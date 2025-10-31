@@ -31,9 +31,9 @@ const sessionFormSchema = z.object({
   totalFrontCrawlKick: z.coerce.number().min(0).default(0),
   totalFrontCrawlPull: z.coerce.number().min(0).default(0),
   totalBackstrokeSwim: z.coerce.number().min(0).default(0),
-  totalbackstrokeDrill: z.coerce.number().min(0).default(0),
+  totalBackstrokeDrill: z.coerce.number().min(0).default(0),
   totalBackstrokeKick: z.coerce.number().min(0).default(0),
-  totalbackstrokePull: z.coerce.number().min(0).default(0),
+  totalBackstrokePull: z.coerce.number().min(0).default(0),
   totalBreaststrokeSwim: z.coerce.number().min(0).default(0),
   totalBreaststrokeDrill: z.coerce.number().min(0).default(0),
   totalBreaststrokeKick: z.coerce.number().min(0).default(0),
@@ -75,9 +75,9 @@ export default function NewSession() {
       totalFrontCrawlKick: 0,
       totalFrontCrawlPull: 0,
       totalBackstrokeSwim: 0,
-      totalbackstrokeDrill: 0,
+      totalBackstrokeDrill: 0,
       totalBackstrokeKick: 0,
-      totalbackstrokePull: 0,
+      totalBackstrokePull: 0,
       totalBreaststrokeSwim: 0,
       totalBreaststrokeDrill: 0,
       totalBreaststrokeKick: 0,
@@ -107,17 +107,21 @@ export default function NewSession() {
 
       const totalDistance = 
         data.totalFrontCrawlSwim + data.totalFrontCrawlDrill + data.totalFrontCrawlKick + data.totalFrontCrawlPull +
-        data.totalBackstrokeSwim + data.totalbackstrokeDrill + data.totalBackstrokeKick + data.totalbackstrokePull +
+        data.totalBackstrokeSwim + data.totalBackstrokeDrill + data.totalBackstrokeKick + data.totalBackstrokePull +
         data.totalBreaststrokeSwim + data.totalBreaststrokeDrill + data.totalBreaststrokeKick + data.totalBreaststrokePull +
         data.totalButterflySwim + data.totalButterflyDrill + data.totalButterflyKick + data.totalButterflyPull +
         data.totalIMSwim + data.totalIMDrill + data.totalIMKick + data.totalIMPull +
         data.totalNo1Swim + data.totalNo1Drill + data.totalNo1Kick + data.totalNo1Pull;
 
-      const response = await apiRequest("POST", "/api/sessions", {
+      const payload = {
         ...data,
+        secondCoachId: data.secondCoachId === "none" ? undefined : data.secondCoachId,
+        helperId: data.helperId === "none" ? undefined : data.helperId,
         duration,
         totalDistance,
-      });
+      };
+
+      const response = await apiRequest("POST", "/api/sessions", payload);
       return response;
     },
     onSuccess: (data) => {
@@ -144,7 +148,7 @@ export default function NewSession() {
   const values = form.watch();
   const totalDistance = 
     (values.totalFrontCrawlSwim || 0) + (values.totalFrontCrawlDrill || 0) + (values.totalFrontCrawlKick || 0) + (values.totalFrontCrawlPull || 0) +
-    (values.totalBackstrokeSwim || 0) + (values.totalbackstrokeDrill || 0) + (values.totalBackstrokeKick || 0) + (values.totalbackstrokePull || 0) +
+    (values.totalBackstrokeSwim || 0) + (values.totalBackstrokeDrill || 0) + (values.totalBackstrokeKick || 0) + (values.totalBackstrokePull || 0) +
     (values.totalBreaststrokeSwim || 0) + (values.totalBreaststrokeDrill || 0) + (values.totalBreaststrokeKick || 0) + (values.totalBreaststrokePull || 0) +
     (values.totalButterflySwim || 0) + (values.totalButterflyDrill || 0) + (values.totalButterflyKick || 0) + (values.totalButterflyPull || 0) +
     (values.totalIMSwim || 0) + (values.totalIMDrill || 0) + (values.totalIMKick || 0) + (values.totalIMPull || 0) +
@@ -371,7 +375,7 @@ export default function NewSession() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="">None</SelectItem>
+                              <SelectItem value="none">None</SelectItem>
                               {coaches?.map((coach) => (
                                 <SelectItem key={coach.id} value={coach.id}>
                                   {coach.firstName} {coach.lastName}
@@ -399,7 +403,7 @@ export default function NewSession() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="">None</SelectItem>
+                              <SelectItem value="none">None</SelectItem>
                               {coaches?.map((coach) => (
                                 <SelectItem key={coach.id} value={coach.id}>
                                   {coach.firstName} {coach.lastName}

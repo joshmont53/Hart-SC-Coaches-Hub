@@ -152,9 +152,9 @@ export const swimmingSessions = pgTable("swimming_sessions", {
   
   // Backstroke
   totalBackstrokeSwim: integer("total_backstroke_swim").notNull().default(0),
-  totalbackstrokeDrill: integer("total_backstroke_drill").notNull().default(0),
+  totalBackstrokeDrill: integer("total_backstroke_drill").notNull().default(0),
   totalBackstrokeKick: integer("total_backstroke_kick").notNull().default(0),
-  totalbackstrokePull: integer("total_backstroke_pull").notNull().default(0),
+  totalBackstrokePull: integer("total_backstroke_pull").notNull().default(0),
   
   // Breaststroke
   totalBreaststrokeSwim: integer("total_breaststroke_swim").notNull().default(0),
