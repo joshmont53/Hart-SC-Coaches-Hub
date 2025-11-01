@@ -10,10 +10,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { ArrowLeft, Plus, Users } from "lucide-react";
+import { ArrowLeft, Plus, Users, Pencil, Trash2 } from "lucide-react";
 import { useLocation } from "wouter";
 import type { Squad, Coach } from "@shared/schema";
 import { useState } from "react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 const squadFormSchema = z.object({
   squadName: z.string().min(1, "Squad name is required"),
@@ -26,6 +27,8 @@ export default function Squads() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingSquad, setEditingSquad] = useState<Squad | null>(null);
+  const [deletingSquad, setDeletingSquad] = useState<Squad | null>(null);
 
   const { data: squads, isLoading } = useQuery<Squad[]>({ queryKey: ["/api/squads"] });
   const { data: coaches } = useQuery<Coach[]>({ queryKey: ["/api/coaches"] });
@@ -53,8 +56,56 @@ export default function Squads() {
     },
   });
 
+  const updateSquadMutation = useMutation({
+    mutationFn: async (data: SquadFormValues & { id: string }) => {
+      return await apiRequest("PATCH", `/api/squads/${data.id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/squads"] });
+      toast({ title: "Success", description: "Squad updated successfully" });
+      setEditingSquad(null);
+      form.reset();
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message || "Failed to update squad", variant: "destructive" });
+    },
+  });
+
+  const deleteSquadMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest("DELETE", `/api/squads/${id}`, undefined);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/squads"] });
+      toast({ title: "Success", description: "Squad deleted successfully" });
+      setDeletingSquad(null);
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message || "Failed to delete squad", variant: "destructive" });
+    },
+  });
+
   const onSubmit = (data: SquadFormValues) => {
-    createSquadMutation.mutate(data);
+    if (editingSquad) {
+      updateSquadMutation.mutate({ ...data, id: editingSquad.id });
+    } else {
+      createSquadMutation.mutate(data);
+    }
+  };
+
+  const handleEdit = (squad: Squad) => {
+    setEditingSquad(squad);
+    setDialogOpen(true);
+    form.reset({
+      squadName: squad.squadName,
+      primaryCoachId: squad.primaryCoachId || "",
+    });
+  };
+
+  const handleCloseDialog = () => {
+    setDialogOpen(false);
+    setEditingSquad(null);
+    form.reset();
   };
 
   const getCoachName = (coachId: string | null) => {
@@ -77,72 +128,100 @@ export default function Squads() {
                 <p className="text-sm text-muted-foreground">Manage training squads</p>
               </div>
             </div>
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-              <DialogTrigger asChild>
-                <Button data-testid="button-add-squad">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Squad
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Create New Squad</DialogTitle>
-                  <DialogDescription>Enter the squad details below</DialogDescription>
-                </DialogHeader>
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                    <FormField
-                      control={form.control}
-                      name="squadName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Squad Name</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="e.g., Senior Elite" data-testid="input-squad-name" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="primaryCoachId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Primary Coach</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-primary-coach">
-                                <SelectValue placeholder="Select primary coach" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {coaches?.map((coach) => (
-                                <SelectItem key={coach.id} value={coach.id}>
-                                  {coach.firstName} {coach.lastName}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <div className="flex justify-end gap-3 pt-4">
-                      <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                        Cancel
-                      </Button>
-                      <Button type="submit" disabled={createSquadMutation.isPending} data-testid="button-submit-squad">
-                        {createSquadMutation.isPending ? "Creating..." : "Create Squad"}
-                      </Button>
-                    </div>
-                  </form>
-                </Form>
-              </DialogContent>
-            </Dialog>
+            <Button onClick={() => { setEditingSquad(null); setDialogOpen(true); }} data-testid="button-add-squad">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Squad
+            </Button>
           </div>
         </div>
       </header>
+
+      <Dialog open={dialogOpen || !!editingSquad} onOpenChange={(open) => { if (!open) handleCloseDialog(); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingSquad ? "Edit Squad" : "Create New Squad"}</DialogTitle>
+            <DialogDescription>Enter the squad details below</DialogDescription>
+          </DialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="squadName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Squad Name</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="e.g., Senior Elite" data-testid="input-squad-name" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="primaryCoachId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Primary Coach</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-primary-coach">
+                          <SelectValue placeholder="Select primary coach" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {coaches?.map((coach) => (
+                          <SelectItem key={coach.id} value={coach.id}>
+                            {coach.firstName} {coach.lastName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="flex justify-end gap-3 pt-4">
+                <Button type="button" variant="outline" onClick={handleCloseDialog}>
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={createSquadMutation.isPending || updateSquadMutation.isPending} 
+                  data-testid="button-submit-squad"
+                >
+                  {editingSquad 
+                    ? (updateSquadMutation.isPending ? "Updating..." : "Update Squad")
+                    : (createSquadMutation.isPending ? "Creating..." : "Create Squad")
+                  }
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!deletingSquad} onOpenChange={(open) => { if (!open) setDeletingSquad(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Squad</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{deletingSquad?.squadName}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteSquadMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deletingSquad && deleteSquadMutation.mutate(deletingSquad.id)}
+              disabled={deleteSquadMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="button-confirm-delete"
+            >
+              {deleteSquadMutation.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <div className="container mx-auto px-4 py-6">
         {isLoading ? (
@@ -155,11 +234,31 @@ export default function Squads() {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
             {squads.map((squad) => (
               <Card key={squad.id} className="hover-elevate">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg">{squad.squadName}</CardTitle>
-                  <CardDescription className="text-sm">
-                    Primary Coach: {getCoachName(squad.primaryCoachId)}
-                  </CardDescription>
+                <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0 pb-3">
+                  <div className="flex-1">
+                    <CardTitle className="text-lg">{squad.squadName}</CardTitle>
+                    <CardDescription className="text-sm">
+                      Primary Coach: {getCoachName(squad.primaryCoachId)}
+                    </CardDescription>
+                  </div>
+                  <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleEdit(squad)}
+                      data-testid={`button-edit-squad-${squad.id}`}
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setDeletingSquad(squad)}
+                      data-testid={`button-delete-squad-${squad.id}`}
+                    >
+                      <Trash2 className="w-4 h-4 text-destructive" />
+                    </Button>
+                  </div>
                 </CardHeader>
               </Card>
             ))}
