@@ -294,12 +294,20 @@ export default function Dashboard() {
         </Tabs>
 
         {/* Quick Links */}
-        <div className="mt-8 grid md:grid-cols-3 gap-4">
+        <div className="mt-8 grid md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Link href="/coaches">
             <Card className="hover-elevate active-elevate-2 cursor-pointer">
               <CardContent className="flex items-center gap-3 py-4">
                 <Users className="w-5 h-5 text-primary" />
                 <span className="font-medium">Manage Coaches</span>
+              </CardContent>
+            </Card>
+          </Link>
+          <Link href="/squads">
+            <Card className="hover-elevate active-elevate-2 cursor-pointer">
+              <CardContent className="flex items-center gap-3 py-4">
+                <Users className="w-5 h-5 text-primary" />
+                <span className="font-medium">Manage Squads</span>
               </CardContent>
             </Card>
           </Link>

@@ -39,9 +39,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/coaches/me", isAuthenticated, async (req, res) => {
+  app.get("/api/coaches/me", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user!.id;
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
       const coach = await storage.getCoachByUserId(userId);
       if (!coach) {
         return res.status(404).json({ message: "Coach profile not found" });
@@ -53,9 +56,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/coaches/link/:coachId", isAuthenticated, async (req, res) => {
+  app.post("/api/coaches/link/:coachId", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user!.id;
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
       const coachId = req.params.coachId;
       
       // Check if coach exists
