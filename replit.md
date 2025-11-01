@@ -81,7 +81,7 @@ Preferred communication style: Simple, everyday language.
 - `swimmers` - Athlete records with squad membership and ASA numbers
 - `locations` - Pool facilities with type classification
 - `swimming_sessions` - Training session records with comprehensive stroke/distance tracking
-- `attendance` - Session attendance tracking with status (present/absent/excused)
+- `attendance` - Session attendance tracking with status options: Present, Late, Very Late, First Half Only, Second Half Only, Absent. Records are created for ALL swimmers in a squad (not just attendees), defaulting to "Present" status
 
 **Key Relationships**:
 - Users → Coaches (one-to-one via userId foreign key)
