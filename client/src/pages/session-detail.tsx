@@ -5,7 +5,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -20,7 +19,7 @@ export default function SessionDetail() {
   const { toast } = useToast();
   const sessionId = params?.id;
 
-  const [attendanceData, setAttendanceData] = useState<Record<string, { status: string; attended: boolean }>>({});
+  const [attendanceData, setAttendanceData] = useState<Record<string, string>>({});
 
   const { data: session, isLoading } = useQuery<SwimmingSession>({
     queryKey: ["/api/sessions", sessionId],
@@ -78,12 +77,10 @@ export default function SessionDetail() {
   });
 
   const handleSaveAttendance = () => {
-    const attendanceRecords = Object.entries(attendanceData)
-      .filter(([_, data]) => data.attended)
-      .map(([swimmerId, data]) => ({
-        swimmerId,
-        status: data.status,
-      }));
+    const attendanceRecords = squadSwimmers.map((swimmer) => ({
+      swimmerId: swimmer.id,
+      status: attendanceData[swimmer.id] ?? "Present",
+    }));
 
     saveAttendanceMutation.mutate(attendanceRecords);
   };
@@ -357,8 +354,7 @@ export default function SessionDetail() {
             <div className="space-y-3">
               {squadSwimmers.map((swimmer) => {
                 const existingAttendance = attendance?.find(a => a.swimmerId === swimmer.id);
-                const isAttended = attendanceData[swimmer.id]?.attended ?? !!existingAttendance;
-                const status = attendanceData[swimmer.id]?.status ?? existingAttendance?.status ?? "Present";
+                const status = attendanceData[swimmer.id] ?? existingAttendance?.status ?? "Present";
 
                 return (
                   <div
@@ -366,19 +362,6 @@ export default function SessionDetail() {
                     className="flex items-center justify-between gap-4 p-3 rounded-lg border"
                   >
                     <div className="flex items-center gap-3 flex-1">
-                      <Checkbox
-                        checked={isAttended}
-                        onCheckedChange={(checked) => {
-                          setAttendanceData(prev => ({
-                            ...prev,
-                            [swimmer.id]: {
-                              attended: !!checked,
-                              status: prev[swimmer.id]?.status ?? "Present",
-                            },
-                          }));
-                        }}
-                        data-testid={`checkbox-swimmer-${swimmer.id}`}
-                      />
                       <div>
                         <p className="font-medium">
                           {swimmer.firstName} {swimmer.lastName}
@@ -386,31 +369,27 @@ export default function SessionDetail() {
                         <p className="text-xs text-muted-foreground">ASA: {swimmer.asaNumber}</p>
                       </div>
                     </div>
-                    {isAttended && (
-                      <Select
-                        value={status}
-                        onValueChange={(value) => {
-                          setAttendanceData(prev => ({
-                            ...prev,
-                            [swimmer.id]: {
-                              attended: true,
-                              status: value,
-                            },
-                          }));
-                        }}
-                      >
-                        <SelectTrigger className="w-[180px]" data-testid={`select-status-${swimmer.id}`}>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Present">Present</SelectItem>
-                          <SelectItem value="Late">Late</SelectItem>
-                          <SelectItem value="Very Late">Very Late</SelectItem>
-                          <SelectItem value="First Half Only">First Half Only</SelectItem>
-                          <SelectItem value="Second Half Only">Second Half Only</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    )}
+                    <Select
+                      value={status}
+                      onValueChange={(value) => {
+                        setAttendanceData(prev => ({
+                          ...prev,
+                          [swimmer.id]: value,
+                        }));
+                      }}
+                    >
+                      <SelectTrigger className="w-[180px]" data-testid={`select-status-${swimmer.id}`}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Present">Present</SelectItem>
+                        <SelectItem value="Late">Late</SelectItem>
+                        <SelectItem value="Very Late">Very Late</SelectItem>
+                        <SelectItem value="First Half Only">First Half Only</SelectItem>
+                        <SelectItem value="Second Half Only">Second Half Only</SelectItem>
+                        <SelectItem value="Absent">Absent</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 );
               })}
