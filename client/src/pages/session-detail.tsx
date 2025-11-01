@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { ArrowLeft, Calendar, Clock, MapPin, Users, Target, Trash2, Save, Edit } from "lucide-react";
 import { format, parseISO } from "date-fns";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { SwimmingSession, Coach, Squad, Location, Swimmer, Attendance } from "@shared/schema";
 
 export default function SessionDetail() {
@@ -34,6 +34,16 @@ export default function SessionDetail() {
     queryKey: ["/api/attendance", sessionId],
     enabled: !!sessionId,
   });
+
+  useEffect(() => {
+    if (attendance && attendance.length > 0) {
+      const initialData: Record<string, string> = {};
+      attendance.forEach(record => {
+        initialData[record.swimmerId] = record.status;
+      });
+      setAttendanceData(initialData);
+    }
+  }, [attendance]);
 
   const deleteSessionMutation = useMutation({
     mutationFn: async () => {
@@ -130,9 +140,9 @@ export default function SessionDetail() {
     {
       name: "Backstroke",
       swim: session.totalBackstrokeSwim,
-      drill: session.totalbackstrokeDrill,
+      drill: session.totalBackstrokeDrill,
       kick: session.totalBackstrokeKick,
-      pull: session.totalbackstrokePull,
+      pull: session.totalBackstrokePull,
     },
     {
       name: "Breaststroke",
