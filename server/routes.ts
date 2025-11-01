@@ -39,6 +39,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/coaches/me", isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const coach = await storage.getCoachByUserId(userId);
+      if (!coach) {
+        return res.status(404).json({ message: "Coach profile not found" });
+      }
+      res.json(coach);
+    } catch (error) {
+      console.error("Error fetching coach profile:", error);
+      res.status(500).json({ message: "Failed to fetch coach profile" });
+    }
+  });
+
+  app.post("/api/coaches/link/:coachId", isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const coachId = req.params.coachId;
+      
+      // Check if coach exists
+      const coach = await storage.getCoach(coachId);
+      if (!coach) {
+        return res.status(404).json({ message: "Coach not found" });
+      }
+      
+      // Check if coach is already linked
+      if (coach.userId && coach.userId !== userId) {
+        return res.status(400).json({ message: "Coach profile already linked to another user" });
+      }
+      
+      // Link the coach to the user
+      const updatedCoach = await storage.updateCoach(coachId, { userId });
+      res.json(updatedCoach);
+    } catch (error: any) {
+      console.error("Error linking coach:", error);
+      res.status(500).json({ message: error.message || "Failed to link coach profile" });
+    }
+  });
+
   app.post("/api/coaches", isAuthenticated, async (req, res) => {
     try {
       const validatedData = insertCoachSchema.parse(req.body);

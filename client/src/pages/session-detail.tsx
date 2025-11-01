@@ -1,5 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useRoute, useLocation } from "wouter";
+import { useRoute, useLocation, Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { ArrowLeft, Calendar, Clock, MapPin, Users, Target, Trash2, Save } from "lucide-react";
+import { ArrowLeft, Calendar, Clock, MapPin, Users, Target, Trash2, Save, Edit } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { useState } from "react";
 import type { SwimmingSession, Coach, Squad, Location, Swimmer, Attendance } from "@shared/schema";
@@ -188,20 +188,32 @@ export default function SessionDetail() {
                 </p>
               </div>
             </div>
-            <Button
-              variant="destructive"
-              size="default"
-              onClick={() => {
-                if (confirm("Are you sure you want to delete this session?")) {
-                  deleteSessionMutation.mutate();
-                }
-              }}
-              disabled={deleteSessionMutation.isPending}
-              data-testid="button-delete-session"
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Delete
-            </Button>
+            <div className="flex gap-2">
+              <Link href={`/sessions/${sessionId}/edit`}>
+                <Button
+                  variant="outline"
+                  size="default"
+                  data-testid="button-edit-session"
+                >
+                  <Edit className="w-4 h-4 mr-2" />
+                  Edit
+                </Button>
+              </Link>
+              <Button
+                variant="destructive"
+                size="default"
+                onClick={() => {
+                  if (confirm("Are you sure you want to delete this session?")) {
+                    deleteSessionMutation.mutate();
+                  }
+                }}
+                disabled={deleteSessionMutation.isPending}
+                data-testid="button-delete-session"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete
+              </Button>
+            </div>
           </div>
         </div>
       </header>

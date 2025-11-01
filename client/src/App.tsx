@@ -8,6 +8,7 @@ import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Dashboard from "@/pages/dashboard";
 import NewSession from "@/pages/new-session";
+import EditSession from "@/pages/edit-session";
 import SessionDetail from "@/pages/session-detail";
 import Coaches from "@/pages/coaches";
 import Swimmers from "@/pages/swimmers";
@@ -25,6 +26,7 @@ function Router() {
         <>
           <Route path="/" component={Dashboard} />
           <Route path="/new-session" component={NewSession} />
+          <Route path="/sessions/:id/edit" component={EditSession} />
           <Route path="/sessions/:id" component={SessionDetail} />
           <Route path="/coaches" component={Coaches} />
           <Route path="/swimmers" component={Swimmers} />

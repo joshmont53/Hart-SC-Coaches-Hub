@@ -33,6 +33,7 @@ export interface IStorage {
   // Coach operations
   getCoaches(): Promise<Coach[]>;
   getCoach(id: string): Promise<Coach | undefined>;
+  getCoachByUserId(userId: string): Promise<Coach | undefined>;
   createCoach(coach: InsertCoach): Promise<Coach>;
   updateCoach(id: string, coach: Partial<InsertCoach>): Promise<Coach>;
   deleteCoach(id: string): Promise<void>;
@@ -79,6 +80,26 @@ export class DatabaseStorage implements IStorage {
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
+    // First try to find existing user by email
+    const [existingUser] = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, userData.email!));
+    
+    if (existingUser) {
+      // Update existing user
+      const [user] = await db
+        .update(users)
+        .set({
+          ...userData,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, existingUser.id))
+        .returning();
+      return user;
+    }
+    
+    // Insert new user
     const [user] = await db
       .insert(users)
       .values(userData)
@@ -100,6 +121,11 @@ export class DatabaseStorage implements IStorage {
 
   async getCoach(id: string): Promise<Coach | undefined> {
     const [coach] = await db.select().from(coaches).where(eq(coaches.id, id));
+    return coach;
+  }
+
+  async getCoachByUserId(userId: string): Promise<Coach | undefined> {
+    const [coach] = await db.select().from(coaches).where(eq(coaches.userId, userId));
     return coach;
   }
 
