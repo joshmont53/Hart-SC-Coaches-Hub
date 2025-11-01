@@ -8,10 +8,11 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { ArrowLeft, Plus, MapPin } from "lucide-react";
+import { ArrowLeft, Plus, MapPin, Pencil, Trash2 } from "lucide-react";
 import { useLocation as useRouterLocation } from "wouter";
 import type { Location } from "@shared/schema";
 import { useState } from "react";
@@ -27,6 +28,8 @@ export default function Locations() {
   const [, navigate] = useRouterLocation();
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingLocation, setEditingLocation] = useState<Location | null>(null);
+  const [deletingLocation, setDeletingLocation] = useState<Location | null>(null);
 
   const { data: locations, isLoading } = useQuery<Location[]>({ queryKey: ["/api/locations"] });
 
@@ -53,8 +56,61 @@ export default function Locations() {
     },
   });
 
+  const updateLocationMutation = useMutation({
+    mutationFn: async (data: LocationFormValues & { id: string }) => {
+      return await apiRequest("PATCH", `/api/locations/${data.id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/locations"] });
+      toast({ title: "Success", description: "Location updated successfully" });
+      setEditingLocation(null);
+      setDialogOpen(false);
+      form.reset();
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message || "Failed to update location", variant: "destructive" });
+    },
+  });
+
+  const deleteLocationMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest("DELETE", `/api/locations/${id}`, undefined);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/locations"] });
+      toast({ title: "Success", description: "Location deleted successfully" });
+      setDeletingLocation(null);
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message || "Failed to delete location", variant: "destructive" });
+    },
+  });
+
   const onSubmit = (data: LocationFormValues) => {
-    createLocationMutation.mutate(data);
+    if (editingLocation) {
+      updateLocationMutation.mutate({ ...data, id: editingLocation.id });
+    } else {
+      createLocationMutation.mutate(data);
+    }
+  };
+
+  const handleEdit = (location: Location) => {
+    setEditingLocation(location);
+    setDialogOpen(true);
+    form.reset({
+      poolName: location.poolName,
+      poolType: location.poolType,
+    });
+  };
+
+  const handleCloseDialog = () => {
+    setDialogOpen(false);
+    setEditingLocation(null);
+    form.reset({
+      poolName: "",
+      poolType: undefined,
+      location: "",
+    });
   };
 
   return (
@@ -71,7 +127,7 @@ export default function Locations() {
                 <p className="text-sm text-muted-foreground">Manage training venues</p>
               </div>
             </div>
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <Dialog open={dialogOpen} onOpenChange={(open) => { if (open) setDialogOpen(true); else handleCloseDialog(); }}>
               <DialogTrigger asChild>
                 <Button data-testid="button-add-location">
                   <Plus className="w-4 h-4 mr-2" />
@@ -80,8 +136,10 @@ export default function Locations() {
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Add New Location</DialogTitle>
-                  <DialogDescription>Enter the pool details below</DialogDescription>
+                  <DialogTitle>{editingLocation ? "Edit Location" : "Add New Location"}</DialogTitle>
+                  <DialogDescription>
+                    {editingLocation ? "Update the pool details below" : "Enter the pool details below"}
+                  </DialogDescription>
                 </DialogHeader>
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -120,11 +178,18 @@ export default function Locations() {
                       )}
                     />
                     <div className="flex justify-end gap-3 pt-4">
-                      <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                      <Button type="button" variant="outline" onClick={handleCloseDialog}>
                         Cancel
                       </Button>
-                      <Button type="submit" disabled={createLocationMutation.isPending} data-testid="button-submit-location">
-                        {createLocationMutation.isPending ? "Adding..." : "Add Location"}
+                      <Button 
+                        type="submit" 
+                        disabled={createLocationMutation.isPending || updateLocationMutation.isPending} 
+                        data-testid="button-submit-location"
+                      >
+                        {editingLocation 
+                          ? (updateLocationMutation.isPending ? "Updating..." : "Update Location")
+                          : (createLocationMutation.isPending ? "Adding..." : "Add Location")
+                        }
                       </Button>
                     </div>
                   </form>
@@ -157,6 +222,28 @@ export default function Locations() {
                     </Badge>
                   </div>
                 </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => handleEdit(location)}
+                      data-testid={`button-edit-location-${location.id}`}
+                    >
+                      <Pencil className="w-4 h-4 mr-1" />
+                      Edit
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setDeletingLocation(location)}
+                      data-testid={`button-delete-location-${location.id}`}
+                    >
+                      <Trash2 className="w-4 h-4 mr-1" />
+                      Delete
+                    </Button>
+                  </div>
+                </CardContent>
               </Card>
             ))}
           </div>
@@ -172,6 +259,26 @@ export default function Locations() {
           </Card>
         )}
       </div>
+
+      <AlertDialog open={!!deletingLocation} onOpenChange={() => setDeletingLocation(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Location</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {deletingLocation?.poolName}? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deletingLocation && deleteLocationMutation.mutate(deletingLocation.id)}
+              data-testid="button-confirm-delete"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

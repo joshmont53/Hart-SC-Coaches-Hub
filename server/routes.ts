@@ -95,7 +95,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/coaches/:id", isAuthenticated, async (req, res) => {
+  app.patch("/api/coaches/:id", isAuthenticated, async (req, res) => {
     try {
       const validatedData = insertCoachSchema.partial().parse(req.body);
       const coach = await storage.updateCoach(req.params.id, validatedData);
@@ -144,7 +144,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/squads/:id", isAuthenticated, async (req, res) => {
+  app.patch("/api/squads/:id", isAuthenticated, async (req, res) => {
     try {
       const validatedData = insertSquadSchema.partial().parse(req.body);
       const squad = await storage.updateSquad(req.params.id, validatedData);
@@ -193,7 +193,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/swimmers/:id", isAuthenticated, async (req, res) => {
+  app.patch("/api/swimmers/:id", isAuthenticated, async (req, res) => {
     try {
       const validatedData = insertSwimmerSchema.partial().parse(req.body);
       const swimmer = await storage.updateSwimmer(req.params.id, validatedData);
@@ -242,7 +242,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/locations/:id", isAuthenticated, async (req, res) => {
+  app.patch("/api/locations/:id", isAuthenticated, async (req, res) => {
     try {
       const validatedData = insertLocationSchema.partial().parse(req.body);
       const location = await storage.updateLocation(req.params.id, validatedData);

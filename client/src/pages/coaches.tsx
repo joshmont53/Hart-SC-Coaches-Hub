@@ -15,10 +15,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { ArrowLeft, Plus, Users } from "lucide-react";
+import { ArrowLeft, Plus, Users, Pencil, Trash2 } from "lucide-react";
 import { useLocation } from "wouter";
 import type { Coach } from "@shared/schema";
 import { useState } from "react";
@@ -36,6 +37,8 @@ export default function Coaches() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingCoach, setEditingCoach] = useState<Coach | null>(null);
+  const [deletingCoach, setDeletingCoach] = useState<Coach | null>(null);
 
   const { data: coaches, isLoading } = useQuery<Coach[]>({
     queryKey: ["/api/coaches"],
@@ -73,8 +76,78 @@ export default function Coaches() {
     },
   });
 
+  const updateCoachMutation = useMutation({
+    mutationFn: async (data: CoachFormValues & { id: string }) => {
+      return await apiRequest("PATCH", `/api/coaches/${data.id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/coaches"] });
+      toast({
+        title: "Success",
+        description: "Coach updated successfully",
+      });
+      setEditingCoach(null);
+      setDialogOpen(false);
+      form.reset();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update coach",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteCoachMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest("DELETE", `/api/coaches/${id}`, undefined);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/coaches"] });
+      toast({
+        title: "Success",
+        description: "Coach deleted successfully",
+      });
+      setDeletingCoach(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete coach",
+        variant: "destructive",
+      });
+    },
+  });
+
   const onSubmit = (data: CoachFormValues) => {
-    createCoachMutation.mutate(data);
+    if (editingCoach) {
+      updateCoachMutation.mutate({ ...data, id: editingCoach.id });
+    } else {
+      createCoachMutation.mutate(data);
+    }
+  };
+
+  const handleEdit = (coach: Coach) => {
+    setEditingCoach(coach);
+    setDialogOpen(true);
+    form.reset({
+      firstName: coach.firstName,
+      lastName: coach.lastName,
+      level: coach.level,
+      dob: coach.dob,
+    });
+  };
+
+  const handleCloseDialog = () => {
+    setDialogOpen(false);
+    setEditingCoach(null);
+    form.reset({
+      firstName: "",
+      lastName: "",
+      level: undefined,
+      dob: "",
+    });
   };
 
   const getLevelColor = (level: string) => {
@@ -107,7 +180,7 @@ export default function Coaches() {
                 </p>
               </div>
             </div>
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <Dialog open={dialogOpen} onOpenChange={(open) => { if (open) setDialogOpen(true); else handleCloseDialog(); }}>
               <DialogTrigger asChild>
                 <Button data-testid="button-add-coach">
                   <Plus className="w-4 h-4 mr-2" />
@@ -116,9 +189,9 @@ export default function Coaches() {
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Add New Coach</DialogTitle>
+                  <DialogTitle>{editingCoach ? "Edit Coach" : "Add New Coach"}</DialogTitle>
                   <DialogDescription>
-                    Enter the coach's details below
+                    {editingCoach ? "Update the coach's details below" : "Enter the coach's details below"}
                   </DialogDescription>
                 </DialogHeader>
                 <Form {...form}>
@@ -191,16 +264,19 @@ export default function Coaches() {
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={() => setDialogOpen(false)}
+                        onClick={handleCloseDialog}
                       >
                         Cancel
                       </Button>
                       <Button
                         type="submit"
-                        disabled={createCoachMutation.isPending}
+                        disabled={createCoachMutation.isPending || updateCoachMutation.isPending}
                         data-testid="button-submit-coach"
                       >
-                        {createCoachMutation.isPending ? "Adding..." : "Add Coach"}
+                        {editingCoach 
+                          ? (updateCoachMutation.isPending ? "Updating..." : "Update Coach")
+                          : (createCoachMutation.isPending ? "Adding..." : "Add Coach")
+                        }
                       </Button>
                     </div>
                   </form>
@@ -237,6 +313,28 @@ export default function Coaches() {
                     </Badge>
                   </div>
                 </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => handleEdit(coach)}
+                      data-testid={`button-edit-coach-${coach.id}`}
+                    >
+                      <Pencil className="w-4 h-4 mr-1" />
+                      Edit
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setDeletingCoach(coach)}
+                      data-testid={`button-delete-coach-${coach.id}`}
+                    >
+                      <Trash2 className="w-4 h-4 mr-1" />
+                      Delete
+                    </Button>
+                  </div>
+                </CardContent>
               </Card>
             ))}
           </div>
@@ -252,6 +350,26 @@ export default function Coaches() {
           </Card>
         )}
       </div>
+
+      <AlertDialog open={!!deletingCoach} onOpenChange={() => setDeletingCoach(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Coach</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {deletingCoach?.firstName} {deletingCoach?.lastName}? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deletingCoach && deleteCoachMutation.mutate(deletingCoach.id)}
+              data-testid="button-confirm-delete"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

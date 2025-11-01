@@ -64,6 +64,7 @@ export default function Squads() {
       queryClient.invalidateQueries({ queryKey: ["/api/squads"] });
       toast({ title: "Success", description: "Squad updated successfully" });
       setEditingSquad(null);
+      setDialogOpen(false);
       form.reset();
     },
     onError: (error: Error) => {
@@ -105,7 +106,10 @@ export default function Squads() {
   const handleCloseDialog = () => {
     setDialogOpen(false);
     setEditingSquad(null);
-    form.reset();
+    form.reset({
+      squadName: "",
+      primaryCoachId: undefined,
+    });
   };
 
   const getCoachName = (coachId: string | null) => {
@@ -128,16 +132,14 @@ export default function Squads() {
                 <p className="text-sm text-muted-foreground">Manage training squads</p>
               </div>
             </div>
-            <Button onClick={() => { setEditingSquad(null); setDialogOpen(true); }} data-testid="button-add-squad">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Squad
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      <Dialog open={dialogOpen || !!editingSquad} onOpenChange={(open) => { if (!open) handleCloseDialog(); }}>
-        <DialogContent>
+            <Dialog open={dialogOpen} onOpenChange={(open) => { if (open) setDialogOpen(true); else handleCloseDialog(); }}>
+              <DialogTrigger asChild>
+                <Button data-testid="button-add-squad">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Squad
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
           <DialogHeader>
             <DialogTitle>{editingSquad ? "Edit Squad" : "Create New Squad"}</DialogTitle>
             <DialogDescription>Enter the squad details below</DialogDescription>
@@ -200,6 +202,9 @@ export default function Squads() {
           </Form>
         </DialogContent>
       </Dialog>
+          </div>
+        </div>
+      </header>
 
       <AlertDialog open={!!deletingSquad} onOpenChange={(open) => { if (!open) setDeletingSquad(null); }}>
         <AlertDialogContent>

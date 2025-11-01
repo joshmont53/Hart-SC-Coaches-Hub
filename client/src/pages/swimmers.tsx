@@ -8,10 +8,11 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { ArrowLeft, Plus, Users } from "lucide-react";
+import { ArrowLeft, Plus, Users, Pencil, Trash2 } from "lucide-react";
 import { useLocation } from "wouter";
 import type { Swimmer, Squad } from "@shared/schema";
 import { useState } from "react";
@@ -30,6 +31,8 @@ export default function Swimmers() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingSwimmer, setEditingSwimmer] = useState<Swimmer | null>(null);
+  const [deletingSwimmer, setDeletingSwimmer] = useState<Swimmer | null>(null);
 
   const { data: swimmers, isLoading } = useQuery<Swimmer[]>({ queryKey: ["/api/swimmers"] });
   const { data: squads } = useQuery<Squad[]>({ queryKey: ["/api/squads"] });
@@ -60,8 +63,66 @@ export default function Swimmers() {
     },
   });
 
+  const updateSwimmerMutation = useMutation({
+    mutationFn: async (data: SwimmerFormValues & { id: string }) => {
+      return await apiRequest("PATCH", `/api/swimmers/${data.id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/swimmers"] });
+      toast({ title: "Success", description: "Swimmer updated successfully" });
+      setEditingSwimmer(null);
+      setDialogOpen(false);
+      form.reset();
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message || "Failed to update swimmer", variant: "destructive" });
+    },
+  });
+
+  const deleteSwimmerMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest("DELETE", `/api/swimmers/${id}`, undefined);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/swimmers"] });
+      toast({ title: "Success", description: "Swimmer deleted successfully" });
+      setDeletingSwimmer(null);
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message || "Failed to delete swimmer", variant: "destructive" });
+    },
+  });
+
   const onSubmit = (data: SwimmerFormValues) => {
-    createSwimmerMutation.mutate(data);
+    if (editingSwimmer) {
+      updateSwimmerMutation.mutate({ ...data, id: editingSwimmer.id });
+    } else {
+      createSwimmerMutation.mutate(data);
+    }
+  };
+
+  const handleEdit = (swimmer: Swimmer) => {
+    setEditingSwimmer(swimmer);
+    setDialogOpen(true);
+    form.reset({
+      firstName: swimmer.firstName,
+      lastName: swimmer.lastName,
+      squadId: swimmer.squadId,
+      asaNumber: swimmer.asaNumber,
+      dob: swimmer.dob,
+    });
+  };
+
+  const handleCloseDialog = () => {
+    setDialogOpen(false);
+    setEditingSwimmer(null);
+    form.reset({
+      firstName: "",
+      lastName: "",
+      squadId: undefined,
+      asaNumber: 0,
+      dob: "",
+    });
   };
 
   const getSquadName = (squadId: string) => {
@@ -83,7 +144,7 @@ export default function Swimmers() {
                 <p className="text-sm text-muted-foreground">Manage swimmers across all squads</p>
               </div>
             </div>
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <Dialog open={dialogOpen} onOpenChange={(open) => { if (open) setDialogOpen(true); else handleCloseDialog(); }}>
               <DialogTrigger asChild>
                 <Button data-testid="button-add-swimmer">
                   <Plus className="w-4 h-4 mr-2" />
@@ -92,8 +153,10 @@ export default function Swimmers() {
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Add New Swimmer</DialogTitle>
-                  <DialogDescription>Enter the swimmer's details below</DialogDescription>
+                  <DialogTitle>{editingSwimmer ? "Edit Swimmer" : "Add New Swimmer"}</DialogTitle>
+                  <DialogDescription>
+                    {editingSwimmer ? "Update the swimmer's details below" : "Enter the swimmer's details below"}
+                  </DialogDescription>
                 </DialogHeader>
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -178,11 +241,18 @@ export default function Swimmers() {
                       />
                     </div>
                     <div className="flex justify-end gap-3 pt-4">
-                      <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                      <Button type="button" variant="outline" onClick={handleCloseDialog}>
                         Cancel
                       </Button>
-                      <Button type="submit" disabled={createSwimmerMutation.isPending} data-testid="button-submit-swimmer">
-                        {createSwimmerMutation.isPending ? "Adding..." : "Add Swimmer"}
+                      <Button 
+                        type="submit" 
+                        disabled={createSwimmerMutation.isPending || updateSwimmerMutation.isPending} 
+                        data-testid="button-submit-swimmer"
+                      >
+                        {editingSwimmer 
+                          ? (updateSwimmerMutation.isPending ? "Updating..." : "Update Swimmer")
+                          : (createSwimmerMutation.isPending ? "Adding..." : "Add Swimmer")
+                        }
                       </Button>
                     </div>
                   </form>
@@ -220,6 +290,28 @@ export default function Swimmers() {
                     <Badge variant="secondary">{getSquadName(swimmer.squadId)}</Badge>
                   </div>
                 </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => handleEdit(swimmer)}
+                      data-testid={`button-edit-swimmer-${swimmer.id}`}
+                    >
+                      <Pencil className="w-4 h-4 mr-1" />
+                      Edit
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setDeletingSwimmer(swimmer)}
+                      data-testid={`button-delete-swimmer-${swimmer.id}`}
+                    >
+                      <Trash2 className="w-4 h-4 mr-1" />
+                      Delete
+                    </Button>
+                  </div>
+                </CardContent>
               </Card>
             ))}
           </div>
@@ -235,6 +327,26 @@ export default function Swimmers() {
           </Card>
         )}
       </div>
+
+      <AlertDialog open={!!deletingSwimmer} onOpenChange={() => setDeletingSwimmer(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Swimmer</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {deletingSwimmer?.firstName} {deletingSwimmer?.lastName}? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deletingSwimmer && deleteSwimmerMutation.mutate(deletingSwimmer.id)}
+              data-testid="button-confirm-delete"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
