@@ -122,7 +122,7 @@ export default function NewSession() {
       };
 
       const response = await apiRequest("POST", "/api/sessions", payload);
-      return response;
+      return response.json();
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/sessions"] });
