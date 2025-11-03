@@ -368,7 +368,7 @@ export default function SessionDetail() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
+            <div className="space-y-2">
               {squadSwimmers.map((swimmer) => {
                 const existingAttendance = attendance?.find(a => a.swimmerId === swimmer.id);
                 const data = attendanceData[swimmer.id] ?? {
@@ -380,17 +380,17 @@ export default function SessionDetail() {
                 return (
                   <div
                     key={swimmer.id}
-                    className="flex items-center justify-between gap-3 p-3 rounded-lg border"
+                    className="flex items-center justify-between gap-1.5 sm:gap-2 p-2 sm:p-3 rounded-lg border"
                   >
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <div>
-                        <p className="font-medium">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm sm:text-base font-medium truncate">
                           {swimmer.firstName} {swimmer.lastName}
                         </p>
-                        <p className="text-xs text-muted-foreground">ASA: {swimmer.asaNumber}</p>
+                        <p className="text-[10px] sm:text-xs text-muted-foreground hidden sm:block">ASA: {swimmer.asaNumber}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 sm:gap-2 shrink-0">
                       <Select
                         value={data.status}
                         onValueChange={(value) => {
@@ -403,7 +403,7 @@ export default function SessionDetail() {
                           }));
                         }}
                       >
-                        <SelectTrigger className="w-[160px]" data-testid={`select-status-${swimmer.id}`}>
+                        <SelectTrigger className="w-[95px] sm:w-[140px] h-8 text-xs sm:text-sm" data-testid={`select-status-${swimmer.id}`}>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -426,7 +426,7 @@ export default function SessionDetail() {
                         }}
                         disabled={isAbsent}
                       >
-                        <SelectTrigger className="w-[120px]" data-testid={`select-notes-${swimmer.id}`}>
+                        <SelectTrigger className="w-[75px] sm:w-[100px] h-8 text-xs sm:text-sm" data-testid={`select-notes-${swimmer.id}`}>
                           <SelectValue placeholder="—" />
                         </SelectTrigger>
                         <SelectContent>
