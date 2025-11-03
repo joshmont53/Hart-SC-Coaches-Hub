@@ -352,11 +352,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create new attendance records
       const createdRecords = [];
       for (const record of attendanceData) {
+        // Validate that notes is null when status is Absent
+        const notes = record.status === "Absent" ? null : (record.notes || null);
+        
         const validatedData = insertAttendanceSchema.parse({
           sessionId: req.params.sessionId,
           swimmerId: record.swimmerId,
           status: record.status,
-          notes: record.notes || null,
+          notes: notes,
         });
         const attendance = await storage.createAttendance(validatedData);
         createdRecords.push(attendance);

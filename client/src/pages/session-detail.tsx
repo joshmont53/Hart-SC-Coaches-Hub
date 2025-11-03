@@ -414,13 +414,13 @@ export default function SessionDetail() {
                         </SelectContent>
                       </Select>
                       <Select
-                        value={data.notes ?? ""}
+                        value={data.notes ?? "none"}
                         onValueChange={(value) => {
                           setAttendanceData(prev => ({
                             ...prev,
                             [swimmer.id]: {
                               status: prev[swimmer.id]?.status ?? "Present",
-                              notes: value === "" ? null : value,
+                              notes: value === "none" ? null : value,
                             },
                           }));
                         }}
@@ -430,7 +430,7 @@ export default function SessionDetail() {
                           <SelectValue placeholder="—" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">—</SelectItem>
+                          <SelectItem value="none">—</SelectItem>
                           <SelectItem value="Late">Late</SelectItem>
                           <SelectItem value="Very Late">Very Late</SelectItem>
                         </SelectContent>
