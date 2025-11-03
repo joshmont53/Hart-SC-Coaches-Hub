@@ -229,8 +229,8 @@ export const attendance = pgTable("attendance", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   sessionId: varchar("session_id").references(() => swimmingSessions.id, { onDelete: 'cascade' }).notNull(),
   swimmerId: varchar("swimmer_id").references(() => swimmers.id).notNull(),
-  status: varchar("status").notNull(), // "Present" | "Late" | "Very Late" | "First Half Only" | "Second Half Only" | "Absent"
-  notes: varchar("notes"),
+  status: varchar("status").notNull(), // "Present" | "First Half Only" | "Second Half Only" | "Absent"
+  notes: varchar("notes"), // "Late" | "Very Late" | null (timeliness indicator)
   createdAt: timestamp("created_at").defaultNow(),
 });
 

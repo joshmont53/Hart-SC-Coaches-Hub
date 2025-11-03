@@ -19,7 +19,7 @@ export default function SessionDetail() {
   const { toast } = useToast();
   const sessionId = params?.id;
 
-  const [attendanceData, setAttendanceData] = useState<Record<string, string>>({});
+  const [attendanceData, setAttendanceData] = useState<Record<string, { status: string, notes: string | null }>>({});
 
   const { data: session, isLoading } = useQuery<SwimmingSession>({
     queryKey: ["/api/sessions", sessionId],
@@ -37,9 +37,12 @@ export default function SessionDetail() {
 
   useEffect(() => {
     if (attendance && attendance.length > 0) {
-      const initialData: Record<string, string> = {};
+      const initialData: Record<string, { status: string, notes: string | null }> = {};
       attendance.forEach(record => {
-        initialData[record.swimmerId] = record.status;
+        initialData[record.swimmerId] = {
+          status: record.status,
+          notes: record.notes || null,
+        };
       });
       setAttendanceData(initialData);
     }
@@ -67,7 +70,7 @@ export default function SessionDetail() {
   });
 
   const saveAttendanceMutation = useMutation({
-    mutationFn: async (data: { swimmerId: string; status: string }[]) => {
+    mutationFn: async (data: { swimmerId: string; status: string; notes: string | null }[]) => {
       await apiRequest("POST", `/api/attendance/${sessionId}`, { attendance: data });
     },
     onSuccess: () => {
@@ -87,10 +90,14 @@ export default function SessionDetail() {
   });
 
   const handleSaveAttendance = () => {
-    const attendanceRecords = squadSwimmers.map((swimmer) => ({
-      swimmerId: swimmer.id,
-      status: attendanceData[swimmer.id] ?? "Present",
-    }));
+    const attendanceRecords = squadSwimmers.map((swimmer) => {
+      const data = attendanceData[swimmer.id] ?? { status: "Present", notes: null };
+      return {
+        swimmerId: swimmer.id,
+        status: data.status,
+        notes: data.status === "Absent" ? null : data.notes,
+      };
+    });
 
     saveAttendanceMutation.mutate(attendanceRecords);
   };
@@ -364,14 +371,18 @@ export default function SessionDetail() {
             <div className="space-y-3">
               {squadSwimmers.map((swimmer) => {
                 const existingAttendance = attendance?.find(a => a.swimmerId === swimmer.id);
-                const status = attendanceData[swimmer.id] ?? existingAttendance?.status ?? "Present";
+                const data = attendanceData[swimmer.id] ?? {
+                  status: existingAttendance?.status ?? "Present",
+                  notes: existingAttendance?.notes ?? null,
+                };
+                const isAbsent = data.status === "Absent";
 
                 return (
                   <div
                     key={swimmer.id}
-                    className="flex items-center justify-between gap-4 p-3 rounded-lg border"
+                    className="flex items-center justify-between gap-3 p-3 rounded-lg border"
                   >
-                    <div className="flex items-center gap-3 flex-1">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
                       <div>
                         <p className="font-medium">
                           {swimmer.firstName} {swimmer.lastName}
@@ -379,27 +390,52 @@ export default function SessionDetail() {
                         <p className="text-xs text-muted-foreground">ASA: {swimmer.asaNumber}</p>
                       </div>
                     </div>
-                    <Select
-                      value={status}
-                      onValueChange={(value) => {
-                        setAttendanceData(prev => ({
-                          ...prev,
-                          [swimmer.id]: value,
-                        }));
-                      }}
-                    >
-                      <SelectTrigger className="w-[180px]" data-testid={`select-status-${swimmer.id}`}>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Present">Present</SelectItem>
-                        <SelectItem value="Late">Late</SelectItem>
-                        <SelectItem value="Very Late">Very Late</SelectItem>
-                        <SelectItem value="First Half Only">First Half Only</SelectItem>
-                        <SelectItem value="Second Half Only">Second Half Only</SelectItem>
-                        <SelectItem value="Absent">Absent</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="flex items-center gap-2">
+                      <Select
+                        value={data.status}
+                        onValueChange={(value) => {
+                          setAttendanceData(prev => ({
+                            ...prev,
+                            [swimmer.id]: {
+                              status: value,
+                              notes: value === "Absent" ? null : (prev[swimmer.id]?.notes ?? null),
+                            },
+                          }));
+                        }}
+                      >
+                        <SelectTrigger className="w-[160px]" data-testid={`select-status-${swimmer.id}`}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Present">Present</SelectItem>
+                          <SelectItem value="First Half Only">First Half Only</SelectItem>
+                          <SelectItem value="Second Half Only">Second Half Only</SelectItem>
+                          <SelectItem value="Absent">Absent</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Select
+                        value={data.notes ?? ""}
+                        onValueChange={(value) => {
+                          setAttendanceData(prev => ({
+                            ...prev,
+                            [swimmer.id]: {
+                              status: prev[swimmer.id]?.status ?? "Present",
+                              notes: value === "" ? null : value,
+                            },
+                          }));
+                        }}
+                        disabled={isAbsent}
+                      >
+                        <SelectTrigger className="w-[120px]" data-testid={`select-notes-${swimmer.id}`}>
+                          <SelectValue placeholder="—" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">—</SelectItem>
+                          <SelectItem value="Late">Late</SelectItem>
+                          <SelectItem value="Very Late">Very Late</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 );
               })}
