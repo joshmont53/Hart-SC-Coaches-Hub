@@ -94,6 +94,8 @@ const DRILL_KEYWORDS = [
   '6 kick drill',
   'zipper',
   'single arm',
+  'arms +',  // e.g., "BR Arms + Fly kick"
+  'kick +',  // e.g., "2 kick + 1 pull"
 ];
 
 function normalizeText(text: string): string {
@@ -108,8 +110,43 @@ function detectStroke(text: string): Stroke | null {
     return 'No1';
   }
   
-  // Check all other patterns
-  for (const [pattern, stroke] of Object.entries(STROKE_PATTERNS)) {
+  // Handle "X on Back" patterns - prioritize the main stroke (X) over position modifier
+  // e.g., "Fly Kick on Back" should be Butterfly, not Backstroke
+  const onBackPattern = /(\w+)\s+(?:kick|swim|drill|pull)\s+on\s+back/i;
+  const onBackMatch = normalized.match(onBackPattern);
+  if (onBackMatch) {
+    const strokePart = onBackMatch[1];
+    // Check if the stroke part matches a pattern
+    for (const [pattern, stroke] of Object.entries(STROKE_PATTERNS)) {
+      if (strokePart.includes(pattern)) {
+        return stroke;
+      }
+    }
+  }
+  
+  // Check patterns in priority order (specific before generic)
+  // Priority order: Fly before Back, BR before Back, etc.
+  const priorityOrder: Array<[string, Stroke]> = [
+    ['fly', 'Butterfly'],
+    ['butterfly', 'Butterfly'],
+    ['br', 'Breaststroke'],
+    ['brst', 'Breaststroke'],
+    ['breast', 'Breaststroke'],
+    ['breaststroke', 'Breaststroke'],
+    ['im', 'IM'],
+    ['fc', 'FrontCrawl'],
+    ['free', 'FrontCrawl'],
+    ['freestyle', 'FrontCrawl'],
+    ['frontcrawl', 'FrontCrawl'],
+    ['bk', 'Backstroke'],
+    ['bc', 'Backstroke'],
+    ['back', 'Backstroke'],
+    ['backstroke', 'Backstroke'],
+    ['no1', 'No1'],
+    ['choice', 'No1'],
+  ];
+  
+  for (const [pattern, stroke] of priorityOrder) {
     if (normalized.includes(pattern)) {
       return stroke;
     }
@@ -171,20 +208,24 @@ function parseBreakdown(text: string, totalDistance: number): Array<{ stroke: St
     const parts = breakdownText.split('/').map(p => p.trim());
     
     if (parts.length > 0) {
-      // Calculate distance per part
+      // Extract the number of reps from the main line (e.g., "4 x 100m")
       const repsPattern = /(\d+)\s*x\s*(\d+)/;
       const repsMatch = normalized.match(repsPattern);
       const reps = repsMatch ? parseInt(repsMatch[1]) : 1;
       
-      // Process each part
-      const partDistances: Array<{ activity: Activity; distance: number }> = [];
+      // Group activities by type to accumulate distances
+      const activityTotals: Map<Activity, number> = new Map();
       
+      // Process each part - these are SUB-DIVISIONS of each repeat
       for (const part of parts) {
         const distMatch = part.match(/(\d+)\s*m?/);
         if (distMatch) {
-          const dist = parseInt(distMatch[1]);
+          const distPerRep = parseInt(distMatch[1]); // Distance in EACH repeat
           const activity = detectActivity(part) || 'Swim';
-          partDistances.push({ activity, distance: dist * reps });
+          
+          // Accumulate distance for this activity (across all reps)
+          const currentTotal = activityTotals.get(activity) || 0;
+          activityTotals.set(activity, currentTotal + (distPerRep * reps));
         }
       }
       
@@ -192,8 +233,8 @@ function parseBreakdown(text: string, totalDistance: number): Array<{ stroke: St
       const stroke = detectStroke(text) || 'FrontCrawl';
       
       // Add contributions
-      for (const pd of partDistances) {
-        contributions.push({ stroke, activity: pd.activity, distance: pd.distance });
+      for (const [activity, distance] of activityTotals.entries()) {
+        contributions.push({ stroke, activity, distance });
       }
       
       return contributions;
@@ -275,6 +316,31 @@ function parseLine(lineText: string, lineNumber: number, previousLines: ParsedLi
   
   // Handle special patterns
   const normalized = normalizeText(trimmed);
+  
+  // "FC/BK" or "BK/BR" - slash-separated strokes, split distance evenly
+  // e.g., "4 x 100m FC/BK Swim" = 200m FC + 200m BK
+  const slashPattern = /(fc|bk|br|fly|free|back|breast)\s*\/\s*(fc|bk|br|fly|free|back|breast)/i;
+  const slashMatch = normalized.match(slashPattern);
+  if (slashMatch) {
+    const stroke1Text = slashMatch[1];
+    const stroke2Text = slashMatch[2];
+    
+    const stroke1 = detectStroke(stroke1Text);
+    const stroke2 = detectStroke(stroke2Text);
+    
+    if (stroke1 && stroke2 && stroke1 !== stroke2) {
+      const distPerStroke = distance / 2;
+      return {
+        lineNumber,
+        originalText: lineText,
+        parsed: true,
+        contributions: [
+          { stroke: stroke1, activity, distance: distPerStroke },
+          { stroke: stroke2, activity, distance: distPerStroke },
+        ],
+      };
+    }
+  }
   
   // "alt lengths" or "alt. lengths" - split distance evenly between strokes
   if (normalized.includes('alt') && (normalized.includes('length') || normalized.includes('len'))) {
