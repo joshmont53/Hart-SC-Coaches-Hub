@@ -1,0 +1,150 @@
+The app’s overall design, database tables, and functionality are already excellent and meet expectations.
+
+However, the session content entry process was slightly misunderstood in the initial requirements.
+
+Currently, once a coach creates a session, they manually input totals for each training element (e.g., “Frontcrawl swim = 800m”, “Backstroke kick = 400m”).
+
+Instead, the goal is for the coach to write out the full session, and the app should automatically calculate the totals from that written text.
+
+Required behaviour
+1. Session text entry
+
+When a coach edits a session’s content, they should be presented with a large text box that spans most of the screen.
+
+The coach can type or paste their full written session exactly as they would on a whiteboard.
+
+Example input:
+
+Warm up
+4 x 100m FC swim @ 1:30
+3 x 100 FC Kick @ 2:00
+200m BK swim
+
+
+Expected automatic totals:
+
+Frontcrawl Swim → 400m (4 × 100)
+
+Frontcrawl Kick → 300m (3 × 100)
+
+Backstroke Swim → 200m
+
+The totals should be stored in the same database fields currently used for manually entered totals.
+
+2. Supported parsing logic
+
+The system should intelligently recognise common coaching language, abbreviations, and shorthand, including:
+
+Type	Examples	Interpretation
+Strokes	FC, Free, Freestyle → Frontcrawl
+BK, BC, Back → Backstroke
+BR, Brst, Breast → Breaststroke
+Fly, Butterfly → Butterfly
+IM → Individual Medley
+No1, Choice, Not FC → Other/Choice stroke	Used to determine which stroke the distance applies to.
+Activity types	Pull, Kick, Drill, Swim	Used to determine the type of work (kick, pull, drill, or swim).
+Special cases		
+Alt lengths A/B	“400 alt lengths FC/BK” → Split evenly (200 FC Swim + 200 BK Swim)	
+IM	“4 x 50 IM” → Split equally across 4 strokes (1×50 each Fly, BK, BR, FC)	
+IM per-stroke	“200 IM per-stroke” → 50m of each stroke	
+Body position	“200 Fly kick on back” → Fly Kick	
+Mixed stroke splits	“2pull as 1 BK 1 FC” → Split pull distance evenly between BK and FC	
+“Repeat again with no fins”	Duplicate relevant previous entries	
+Rep distribution	“8 x 50 ... 4 no1 4 FC” → Divide reps between strokes accordingly	
+3. Example of a full, more complex session
+
+Below is a realistic example of a coach’s written session.
+The logic must correctly interpret this and produce matching totals.
+
+Session input:
+Warm up
+
+400 alt. lengths fc/bk
+
+4 x 50 im from a dive L.I.F.O
+
+400 pull snorkel
+
+Fly Kick set with and without fins
+
+Fins 30secs rest between 200s
+
+200 fly kick on b/c 
+
+200 6 strokes fly off every turn choice in middle
+
+Repeat again with no fins 
+
+Main set 
+
+2 x 200 fc x 3.00 Negative Split
+
+4 x100 2pull as 1 bk 1 fc, 2kick as 1 brst 1 fly kick both on back  no floats fast with TR 2.00 for pull, TR 2.30 kick 
+
+200 alt lengths not fc/fc think about stroke quality technique
+
+4 x100 fc fast x 1.30 descend 1-4 timed
+
+8 x 50 from a dive max 25 sprints 4 no1 4fc L.I.F.O
+
+Repeat 4 x100 fc fast x 1.30- descend 1-4 
+
+8 x 50 from a push 4 last 25 max 2no1 2fc L.I.F.O
+
+                       4 ALL OUT 2no1 2fc
+
+Mini Set
+
+8 x 200 – odds 100 kick/100 drill x 4.00 evens kick/swim 
+
+first 4 on kick fast first and last 25 2nd 4 on kick build speed to max throughout the 100. Swim on evens with effort working u/w off turns.
+
+swim down - 200 fc/bc
+
+Expected calculated totals:
+Category	Distance (m)
+Frontcrawl Swim	1,600
+Frontcrawl Kick	300
+Frontcrawl Pull	400
+Backstroke Swim	400
+Backstroke Pull	200
+Backstroke Kick	200
+Breaststroke Kick	200
+Butterfly Kick	400
+Butterfly Swim	200
+IM Swim	200
+IM Kick	0
+Choice (No1) Swim	300
+Choice (No1) Kick	800
+Choice (No1) Drill	400
+Total Distance (all)	5,700m
+
+(Note: totals are grouped by stroke + activity type. These match the rule-based logic verified earlier.)
+
+4. Expected user experience and design
+
+When implementing this feature, the agent should:
+
+Confirm its understanding of the above requirements and the examples provided — restate the logic and confirm it knows how each line of the session would be interpreted.
+
+Design a mock-up (no code yet) showing:
+
+The screen layout for session text entry (e.g., a large text area with formatting suggestions).
+
+A summary table showing calculated totals by stroke and type, which updates after parsing.
+
+A way for the coach to review and confirm before saving.
+
+Explain how it will handle errors or ambiguous lines (e.g., unknown abbreviations or missing distances).
+
+Stop there — no development or coding until the design and interpretation are approved.
+
+5. Key expectations
+
+The calculated totals must always match what an experienced coach would manually compute from the written text.
+
+The app must handle both straightforward and complex set writing styles.
+
+Clarity and accuracy take priority over speed or implementation detail.
+
+Once the agent’s understanding and design proposal are approved, development can begin.
