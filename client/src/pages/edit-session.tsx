@@ -76,6 +76,9 @@ export default function EditSession() {
 
   const form = useForm<SessionFormValues>({
     resolver: zodResolver(sessionFormSchema),
+    defaultValues: {
+      sessionContent: "",
+    },
   });
 
   // Populate form when session data loads
