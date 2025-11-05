@@ -10,6 +10,7 @@ import {
   date,
   decimal,
   time,
+  text,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -140,6 +141,9 @@ export const swimmingSessions = pgTable("swimming_sessions", {
   helperId: varchar("helper_id").references(() => coaches.id),
   setWriterId: varchar("set_writer_id").references(() => coaches.id).notNull(),
   focus: varchar("focus").notNull(), // "Aerobic capacity" | "Anaerobic capacity" | "Speed" | "Technique" | "Recovery"
+  
+  // Session content (raw text written by coach)
+  sessionContent: text("session_content"),
   
   // Distance fields
   totalDistance: integer("total_distance").notNull().default(0),

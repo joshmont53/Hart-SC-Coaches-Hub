@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -7,13 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { ArrowLeft, ArrowRight, Save } from "lucide-react";
+import { ArrowLeft, ArrowRight, Save, CheckCircle2, AlertCircle } from "lucide-react";
 import { useLocation } from "wouter";
 import type { Coach, Squad, Location, Swimmer } from "@shared/schema";
+import { parseSessionText } from "@shared/sessionParser";
 
 const sessionFormSchema = z.object({
   sessionDate: z.string().min(1, "Date is required"),
@@ -26,6 +27,7 @@ const sessionFormSchema = z.object({
   helperId: z.string().optional(),
   setWriterId: z.string().min(1, "Set writer is required"),
   focus: z.string().min(1, "Session focus is required"),
+  sessionContent: z.string().optional(),
   totalFrontCrawlSwim: z.coerce.number().min(0).default(0),
   totalFrontCrawlDrill: z.coerce.number().min(0).default(0),
   totalFrontCrawlKick: z.coerce.number().min(0).default(0),
@@ -70,6 +72,7 @@ export default function NewSession() {
       sessionDate: new Date().toISOString().split('T')[0],
       startTime: "19:00",
       endTime: "21:00",
+      sessionContent: "",
       totalFrontCrawlSwim: 0,
       totalFrontCrawlDrill: 0,
       totalFrontCrawlKick: 0,
@@ -96,6 +99,41 @@ export default function NewSession() {
       totalNo1Pull: 0,
     },
   });
+
+  // Watch session content and automatically parse it to update totals
+  const sessionContent = form.watch("sessionContent");
+  
+  useEffect(() => {
+    if (sessionContent && sessionContent.trim()) {
+      const parseResult = parseSessionText(sessionContent);
+      
+      // Update all total fields with parsed values
+      form.setValue("totalFrontCrawlSwim", parseResult.totals.totalFrontCrawlSwim);
+      form.setValue("totalFrontCrawlDrill", parseResult.totals.totalFrontCrawlDrill);
+      form.setValue("totalFrontCrawlKick", parseResult.totals.totalFrontCrawlKick);
+      form.setValue("totalFrontCrawlPull", parseResult.totals.totalFrontCrawlPull);
+      form.setValue("totalBackstrokeSwim", parseResult.totals.totalBackstrokeSwim);
+      form.setValue("totalBackstrokeDrill", parseResult.totals.totalBackstrokeDrill);
+      form.setValue("totalBackstrokeKick", parseResult.totals.totalBackstrokeKick);
+      form.setValue("totalBackstrokePull", parseResult.totals.totalBackstrokePull);
+      form.setValue("totalBreaststrokeSwim", parseResult.totals.totalBreaststrokeSwim);
+      form.setValue("totalBreaststrokeDrill", parseResult.totals.totalBreaststrokeDrill);
+      form.setValue("totalBreaststrokeKick", parseResult.totals.totalBreaststrokeKick);
+      form.setValue("totalBreaststrokePull", parseResult.totals.totalBreaststrokePull);
+      form.setValue("totalButterflySwim", parseResult.totals.totalButterflySwim);
+      form.setValue("totalButterflyDrill", parseResult.totals.totalButterflyDrill);
+      form.setValue("totalButterflyKick", parseResult.totals.totalButterflyKick);
+      form.setValue("totalButterflyPull", parseResult.totals.totalButterflyPull);
+      form.setValue("totalIMSwim", parseResult.totals.totalIMSwim);
+      form.setValue("totalIMDrill", parseResult.totals.totalIMDrill);
+      form.setValue("totalIMKick", parseResult.totals.totalIMKick);
+      form.setValue("totalIMPull", parseResult.totals.totalIMPull);
+      form.setValue("totalNo1Swim", parseResult.totals.totalNo1Swim);
+      form.setValue("totalNo1Drill", parseResult.totals.totalNo1Drill);
+      form.setValue("totalNo1Kick", parseResult.totals.totalNo1Kick);
+      form.setValue("totalNo1Pull", parseResult.totals.totalNo1Pull);
+    }
+  }, [sessionContent, form]);
 
   const createSessionMutation = useMutation({
     mutationFn: async (data: SessionFormValues) => {
@@ -154,62 +192,10 @@ export default function NewSession() {
     (values.totalIMSwim || 0) + (values.totalIMDrill || 0) + (values.totalIMKick || 0) + (values.totalIMPull || 0) +
     (values.totalNo1Swim || 0) + (values.totalNo1Drill || 0) + (values.totalNo1Kick || 0) + (values.totalNo1Pull || 0);
 
-  const DistanceInputs = ({ stroke, prefix }: { stroke: string; prefix: string }) => (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-      <FormField
-        control={form.control}
-        name={`${prefix}Swim` as any}
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel className="text-xs">Swim (m)</FormLabel>
-            <FormControl>
-              <Input type="number" {...field} data-testid={`input-${prefix}-swim`} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-      <FormField
-        control={form.control}
-        name={`${prefix}Drill` as any}
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel className="text-xs">Drill (m)</FormLabel>
-            <FormControl>
-              <Input type="number" {...field} data-testid={`input-${prefix}-drill`} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-      <FormField
-        control={form.control}
-        name={`${prefix}Kick` as any}
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel className="text-xs">Kick (m)</FormLabel>
-            <FormControl>
-              <Input type="number" {...field} data-testid={`input-${prefix}-kick`} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-      <FormField
-        control={form.control}
-        name={`${prefix}Pull` as any}
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel className="text-xs">Pull (m)</FormLabel>
-            <FormControl>
-              <Input type="number" {...field} data-testid={`input-${prefix}-pull`} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-    </div>
-  );
+  // Parse session content for feedback
+  const parseResult = sessionContent && sessionContent.trim() 
+    ? parseSessionText(sessionContent) 
+    : null;
 
   return (
     <div className="min-h-screen bg-background">
@@ -470,64 +456,158 @@ export default function NewSession() {
             )}
 
             {step === 2 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Distance Breakdown</CardTitle>
-                  <CardDescription>
-                    Enter the total distance (in meters) for each stroke and activity type
-                  </CardDescription>
-                  <div className="mt-4 p-4 bg-primary/10 rounded-lg">
-                    <p className="text-sm font-medium">
-                      Total Distance: <span className="text-lg text-primary">{totalDistance}m</span>
-                    </p>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <Accordion type="multiple" className="w-full" defaultValue={["front-crawl"]}>
-                    <AccordionItem value="front-crawl">
-                      <AccordionTrigger className="text-base font-medium">Front Crawl</AccordionTrigger>
-                      <AccordionContent className="pt-4">
-                        <DistanceInputs stroke="Front Crawl" prefix="totalFrontCrawl" />
-                      </AccordionContent>
-                    </AccordionItem>
+              <div className="grid lg:grid-cols-3 gap-6">
+                {/* Session Text Entry */}
+                <Card className="lg:col-span-2">
+                  <CardHeader>
+                    <CardTitle>Session Content</CardTitle>
+                    <CardDescription>
+                      Write or paste your full session - distances will be calculated automatically
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <FormField
+                      control={form.control}
+                      name="sessionContent"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Textarea
+                              {...field}
+                              placeholder="Example:&#10;Warm up&#10;4 x 100m FC swim @ 1:30&#10;200m BK kick&#10;&#10;Main set&#10;8 x 50m Fly @ 0:50"
+                              className="min-h-[500px] font-mono text-sm"
+                              data-testid="textarea-session-content"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    {/* Parsing Feedback */}
+                    {parseResult && (
+                      <div className="mt-4 p-3 bg-muted rounded-lg space-y-2">
+                        <div className="flex items-center gap-2 text-sm">
+                          <CheckCircle2 className="w-4 h-4 text-green-600" />
+                          <span className="text-muted-foreground">{parseResult.successCount} lines parsed successfully</span>
+                        </div>
+                        {parseResult.warningCount > 0 && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <AlertCircle className="w-4 h-4 text-yellow-600" />
+                            <span className="text-muted-foreground">{parseResult.warningCount} warnings (defaults applied)</span>
+                          </div>
+                        )}
+                        {parseResult.errorCount > 0 && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <AlertCircle className="w-4 h-4 text-destructive" />
+                            <span className="text-muted-foreground">{parseResult.errorCount} errors (lines skipped)</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
 
-                    <AccordionItem value="backstroke">
-                      <AccordionTrigger className="text-base font-medium">Backstroke</AccordionTrigger>
-                      <AccordionContent className="pt-4">
-                        <DistanceInputs stroke="Backstroke" prefix="totalBackstroke" />
-                      </AccordionContent>
-                    </AccordionItem>
+                {/* Calculated Totals */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Calculated Totals</CardTitle>
+                    <CardDescription>Auto-calculated from session text</CardDescription>
+                    <div className="mt-4 p-4 bg-primary/10 rounded-lg">
+                      <p className="text-sm font-medium">
+                        Total Distance: <span className="text-2xl text-primary font-bold">{totalDistance}m</span>
+                      </p>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4 text-sm">
+                      {/* Front Crawl */}
+                      {(values.totalFrontCrawlSwim || values.totalFrontCrawlDrill || values.totalFrontCrawlKick || values.totalFrontCrawlPull) > 0 && (
+                        <div>
+                          <p className="font-semibold text-foreground mb-1">Front Crawl</p>
+                          <div className="space-y-0.5 text-muted-foreground">
+                            {values.totalFrontCrawlSwim > 0 && <p className="flex justify-between"><span>Swim:</span><span>{values.totalFrontCrawlSwim}m</span></p>}
+                            {values.totalFrontCrawlDrill > 0 && <p className="flex justify-between"><span>Drill:</span><span>{values.totalFrontCrawlDrill}m</span></p>}
+                            {values.totalFrontCrawlKick > 0 && <p className="flex justify-between"><span>Kick:</span><span>{values.totalFrontCrawlKick}m</span></p>}
+                            {values.totalFrontCrawlPull > 0 && <p className="flex justify-between"><span>Pull:</span><span>{values.totalFrontCrawlPull}m</span></p>}
+                          </div>
+                        </div>
+                      )}
 
-                    <AccordionItem value="breaststroke">
-                      <AccordionTrigger className="text-base font-medium">Breaststroke</AccordionTrigger>
-                      <AccordionContent className="pt-4">
-                        <DistanceInputs stroke="Breaststroke" prefix="totalBreaststroke" />
-                      </AccordionContent>
-                    </AccordionItem>
+                      {/* Backstroke */}
+                      {(values.totalBackstrokeSwim || values.totalBackstrokeDrill || values.totalBackstrokeKick || values.totalBackstrokePull) > 0 && (
+                        <div>
+                          <p className="font-semibold text-foreground mb-1">Backstroke</p>
+                          <div className="space-y-0.5 text-muted-foreground">
+                            {values.totalBackstrokeSwim > 0 && <p className="flex justify-between"><span>Swim:</span><span>{values.totalBackstrokeSwim}m</span></p>}
+                            {values.totalBackstrokeDrill > 0 && <p className="flex justify-between"><span>Drill:</span><span>{values.totalBackstrokeDrill}m</span></p>}
+                            {values.totalBackstrokeKick > 0 && <p className="flex justify-between"><span>Kick:</span><span>{values.totalBackstrokeKick}m</span></p>}
+                            {values.totalBackstrokePull > 0 && <p className="flex justify-between"><span>Pull:</span><span>{values.totalBackstrokePull}m</span></p>}
+                          </div>
+                        </div>
+                      )}
 
-                    <AccordionItem value="butterfly">
-                      <AccordionTrigger className="text-base font-medium">Butterfly</AccordionTrigger>
-                      <AccordionContent className="pt-4">
-                        <DistanceInputs stroke="Butterfly" prefix="totalButterfly" />
-                      </AccordionContent>
-                    </AccordionItem>
+                      {/* Breaststroke */}
+                      {(values.totalBreaststrokeSwim || values.totalBreaststrokeDrill || values.totalBreaststrokeKick || values.totalBreaststrokePull) > 0 && (
+                        <div>
+                          <p className="font-semibold text-foreground mb-1">Breaststroke</p>
+                          <div className="space-y-0.5 text-muted-foreground">
+                            {values.totalBreaststrokeSwim > 0 && <p className="flex justify-between"><span>Swim:</span><span>{values.totalBreaststrokeSwim}m</span></p>}
+                            {values.totalBreaststrokeDrill > 0 && <p className="flex justify-between"><span>Drill:</span><span>{values.totalBreaststrokeDrill}m</span></p>}
+                            {values.totalBreaststrokeKick > 0 && <p className="flex justify-between"><span>Kick:</span><span>{values.totalBreaststrokeKick}m</span></p>}
+                            {values.totalBreaststrokePull > 0 && <p className="flex justify-between"><span>Pull:</span><span>{values.totalBreaststrokePull}m</span></p>}
+                          </div>
+                        </div>
+                      )}
 
-                    <AccordionItem value="im">
-                      <AccordionTrigger className="text-base font-medium">IM (Individual Medley)</AccordionTrigger>
-                      <AccordionContent className="pt-4">
-                        <DistanceInputs stroke="IM" prefix="totalIM" />
-                      </AccordionContent>
-                    </AccordionItem>
+                      {/* Butterfly */}
+                      {(values.totalButterflySwim || values.totalButterflyDrill || values.totalButterflyKick || values.totalButterflyPull) > 0 && (
+                        <div>
+                          <p className="font-semibold text-foreground mb-1">Butterfly</p>
+                          <div className="space-y-0.5 text-muted-foreground">
+                            {values.totalButterflySwim > 0 && <p className="flex justify-between"><span>Swim:</span><span>{values.totalButterflySwim}m</span></p>}
+                            {values.totalButterflyDrill > 0 && <p className="flex justify-between"><span>Drill:</span><span>{values.totalButterflyDrill}m</span></p>}
+                            {values.totalButterflyKick > 0 && <p className="flex justify-between"><span>Kick:</span><span>{values.totalButterflyKick}m</span></p>}
+                            {values.totalButterflyPull > 0 && <p className="flex justify-between"><span>Pull:</span><span>{values.totalButterflyPull}m</span></p>}
+                          </div>
+                        </div>
+                      )}
 
-                    <AccordionItem value="no1">
-                      <AccordionTrigger className="text-base font-medium">No1 (Best Stroke)</AccordionTrigger>
-                      <AccordionContent className="pt-4">
-                        <DistanceInputs stroke="No1" prefix="totalNo1" />
-                      </AccordionContent>
-                    </AccordionItem>
-                  </Accordion>
-                </CardContent>
-              </Card>
+                      {/* IM */}
+                      {(values.totalIMSwim || values.totalIMDrill || values.totalIMKick || values.totalIMPull) > 0 && (
+                        <div>
+                          <p className="font-semibold text-foreground mb-1">IM</p>
+                          <div className="space-y-0.5 text-muted-foreground">
+                            {values.totalIMSwim > 0 && <p className="flex justify-between"><span>Swim:</span><span>{values.totalIMSwim}m</span></p>}
+                            {values.totalIMDrill > 0 && <p className="flex justify-between"><span>Drill:</span><span>{values.totalIMDrill}m</span></p>}
+                            {values.totalIMKick > 0 && <p className="flex justify-between"><span>Kick:</span><span>{values.totalIMKick}m</span></p>}
+                            {values.totalIMPull > 0 && <p className="flex justify-between"><span>Pull:</span><span>{values.totalIMPull}m</span></p>}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* No1 (Best Stroke) */}
+                      {(values.totalNo1Swim || values.totalNo1Drill || values.totalNo1Kick || values.totalNo1Pull) > 0 && (
+                        <div>
+                          <p className="font-semibold text-foreground mb-1">Choice (No1)</p>
+                          <div className="space-y-0.5 text-muted-foreground">
+                            {values.totalNo1Swim > 0 && <p className="flex justify-between"><span>Swim:</span><span>{values.totalNo1Swim}m</span></p>}
+                            {values.totalNo1Drill > 0 && <p className="flex justify-between"><span>Drill:</span><span>{values.totalNo1Drill}m</span></p>}
+                            {values.totalNo1Kick > 0 && <p className="flex justify-between"><span>Kick:</span><span>{values.totalNo1Kick}m</span></p>}
+                            {values.totalNo1Pull > 0 && <p className="flex justify-between"><span>Pull:</span><span>{values.totalNo1Pull}m</span></p>}
+                          </div>
+                        </div>
+                      )}
+
+                      {totalDistance === 0 && (
+                        <p className="text-muted-foreground text-center py-8">
+                          Start typing your session to see calculated totals
+                        </p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             )}
 
             {/* Navigation Footer */}
@@ -547,7 +627,7 @@ export default function NewSession() {
                     onClick={() => setStep(2)}
                     data-testid="button-next"
                   >
-                    Next: Distance Breakdown
+                    Next: Session Content
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
                 </>
