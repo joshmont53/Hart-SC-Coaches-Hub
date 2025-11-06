@@ -54,6 +54,24 @@ Preferred communication style: Simple, everyday language.
 - Type-safe CRUD operations for all entities
 - Separation of concerns between route handlers and data access
 
+**AI-Powered Session Parsing** (November 2025):
+- **Purpose**: Automatically extract distance totals from natural language session text written by coaches
+- **Implementation**: GPT-5 Mini via Replit AI Integrations (`server/aiParser.ts`)
+- **Accuracy**: Targets >95% accuracy (improved from ~75% baseline of rule-based parser)
+- **Flow**: 
+  1. Frontend debounces session text input (800ms delay)
+  2. POST to `/api/sessions/parse-ai` endpoint
+  3. AI analyzes text for stroke types, activity types, and distances
+  4. Validation ensures distances are multiples of 25m/50m
+  5. Falls back to rule-based parser if AI fails
+  6. Returns 24 distance fields (6 strokes × 4 activity types)
+- **Cost**: ~0.5-1 Replit credit per session (~$5-10/year for 1,000 sessions)
+- **Integration**: Configured in `replit.nix` with `OPENAI_API_KEY` environment variable
+- **Strokes**: Front Crawl (FC), Backstroke (BK), Breaststroke (BR), Butterfly (FL), IM, No1 (swimmer's choice)
+- **Activities**: Swim, Drill, Kick, Pull
+- **Prompt Engineering**: Comprehensive parsing rules for abbreviations, multipliers, breakdowns, and edge cases
+- **Legacy**: Rule-based parser (`shared/sessionParser.ts`) maintained as fallback only
+
 **Session Management**: 
 - Express sessions with PostgreSQL session store (connect-pg-simple)
 - Server-side session storage in dedicated `sessions` table

@@ -138,7 +138,6 @@ Return ONLY valid JSON with exact field names above. No explanation, no commenta
     const response = await openai.chat.completions.create({
       model: 'gpt-5-mini',
       messages: [{ role: 'user', content: prompt }],
-      temperature: 0, // Deterministic output
       response_format: { type: 'json_object' },
     });
 

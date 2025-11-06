@@ -562,25 +562,13 @@ export default function EditSession() {
                       )}
                     />
                     
-                    {/* Parsing Feedback */}
-                    {parseResult && (
-                      <div className="mt-4 p-3 bg-muted rounded-lg space-y-2">
-                        <div className="flex items-center gap-2 text-sm">
-                          <CheckCircle2 className="w-4 h-4 text-green-600" />
-                          <span className="text-muted-foreground">{parseResult.successCount} lines parsed successfully</span>
+                    {/* AI Parsing Status */}
+                    {isParsing && (
+                      <div className="mt-4 p-3 bg-muted rounded-lg">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
+                          <span>Analyzing session...</span>
                         </div>
-                        {parseResult.warningCount > 0 && (
-                          <div className="flex items-center gap-2 text-sm">
-                            <AlertCircle className="w-4 h-4 text-yellow-600" />
-                            <span className="text-muted-foreground">{parseResult.warningCount} warnings (defaults applied)</span>
-                          </div>
-                        )}
-                        {parseResult.errorCount > 0 && (
-                          <div className="flex items-center gap-2 text-sm">
-                            <AlertCircle className="w-4 h-4 text-destructive" />
-                            <span className="text-muted-foreground">{parseResult.errorCount} errors (lines skipped)</span>
-                          </div>
-                        )}
                       </div>
                     )}
                   </CardContent>
