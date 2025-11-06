@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,7 +14,6 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { ArrowLeft, ArrowRight, Save, CheckCircle2, AlertCircle } from "lucide-react";
 import { useLocation } from "wouter";
 import type { Coach, Squad, Location, Swimmer } from "@shared/schema";
-import { parseSessionText } from "@shared/sessionParser";
 
 const sessionFormSchema = z.object({
   sessionDate: z.string().min(1, "Date is required"),
@@ -59,7 +58,9 @@ type SessionFormValues = z.infer<typeof sessionFormSchema>;
 export default function NewSession() {
   const [, navigate] = useLocation();
   const [step, setStep] = useState(1);
+  const [isParsing, setIsParsing] = useState(false);
   const { toast } = useToast();
+  const parseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const { data: coaches } = useQuery<Coach[]>({ queryKey: ["/api/coaches"] });
   const { data: squads } = useQuery<Squad[]>({ queryKey: ["/api/squads"] });
@@ -100,40 +101,79 @@ export default function NewSession() {
     },
   });
 
-  // Watch session content and automatically parse it to update totals
+  // Watch session content and automatically parse it to update totals using AI
   const sessionContent = form.watch("sessionContent");
   
   useEffect(() => {
     if (sessionContent && sessionContent.trim()) {
-      const parseResult = parseSessionText(sessionContent);
-      
-      // Update all total fields with parsed values
-      form.setValue("totalFrontCrawlSwim", parseResult.totals.totalFrontCrawlSwim);
-      form.setValue("totalFrontCrawlDrill", parseResult.totals.totalFrontCrawlDrill);
-      form.setValue("totalFrontCrawlKick", parseResult.totals.totalFrontCrawlKick);
-      form.setValue("totalFrontCrawlPull", parseResult.totals.totalFrontCrawlPull);
-      form.setValue("totalBackstrokeSwim", parseResult.totals.totalBackstrokeSwim);
-      form.setValue("totalBackstrokeDrill", parseResult.totals.totalBackstrokeDrill);
-      form.setValue("totalBackstrokeKick", parseResult.totals.totalBackstrokeKick);
-      form.setValue("totalBackstrokePull", parseResult.totals.totalBackstrokePull);
-      form.setValue("totalBreaststrokeSwim", parseResult.totals.totalBreaststrokeSwim);
-      form.setValue("totalBreaststrokeDrill", parseResult.totals.totalBreaststrokeDrill);
-      form.setValue("totalBreaststrokeKick", parseResult.totals.totalBreaststrokeKick);
-      form.setValue("totalBreaststrokePull", parseResult.totals.totalBreaststrokePull);
-      form.setValue("totalButterflySwim", parseResult.totals.totalButterflySwim);
-      form.setValue("totalButterflyDrill", parseResult.totals.totalButterflyDrill);
-      form.setValue("totalButterflyKick", parseResult.totals.totalButterflyKick);
-      form.setValue("totalButterflyPull", parseResult.totals.totalButterflyPull);
-      form.setValue("totalIMSwim", parseResult.totals.totalIMSwim);
-      form.setValue("totalIMDrill", parseResult.totals.totalIMDrill);
-      form.setValue("totalIMKick", parseResult.totals.totalIMKick);
-      form.setValue("totalIMPull", parseResult.totals.totalIMPull);
-      form.setValue("totalNo1Swim", parseResult.totals.totalNo1Swim);
-      form.setValue("totalNo1Drill", parseResult.totals.totalNo1Drill);
-      form.setValue("totalNo1Kick", parseResult.totals.totalNo1Kick);
-      form.setValue("totalNo1Pull", parseResult.totals.totalNo1Pull);
+      // Clear previous timeout
+      if (parseTimeoutRef.current) {
+        clearTimeout(parseTimeoutRef.current);
+      }
+
+      // Debounce: wait 800ms after user stops typing
+      parseTimeoutRef.current = setTimeout(async () => {
+        setIsParsing(true);
+        
+        try {
+          const response = await fetch('/api/sessions/parse-ai', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionContent }),
+            credentials: 'include',
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to parse session');
+          }
+
+          const distances = await response.json();
+
+          // Update all total fields with parsed values from AI
+          form.setValue("totalFrontCrawlSwim", distances.totalFrontCrawlSwim);
+          form.setValue("totalFrontCrawlDrill", distances.totalFrontCrawlDrill);
+          form.setValue("totalFrontCrawlKick", distances.totalFrontCrawlKick);
+          form.setValue("totalFrontCrawlPull", distances.totalFrontCrawlPull);
+          form.setValue("totalBackstrokeSwim", distances.totalBackstrokeSwim);
+          form.setValue("totalBackstrokeDrill", distances.totalBackstrokeDrill);
+          form.setValue("totalBackstrokeKick", distances.totalBackstrokeKick);
+          form.setValue("totalBackstrokePull", distances.totalBackstrokePull);
+          form.setValue("totalBreaststrokeSwim", distances.totalBreaststrokeSwim);
+          form.setValue("totalBreaststrokeDrill", distances.totalBreaststrokeDrill);
+          form.setValue("totalBreaststrokeKick", distances.totalBreaststrokeKick);
+          form.setValue("totalBreaststrokePull", distances.totalBreaststrokePull);
+          form.setValue("totalButterflySwim", distances.totalButterflySwim);
+          form.setValue("totalButterflyDrill", distances.totalButterflyDrill);
+          form.setValue("totalButterflyKick", distances.totalButterflyKick);
+          form.setValue("totalButterflyPull", distances.totalButterflyPull);
+          form.setValue("totalIMSwim", distances.totalIMSwim);
+          form.setValue("totalIMDrill", distances.totalIMDrill);
+          form.setValue("totalIMKick", distances.totalIMKick);
+          form.setValue("totalIMPull", distances.totalIMPull);
+          form.setValue("totalNo1Swim", distances.totalNo1Swim);
+          form.setValue("totalNo1Drill", distances.totalNo1Drill);
+          form.setValue("totalNo1Kick", distances.totalNo1Kick);
+          form.setValue("totalNo1Pull", distances.totalNo1Pull);
+
+          setIsParsing(false);
+        } catch (error) {
+          console.error('Failed to parse session:', error);
+          setIsParsing(false);
+          toast({
+            title: "Parsing Error",
+            description: "Could not calculate distances automatically. Please enter manually.",
+            variant: "destructive",
+          });
+        }
+      }, 800);
     }
-  }, [sessionContent, form]);
+
+    return () => {
+      if (parseTimeoutRef.current) {
+        clearTimeout(parseTimeoutRef.current);
+      }
+    };
+  }, [sessionContent, form, toast]);
 
   const createSessionMutation = useMutation({
     mutationFn: async (data: SessionFormValues) => {
@@ -191,11 +231,6 @@ export default function NewSession() {
     (values.totalButterflySwim || 0) + (values.totalButterflyDrill || 0) + (values.totalButterflyKick || 0) + (values.totalButterflyPull || 0) +
     (values.totalIMSwim || 0) + (values.totalIMDrill || 0) + (values.totalIMKick || 0) + (values.totalIMPull || 0) +
     (values.totalNo1Swim || 0) + (values.totalNo1Drill || 0) + (values.totalNo1Kick || 0) + (values.totalNo1Pull || 0);
-
-  // Parse session content for feedback
-  const parseResult = sessionContent && sessionContent.trim() 
-    ? parseSessionText(sessionContent) 
-    : null;
 
   return (
     <div className="min-h-screen bg-background">
