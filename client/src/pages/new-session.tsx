@@ -106,6 +106,7 @@ export default function NewSession() {
   
   useEffect(() => {
     if (sessionContent && sessionContent.trim()) {
+      console.log('[AI Parse] Session content changed, length:', sessionContent.length);
       // Clear previous timeout
       if (parseTimeoutRef.current) {
         clearTimeout(parseTimeoutRef.current);
@@ -113,6 +114,7 @@ export default function NewSession() {
 
       // Debounce: wait 800ms after user stops typing
       parseTimeoutRef.current = setTimeout(async () => {
+        console.log('[AI Parse] Starting AI parsing...');
         setIsParsing(true);
         
         try {
@@ -123,11 +125,16 @@ export default function NewSession() {
             credentials: 'include',
           });
 
+          console.log('[AI Parse] Response status:', response.status);
+
           if (!response.ok) {
+            const errorText = await response.text();
+            console.error('[AI Parse] Error response:', errorText);
             throw new Error('Failed to parse session');
           }
 
           const distances = await response.json();
+          console.log('[AI Parse] Received distances:', distances);
 
           // Update all total fields with parsed values from AI
           form.setValue("totalFrontCrawlSwim", distances.totalFrontCrawlSwim);
@@ -155,9 +162,10 @@ export default function NewSession() {
           form.setValue("totalNo1Kick", distances.totalNo1Kick);
           form.setValue("totalNo1Pull", distances.totalNo1Pull);
 
+          console.log('[AI Parse] Form values updated successfully');
           setIsParsing(false);
         } catch (error) {
-          console.error('Failed to parse session:', error);
+          console.error('[AI Parse] Failed to parse session:', error);
           setIsParsing(false);
           toast({
             title: "Parsing Error",
@@ -166,6 +174,8 @@ export default function NewSession() {
           });
         }
       }, 800);
+    } else {
+      console.log('[AI Parse] Session content empty or whitespace only');
     }
 
     return () => {
@@ -220,6 +230,17 @@ export default function NewSession() {
   });
 
   const onSubmit = (data: SessionFormValues) => {
+    console.log('[Form Submit] onSubmit called with data:', data);
+    console.log('[Form Submit] Session content length:', data.sessionContent?.length || 0);
+    console.log('[Form Submit] Total distance calculated:', 
+      data.totalFrontCrawlSwim + data.totalFrontCrawlDrill + data.totalFrontCrawlKick + data.totalFrontCrawlPull +
+      data.totalBackstrokeSwim + data.totalBackstrokeDrill + data.totalBackstrokeKick + data.totalBackstrokePull +
+      data.totalBreaststrokeSwim + data.totalBreaststrokeDrill + data.totalBreaststrokeKick + data.totalBreaststrokePull +
+      data.totalButterflySwim + data.totalButterflyDrill + data.totalButterflyKick + data.totalButterflyPull +
+      data.totalIMSwim + data.totalIMDrill + data.totalIMKick + data.totalIMPull +
+      data.totalNo1Swim + data.totalNo1Drill + data.totalNo1Kick + data.totalNo1Pull
+    );
+    console.log('[Form Submit] Form errors:', form.formState.errors);
     createSessionMutation.mutate(data);
   };
 
@@ -669,6 +690,15 @@ export default function NewSession() {
                     type="submit"
                     disabled={createSessionMutation.isPending}
                     data-testid="button-create-session"
+                    onClick={() => {
+                      console.log('[Button Click] Create Session clicked');
+                      console.log('[Button Click] Form state:', {
+                        isValid: form.formState.isValid,
+                        isSubmitting: form.formState.isSubmitting,
+                        errors: form.formState.errors,
+                        values: form.getValues()
+                      });
+                    }}
                   >
                     {createSessionMutation.isPending ? (
                       "Creating..."
