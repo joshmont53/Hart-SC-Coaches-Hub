@@ -84,8 +84,8 @@ const ACTIVITY_PATTERNS: Record<string, Activity> = {
 };
 
 // Keywords that indicate drill work
+// Note: "streamline" is NOT included here as it's often a modifier (e.g., "Streamline Kick")
 const DRILL_KEYWORDS = [
-  'streamline',
   'catch switch',
   'doggy paddle',
   '12/1/12',
@@ -115,39 +115,39 @@ function detectStroke(text: string): Stroke | null {
   const onBackPattern = /(\w+)\s+(?:kick|swim|drill|pull)\s+on\s+back/i;
   const onBackMatch = normalized.match(onBackPattern);
   if (onBackMatch) {
-    const strokePart = onBackMatch[1];
-    // Check if the stroke part matches a pattern
-    for (const [pattern, stroke] of Object.entries(STROKE_PATTERNS)) {
-      if (strokePart.includes(pattern)) {
-        return stroke;
-      }
-    }
+    const strokePart = onBackMatch[1].toLowerCase();
+    // Check if the stroke part matches a specific stroke
+    if (strokePart.includes('fly')) return 'Butterfly';
+    if (strokePart.includes('br')) return 'Breaststroke';
+    if (strokePart.includes('fc') || strokePart.includes('free')) return 'FrontCrawl';
+    if (strokePart.includes('bk') || strokePart.includes('back')) return 'Backstroke';
   }
   
   // Check patterns in priority order (specific before generic)
   // Priority order: Fly before Back, BR before Back, etc.
-  const priorityOrder: Array<[string, Stroke]> = [
-    ['fly', 'Butterfly'],
-    ['butterfly', 'Butterfly'],
-    ['br', 'Breaststroke'],
-    ['brst', 'Breaststroke'],
-    ['breast', 'Breaststroke'],
-    ['breaststroke', 'Breaststroke'],
-    ['im', 'IM'],
-    ['fc', 'FrontCrawl'],
-    ['free', 'FrontCrawl'],
-    ['freestyle', 'FrontCrawl'],
-    ['frontcrawl', 'FrontCrawl'],
-    ['bk', 'Backstroke'],
-    ['bc', 'Backstroke'],
-    ['back', 'Backstroke'],
-    ['backstroke', 'Backstroke'],
-    ['no1', 'No1'],
-    ['choice', 'No1'],
+  // Use word boundaries to avoid false matches (e.g., "swim" containing "im")
+  const priorityPatterns: Array<[RegExp, Stroke]> = [
+    [/\bfly\b/, 'Butterfly'],
+    [/\bbutterfly\b/, 'Butterfly'],
+    [/\bbr\b/, 'Breaststroke'],
+    [/\bbrst\b/, 'Breaststroke'],
+    [/\bbreast/, 'Breaststroke'],
+    [/\bbreaststroke\b/, 'Breaststroke'],
+    [/\bim\b/, 'IM'],  // Word boundary prevents matching "swim"
+    [/\bfc\b/, 'FrontCrawl'],
+    [/\bfree/, 'FrontCrawl'],
+    [/\bfreestyle\b/, 'FrontCrawl'],
+    [/\bfrontcrawl\b/, 'FrontCrawl'],
+    [/\bbk\b/, 'Backstroke'],
+    [/\bbc\b/, 'Backstroke'],
+    [/\bback/, 'Backstroke'],
+    [/\bbackstroke\b/, 'Backstroke'],
+    [/\bno1\b/, 'No1'],
+    [/\bchoice\b/, 'No1'],
   ];
   
-  for (const [pattern, stroke] of priorityOrder) {
-    if (normalized.includes(pattern)) {
+  for (const [pattern, stroke] of priorityPatterns) {
+    if (pattern.test(normalized)) {
       return stroke;
     }
   }
@@ -158,14 +158,20 @@ function detectStroke(text: string): Stroke | null {
 function detectActivity(text: string): Activity | null {
   const normalized = normalizeText(text);
   
-  // Check for drill keywords first
+  // FIRST: Check for drill-indicating patterns that would be misclassified
+  // These are combinations like "BR Arms + Fly kick" or "2 kick + 1 pull"
+  if (normalized.includes('arms +') || normalized.includes('+ arms')) return 'Drill';
+  if (normalized.includes('kick +') || normalized.includes('+ kick')) return 'Drill';
+  if (normalized.includes('pull +') || normalized.includes('+ pull')) return 'Drill';
+  
+  // SECOND: Check drill keywords
   for (const keyword of DRILL_KEYWORDS) {
     if (normalized.includes(keyword)) {
       return 'Drill';
     }
   }
   
-  // Check explicit activity patterns
+  // THIRD: Check explicit activity patterns (kick, pull, drill, swim)
   for (const [pattern, activity] of Object.entries(ACTIVITY_PATTERNS)) {
     if (normalized.includes(pattern)) {
       return activity;
@@ -205,7 +211,10 @@ function parseBreakdown(text: string, totalDistance: number): Array<{ stroke: St
   
   if (asMatch) {
     const breakdownText = asMatch[1];
-    const parts = breakdownText.split('/').map(p => p.trim());
+    // Match parts that start with a distance (e.g., "25m Kick", "25m 12/1/12")
+    // This handles drill names with slashes better than splitting
+    const partMatches = breakdownText.match(/\d+\s*m?\s[^/]+(?:\/\d+)*(?=\s*\/|$)/g);
+    const parts = partMatches ? partMatches.map(p => p.trim()) : [];
     
     if (parts.length > 0) {
       // Extract the number of reps from the main line (e.g., "4 x 100m")
@@ -213,24 +222,32 @@ function parseBreakdown(text: string, totalDistance: number): Array<{ stroke: St
       const repsMatch = normalized.match(repsPattern);
       const reps = repsMatch ? parseInt(repsMatch[1]) : 1;
       
+      // Determine stroke from the MAIN part (before "as"), not the breakdown text
+      // This prevents "BR ... as ... Fly kick" from being detected as Butterfly
+      const mainPart = normalized.split('as')[0].trim();
+      const stroke = detectStroke(mainPart) || 'FrontCrawl';
+      
       // Group activities by type to accumulate distances
       const activityTotals: Map<Activity, number> = new Map();
       
+      // Detect the primary activity from the main line to use as fallback
+      const mainActivity = detectActivity(mainPart);
+      
       // Process each part - these are SUB-DIVISIONS of each repeat
       for (const part of parts) {
-        const distMatch = part.match(/(\d+)\s*m?/);
+        // Match distance at the START of the part (e.g., "25m kick" or "25 kick")
+        // This prevents matching numbers inside drill names like "12/1/12"
+        const distMatch = part.match(/^(\d+)\s*m?\s/);
         if (distMatch) {
           const distPerRep = parseInt(distMatch[1]); // Distance in EACH repeat
-          const activity = detectActivity(part) || 'Swim';
+          // Use detected activity, or fallback to main activity, or default to Swim
+          const activity = detectActivity(part) || mainActivity || 'Swim';
           
           // Accumulate distance for this activity (across all reps)
           const currentTotal = activityTotals.get(activity) || 0;
           activityTotals.set(activity, currentTotal + (distPerRep * reps));
         }
       }
-      
-      // Determine stroke
-      const stroke = detectStroke(text) || 'FrontCrawl';
       
       // Add contributions
       for (const [activity, distance] of activityTotals.entries()) {
