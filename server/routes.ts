@@ -11,6 +11,8 @@ import {
   insertSwimmingSessionSchema,
   insertAttendanceSchema,
 } from "@shared/schema";
+import { calculateSessionDistancesAI, validateDistances } from "./aiParser";
+import { parseSessionText } from "@shared/sessionParser";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -328,6 +330,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: error.message });
       }
       res.status(500).json({ message: "Failed to delete session" });
+    }
+  });
+
+  // AI Session Parsing endpoint
+  app.post("/api/sessions/parse-ai", isAuthenticated, async (req, res) => {
+    try {
+      const { sessionContent } = req.body;
+
+      if (!sessionContent || typeof sessionContent !== 'string') {
+        return res.status(400).json({ error: 'Invalid session content' });
+      }
+
+      // Try AI parsing first
+      try {
+        console.log('[AI Parser] Parsing session via GPT-5 Mini...');
+        const startTime = Date.now();
+        
+        const distances = await calculateSessionDistancesAI(sessionContent);
+        const validation = validateDistances(distances);
+        
+        const elapsed = Date.now() - startTime;
+        console.log(`[AI Parser] Completed in ${elapsed}ms`);
+
+        if (!validation.valid) {
+          console.warn('[AI Parser] Validation failed:', validation.errors);
+          console.log('[AI Parser] Falling back to rule-based parser');
+          
+          // Fallback to rule-based
+          const fallback = parseSessionText(sessionContent);
+          return res.json({
+            ...fallback.totals,
+            method: 'rule-based-fallback',
+            aiErrors: validation.errors,
+            aiWarnings: validation.warnings,
+          });
+        }
+
+        if (validation.warnings.length > 0) {
+          console.warn('[AI Parser] Warnings:', validation.warnings);
+        }
+
+        return res.json({
+          ...distances,
+          method: 'ai',
+          warnings: validation.warnings,
+        });
+
+      } catch (aiError) {
+        console.error('[AI Parser] Error:', aiError);
+        console.log('[AI Parser] Falling back to rule-based parser');
+        
+        // Fallback to rule-based
+        const fallback = parseSessionText(sessionContent);
+        return res.json({
+          ...fallback.totals,
+          method: 'rule-based-fallback',
+          error: aiError instanceof Error ? aiError.message : 'AI parsing unavailable',
+        });
+      }
+
+    } catch (error) {
+      console.error('[API Error] Parse endpoint failed:', error);
+      res.status(500).json({ error: 'Failed to parse session' });
     }
   });
 
