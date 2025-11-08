@@ -117,19 +117,19 @@ export function ManageSwimmers({ swimmers, squads, onBack }: ManageSwimmersProps
                   className="p-4"
                   data-testid={`swimmer-card-${swimmer.id}`}
                 >
-                  <div className="grid grid-cols-[1fr_auto] gap-4 items-start">
-                    <div>
+                  <div className="flex items-start gap-4">
+                    <div className="flex-1 min-w-0">
                       <h3 className="font-medium mb-2">{swimmer.name}</h3>
                       <div className="flex items-center gap-3">
-                        <Badge variant="secondary">
+                        <Badge variant="secondary" className="flex-shrink-0">
                           {squads.find((s) => s.id === swimmer.squadId)?.name || 'No Squad'}
                         </Badge>
-                        <p className="text-sm text-muted-foreground flex-1">
+                        <p className="text-sm text-muted-foreground whitespace-nowrap">
                           ASA: {swimmer.asaNumber}
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-shrink-0">
                       <Button
                         variant="ghost"
                         size="sm"

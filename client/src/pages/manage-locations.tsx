@@ -112,14 +112,14 @@ export function ManageLocations({ locations, onBack }: ManageLocationsProps) {
                   className="p-4"
                   data-testid={`location-card-${location.id}`}
                 >
-                  <div className="grid grid-cols-[1fr_auto] gap-4 items-start">
-                    <div>
+                  <div className="flex items-start gap-4">
+                    <div className="flex-1 min-w-0">
                       <h3 className="font-medium mb-2">{location.name}</h3>
-                      <Badge variant="secondary" className="text-xs">
+                      <Badge variant="secondary" className="text-xs flex-shrink-0">
                         {location.poolType}
                       </Badge>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-shrink-0">
                       <Button
                         variant="ghost"
                         size="sm"
