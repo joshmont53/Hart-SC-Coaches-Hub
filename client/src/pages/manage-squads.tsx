@@ -73,15 +73,9 @@ export function ManageSquads({ squads, coaches, onBack }: ManageSquadsProps) {
 
   return (
     <div className="flex flex-col h-screen bg-background" data-testid="view-manage-squads">
-      <header className="border-b px-4 py-3 flex items-center gap-3">
-        <Button variant="ghost" size="icon" data-testid="button-menu">
-          <Menu className="h-5 w-5" />
-        </Button>
-      </header>
-
-      <div className="flex-1 overflow-auto">
-        <div className="max-w-2xl mx-auto px-4 py-6">
-          <div className="flex items-start justify-between mb-6">
+      <div className="sticky top-0 z-10 bg-background border-b">
+        <div className="max-w-2xl mx-auto px-4 py-4">
+          <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
               <Button
                 variant="ghost"
@@ -101,7 +95,11 @@ export function ManageSquads({ squads, coaches, onBack }: ManageSquadsProps) {
               Add Squad
             </Button>
           </div>
+        </div>
+      </div>
 
+      <div className="flex-1 overflow-auto">
+        <div className="max-w-2xl mx-auto px-4 py-6">
           <div className="space-y-3">
             {squads.length === 0 ? (
               <Card className="p-8 text-center">
@@ -115,8 +113,8 @@ export function ManageSquads({ squads, coaches, onBack }: ManageSquadsProps) {
                   data-testid={`squad-card-${squad.id}`}
                 >
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-lg mb-1">{squad.name}</h3>
-                    <p className="text-sm text-muted-foreground">
+                    <h3 className="font-medium text-lg mb-1 whitespace-nowrap overflow-hidden text-ellipsis">{squad.name}</h3>
+                    <p className="text-sm text-muted-foreground whitespace-nowrap overflow-hidden text-ellipsis">
                       Primary Coach: {coaches.find((c) => c.id === squad.primaryCoachId)?.name || '-'}
                     </p>
                   </div>

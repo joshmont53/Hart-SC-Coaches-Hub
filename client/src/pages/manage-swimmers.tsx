@@ -78,15 +78,9 @@ export function ManageSwimmers({ swimmers, squads, onBack }: ManageSwimmersProps
 
   return (
     <div className="flex flex-col h-screen bg-background" data-testid="view-manage-swimmers">
-      <header className="border-b px-4 py-3 flex items-center gap-3">
-        <Button variant="ghost" size="icon" data-testid="button-menu">
-          <Menu className="h-5 w-5" />
-        </Button>
-      </header>
-
-      <div className="flex-1 overflow-auto">
-        <div className="max-w-2xl mx-auto px-4 py-6">
-          <div className="flex items-start justify-between mb-6">
+      <div className="sticky top-0 z-10 bg-background border-b">
+        <div className="max-w-2xl mx-auto px-4 py-4">
+          <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
               <Button
                 variant="ghost"
@@ -106,7 +100,11 @@ export function ManageSwimmers({ swimmers, squads, onBack }: ManageSwimmersProps
               Add Swimmer
             </Button>
           </div>
+        </div>
+      </div>
 
+      <div className="flex-1 overflow-auto">
+        <div className="max-w-2xl mx-auto px-4 py-6">
           <div className="space-y-3">
             {swimmers.length === 0 ? (
               <Card className="p-8 text-center">
@@ -120,14 +118,14 @@ export function ManageSwimmers({ swimmers, squads, onBack }: ManageSwimmersProps
                   data-testid={`swimmer-card-${swimmer.id}`}
                 >
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-lg mb-2">{swimmer.name}</h3>
+                    <h3 className="font-medium text-lg mb-2 whitespace-nowrap overflow-hidden text-ellipsis">{swimmer.name}</h3>
                     <Badge variant="secondary" className="mb-2">
                       {squads.find((s) => s.id === swimmer.squadId)?.name || 'No Squad'}
                     </Badge>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-muted-foreground whitespace-nowrap">
                       ASA: {swimmer.asaNumber}
                     </p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-muted-foreground whitespace-nowrap">
                       DOB: {swimmer.dateOfBirth.toLocaleDateString('en-CA')}
                     </p>
                   </div>

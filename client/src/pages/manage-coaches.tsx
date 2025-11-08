@@ -82,15 +82,9 @@ export function ManageCoaches({ coaches, onBack }: ManageCoachesProps) {
 
   return (
     <div className="flex flex-col h-screen bg-background" data-testid="view-manage-coaches">
-      <header className="border-b px-4 py-3 flex items-center gap-3">
-        <Button variant="ghost" size="icon" data-testid="button-menu">
-          <Menu className="h-5 w-5" />
-        </Button>
-      </header>
-
-      <div className="flex-1 overflow-auto">
-        <div className="max-w-2xl mx-auto px-4 py-6">
-          <div className="flex items-start justify-between mb-6">
+      <div className="sticky top-0 z-10 bg-background border-b">
+        <div className="max-w-2xl mx-auto px-4 py-4">
+          <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
               <Button
                 variant="ghost"
@@ -110,7 +104,11 @@ export function ManageCoaches({ coaches, onBack }: ManageCoachesProps) {
               Add Coach
             </Button>
           </div>
+        </div>
+      </div>
 
+      <div className="flex-1 overflow-auto">
+        <div className="max-w-2xl mx-auto px-4 py-6">
           <div className="space-y-3">
             {coaches.length === 0 ? (
               <Card className="p-8 text-center">
@@ -124,14 +122,14 @@ export function ManageCoaches({ coaches, onBack }: ManageCoachesProps) {
                   data-testid={`coach-card-${coach.id}`}
                 >
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-lg mb-2">{coach.name}</h3>
+                    <h3 className="font-medium text-lg mb-2 whitespace-nowrap overflow-hidden text-ellipsis">{coach.name}</h3>
                     <Badge 
                       variant={coach.level === 'Level 3' ? 'default' : 'secondary'}
                       className="mb-1"
                     >
                       {coach.level}
                     </Badge>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-muted-foreground whitespace-nowrap">
                       DOB: {coach.dateOfBirth.toLocaleDateString('en-CA')}
                     </p>
                   </div>
