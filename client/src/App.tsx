@@ -1,10 +1,11 @@
 import { useState, useMemo } from 'react';
 import { QueryClientProvider } from "@tanstack/react-query";
-import { queryClient } from "./lib/queryClient";
+import { queryClient, apiRequest } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 import Landing from "@/pages/landing";
 import { MonthCalendarView } from '@/pages/month-calendar-view';
 import { DayCalendarView } from '@/pages/day-calendar-view';
@@ -37,7 +38,8 @@ import {
   adaptSquad, 
   adaptLocation, 
   adaptCoach, 
-  adaptSwimmer 
+  adaptSwimmer,
+  adaptSessionToBackend
 } from './lib/typeAdapters';
 import type {
   SwimmingSession as BackendSession,
@@ -53,6 +55,7 @@ type ManagementView = 'calendar' | 'coaches' | 'squads' | 'swimmers' | 'location
 
 function CalendarApp() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
@@ -165,6 +168,32 @@ function CalendarApp() {
 
   const handleCancelAddSession = () => {
     setManagementView('calendar');
+  };
+
+  const createSessionMutation = useMutation({
+    mutationFn: async (session: Omit<Session, 'id'>) => {
+      const backendSession = adaptSessionToBackend(session);
+      return await apiRequest('POST', '/api/sessions', backendSession);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/sessions'] });
+      toast({
+        title: 'Session created',
+        description: 'The session has been successfully created.',
+      });
+      setManagementView('calendar');
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to create session.',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const handleSaveSession = (session: Omit<Session, 'id'>) => {
+    createSessionMutation.mutate(session);
   };
 
   const SidebarContent = () => (
@@ -343,6 +372,7 @@ function CalendarApp() {
               squads={squads}
               locations={locations}
               coaches={coaches}
+              onSave={handleSaveSession}
               onCancel={handleCancelAddSession}
             />
           ) : managementView === 'coaches' ? (
