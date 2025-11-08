@@ -1,42 +1,415 @@
-import { Switch, Route } from "wouter";
-import { queryClient } from "./lib/queryClient";
+import { useState, useMemo } from 'react';
 import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
-import NotFound from "@/pages/not-found";
+import { useQuery } from "@tanstack/react-query";
 import Landing from "@/pages/landing";
-import Dashboard from "@/pages/dashboard";
-import NewSession from "@/pages/new-session";
-import EditSession from "@/pages/edit-session";
-import SessionDetail from "@/pages/session-detail";
-import Coaches from "@/pages/coaches";
-import Swimmers from "@/pages/swimmers";
-import Squads from "@/pages/squads";
-import Locations from "@/pages/locations";
+import { MonthCalendarView } from '@/pages/month-calendar-view';
+import { DayCalendarView } from '@/pages/day-calendar-view';
+import { DayListView } from '@/pages/day-list-view';
+import { SessionDetail } from '@/pages/session-detail-view';
+import { AddSession } from '@/pages/add-session';
+import { ManageCoaches } from '@/pages/manage-coaches';
+import { ManageSquads } from '@/pages/manage-squads';
+import { ManageSwimmers } from '@/pages/manage-swimmers';
+import { ManageLocations } from '@/pages/manage-locations';
+import { Button } from './components/ui/button';
+import { Switch } from './components/ui/switch';
+import { Label } from './components/ui/label';
+import { Tabs, TabsList, TabsTrigger } from './components/ui/tabs';
+import {
+  Users,
+  MapPin,
+  UserCog,
+  Plus,
+  LogOut,
+  Menu,
+  CalendarDays,
+  List,
+} from 'lucide-react';
+import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from './components/ui/sheet';
+import { cn } from './lib/utils';
+import type { Session, Squad, Location, Coach, Swimmer } from './lib/typeAdapters';
+import { 
+  adaptSession, 
+  adaptSquad, 
+  adaptLocation, 
+  adaptCoach, 
+  adaptSwimmer 
+} from './lib/typeAdapters';
+import type {
+  SwimmingSession as BackendSession,
+  Squad as BackendSquad,
+  Location as BackendLocation,
+  Coach as BackendCoach,
+  Swimmer as BackendSwimmer,
+} from '@shared/schema';
+
+type View = 'month' | 'day';
+type MobileView = 'calendar' | 'list';
+type ManagementView = 'calendar' | 'coaches' | 'squads' | 'swimmers' | 'locations' | 'addSession';
+
+function CalendarApp() {
+  const { user } = useAuth();
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedSession, setSelectedSession] = useState<Session | null>(null);
+  const [view, setView] = useState<View>('month');
+  const [mobileView, setMobileView] = useState<MobileView>('calendar');
+  const [managementView, setManagementView] = useState<ManagementView>('calendar');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showMySessionsOnly, setShowMySessionsOnly] = useState(false);
+
+  // Fetch all data from backend APIs
+  const { data: backendSessions = [] } = useQuery<BackendSession[]>({ 
+    queryKey: ['/api/sessions'],
+  });
+  
+  const { data: backendSquads = [] } = useQuery<BackendSquad[]>({ 
+    queryKey: ['/api/squads'],
+  });
+  
+  const { data: backendLocations = [] } = useQuery<BackendLocation[]>({ 
+    queryKey: ['/api/locations'],
+  });
+  
+  const { data: backendCoaches = [] } = useQuery<BackendCoach[]>({ 
+    queryKey: ['/api/coaches'],
+  });
+  
+  const { data: backendSwimmers = [] } = useQuery<BackendSwimmer[]>({ 
+    queryKey: ['/api/swimmers'],
+  });
+
+  // Adapt backend data to frontend types
+  const sessions = useMemo(
+    () => backendSessions.map(s => adaptSession(s)),
+    [backendSessions]
+  );
+  
+  const squads = useMemo(
+    () => backendSquads.map(s => adaptSquad(s)),
+    [backendSquads]
+  );
+  
+  const locations = useMemo(
+    () => backendLocations.map(l => adaptLocation(l)),
+    [backendLocations]
+  );
+  
+  const coaches = useMemo(
+    () => backendCoaches.map(c => adaptCoach(c)),
+    [backendCoaches]
+  );
+  
+  const swimmers = useMemo(
+    () => backendSwimmers.map(s => adaptSwimmer(s)),
+    [backendSwimmers]
+  );
+
+  // Find current coach based on authenticated user
+  const currentCoachId = coaches.find(c => 
+    `${c.firstName} ${c.lastName}` === `${user?.firstName} ${user?.lastName}`
+  )?.id;
+  
+  const currentCoach = coaches.find(c => c.id === currentCoachId);
+  
+  // Filter sessions based on toggle
+  const filteredSessions = useMemo(() => {
+    if (showMySessionsOnly && currentCoachId) {
+      return sessions.filter(session => 
+        session.leadCoachId === currentCoachId || 
+        session.secondCoachId === currentCoachId ||
+        session.helperId === currentCoachId
+      );
+    }
+    return sessions;
+  }, [showMySessionsOnly, sessions, currentCoachId]);
+  
+  const handleLogout = () => {
+    window.location.href = '/api/auth/logout';
+  };
+
+  const handleDayClick = (date: Date) => {
+    setSelectedDate(date);
+    setView('day');
+  };
+
+  const handleBackToMonth = () => {
+    setView('month');
+    setSelectedDate(null);
+  };
+
+  const handleManagementClick = (viewType: ManagementView) => {
+    setManagementView(viewType);
+    setSidebarOpen(false);
+  };
+  
+  const handleBackToCalendar = () => {
+    setManagementView('calendar');
+  };
+
+  const handleSessionClick = (session: Session) => {
+    setSelectedSession(session);
+  };
+
+  const handleBackFromSession = () => {
+    setSelectedSession(null);
+  };
+
+  const handleAddSession = () => {
+    setManagementView('addSession');
+  };
+
+  const handleCancelAddSession = () => {
+    setManagementView('calendar');
+  };
+
+  const SidebarContent = () => (
+    <div className="flex flex-col h-full">
+      <div className="p-6 border-b">
+        <div className="flex items-center gap-2">
+          <span>Hart SC Coaches Hub</span>
+        </div>
+        {currentCoach && (
+          <div className="mt-3 text-sm text-muted-foreground">
+            {currentCoach.name}
+          </div>
+        )}
+      </div>
+
+      <nav className="flex-1 p-4">
+        <div className="space-y-2">
+          <Button
+            variant="ghost"
+            className="w-full justify-start"
+            onClick={() => handleManagementClick('coaches')}
+            data-testid="button-manage-coaches"
+          >
+            <UserCog className="h-4 w-4 mr-2" />
+            Manage Coaches
+          </Button>
+          <Button
+            variant="ghost"
+            className="w-full justify-start"
+            onClick={() => handleManagementClick('squads')}
+            data-testid="button-manage-squads"
+          >
+            <Users className="h-4 w-4 mr-2" />
+            Manage Squads
+          </Button>
+          <Button
+            variant="ghost"
+            className="w-full justify-start"
+            onClick={() => handleManagementClick('swimmers')}
+            data-testid="button-manage-swimmers"
+          >
+            <Users className="h-4 w-4 mr-2" />
+            Manage Swimmers
+          </Button>
+          <Button
+            variant="ghost"
+            className="w-full justify-start"
+            onClick={() => handleManagementClick('locations')}
+            data-testid="button-manage-locations"
+          >
+            <MapPin className="h-4 w-4 mr-2" />
+            Manage Locations
+          </Button>
+        </div>
+      </nav>
+
+      <div className="p-4 border-t">
+        <Button
+          variant="outline"
+          className="w-full justify-start"
+          onClick={handleLogout}
+          data-testid="button-logout-sidebar"
+        >
+          <LogOut className="h-4 w-4 mr-2" />
+          Log out
+        </Button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="h-screen flex overflow-hidden bg-background">
+      <aside className="hidden lg:block w-64 border-r bg-card">
+        <SidebarContent />
+      </aside>
+
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <header className="border-b bg-card p-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+                <SheetTrigger asChild className="lg:hidden">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    data-testid="button-sidebar-toggle"
+                  >
+                    <Menu className="h-5 w-5" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="w-64 p-0">
+                  <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
+                  <SheetDescription className="sr-only">Access management options for coaches, squads, swimmers, and locations</SheetDescription>
+                  <SidebarContent />
+                </SheetContent>
+              </Sheet>
+              <div className="flex items-center gap-2">
+                <h1 className="hidden sm:inline" data-testid="text-app-title">Session Calendar</h1>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 sm:gap-3">
+              {managementView === 'calendar' && (
+                <>
+                  <div className="flex items-center gap-2 px-2 sm:px-3 py-1 rounded-lg bg-muted/50">
+                    <Label htmlFor="my-sessions-toggle" className="text-xs sm:text-sm cursor-pointer whitespace-nowrap">
+                      My Sessions
+                    </Label>
+                    <Switch
+                      id="my-sessions-toggle"
+                      checked={showMySessionsOnly}
+                      onCheckedChange={setShowMySessionsOnly}
+                      data-testid="switch-my-sessions"
+                    />
+                  </div>
+                  
+                  <Button onClick={handleAddSession} size="default" data-testid="button-add-session">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Session
+                  </Button>
+                </>
+              )}
+              
+              <Button variant="outline" onClick={handleLogout} className="hidden lg:flex" data-testid="button-logout">
+                <LogOut className="h-4 w-4 mr-2" />
+                Log out
+              </Button>
+            </div>
+          </div>
+          
+          {managementView === 'calendar' && (
+            <div className="mt-3 flex items-center justify-between gap-4">
+              <div className="lg:hidden">
+                <Tabs value={mobileView} onValueChange={(v) => setMobileView(v as MobileView)}>
+                  <TabsList>
+                    <TabsTrigger value="calendar" className="gap-1.5" data-testid="tab-calendar">
+                      <CalendarDays className="h-4 w-4" />
+                      <span className="hidden sm:inline">Calendar</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="list" className="gap-1.5" data-testid="tab-list">
+                      <List className="h-4 w-4" />
+                      <span className="hidden sm:inline">List</span>
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
+              
+              {showMySessionsOnly && (
+                <div className="text-xs sm:text-sm text-muted-foreground ml-auto" data-testid="text-session-count">
+                  <span className="text-primary">
+                    {filteredSessions.length} of {sessions.length} sessions
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+        </header>
+
+        <main className={cn(
+          "flex-1 overflow-auto",
+          selectedSession ? "p-0" : "p-4 md:p-6"
+        )}>
+          {selectedSession ? (
+            <div className="h-full p-4 md:p-6">
+              <SessionDetail
+                session={selectedSession}
+                squad={squads.find(s => s.id === selectedSession.squadId)!}
+                location={locations.find(l => l.id === selectedSession.locationId)!}
+                coaches={coaches}
+                swimmers={swimmers}
+                onBack={handleBackFromSession}
+              />
+            </div>
+          ) : managementView === 'addSession' ? (
+            <AddSession
+              squads={squads}
+              locations={locations}
+              coaches={coaches}
+              onCancel={handleCancelAddSession}
+            />
+          ) : managementView === 'coaches' ? (
+            <ManageCoaches coaches={coaches} onBack={handleBackToCalendar} />
+          ) : managementView === 'squads' ? (
+            <ManageSquads squads={squads} coaches={coaches} onBack={handleBackToCalendar} />
+          ) : managementView === 'swimmers' ? (
+            <ManageSwimmers swimmers={swimmers} squads={squads} onBack={handleBackToCalendar} />
+          ) : managementView === 'locations' ? (
+            <ManageLocations locations={locations} onBack={handleBackToCalendar} />
+          ) : view === 'month' ? (
+            <>
+              <div className={mobileView === 'calendar' ? 'block' : 'hidden lg:block'}>
+                <MonthCalendarView
+                  sessions={filteredSessions}
+                  squads={squads}
+                  currentDate={currentDate}
+                  onDateChange={setCurrentDate}
+                  onDayClick={handleDayClick}
+                />
+              </div>
+              
+              <div className={mobileView === 'list' ? 'block lg:hidden' : 'hidden'}>
+                <DayListView
+                  sessions={filteredSessions}
+                  squads={squads}
+                  locations={locations}
+                  coaches={coaches}
+                  currentDate={currentDate}
+                  onSessionClick={handleSessionClick}
+                />
+              </div>
+            </>
+          ) : (
+            selectedDate && (
+              <DayCalendarView
+                sessions={filteredSessions}
+                squads={squads}
+                locations={locations}
+                selectedDate={selectedDate}
+                onBack={handleBackToMonth}
+                onSessionClick={handleSessionClick}
+              />
+            )
+          )}
+        </main>
+      </div>
+    </div>
+  );
+}
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
 
-  return (
-    <Switch>
-      {isLoading || !isAuthenticated ? (
-        <Route path="/" component={Landing} />
-      ) : (
-        <>
-          <Route path="/" component={Dashboard} />
-          <Route path="/new-session" component={NewSession} />
-          <Route path="/sessions/:id/edit" component={EditSession} />
-          <Route path="/sessions/:id" component={SessionDetail} />
-          <Route path="/coaches" component={Coaches} />
-          <Route path="/swimmers" component={Swimmers} />
-          <Route path="/squads" component={Squads} />
-          <Route path="/locations" component={Locations} />
-        </>
-      )}
-      <Route component={NotFound} />
-    </Switch>
-  );
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-lg">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Landing />;
+  }
+
+  return <CalendarApp />;
 }
 
 export default function App() {
