@@ -86,7 +86,9 @@ export const squadsRelations = relations(squads, ({ one, many }) => ({
 }));
 
 export type Squad = typeof squads.$inferSelect;
-export const insertSquadSchema = createInsertSchema(squads).omit({ id: true, createdAt: true });
+export const insertSquadSchema = createInsertSchema(squads).omit({ id: true, createdAt: true }).extend({
+  color: z.string().optional(),
+});
 export type InsertSquad = z.infer<typeof insertSquadSchema>;
 
 // Swimmers table

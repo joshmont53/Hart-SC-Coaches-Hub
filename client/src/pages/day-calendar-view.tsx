@@ -35,7 +35,11 @@ export function DayCalendarView({
     );
   });
 
-  const hours = Array.from({ length: 14 }, (_, i) => i + 6);
+  const timeSlots = [
+    '05:30', '06:00', '07:00', '08:00', '09:00', '10:00', '11:00', 
+    '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', 
+    '19:00', '20:00', '21:00', '22:00'
+  ];
 
   const getSessionPosition = (session: Session) => {
     const [startHour, startMin] = session.startTime.split(':').map(Number);
@@ -43,7 +47,7 @@ export function DayCalendarView({
 
     const startMinutes = startHour * 60 + startMin;
     const endMinutes = endHour * 60 + endMin;
-    const dayStartMinutes = 6 * 60;
+    const dayStartMinutes = 5 * 60 + 30;
 
     const top = ((startMinutes - dayStartMinutes) / 60) * 80;
     const height = ((endMinutes - startMinutes) / 60) * 80;
@@ -75,9 +79,9 @@ export function DayCalendarView({
         <div className="flex-1 overflow-auto">
           <div className="flex gap-4">
             <div className="w-16 flex-shrink-0">
-              {hours.map((hour) => (
-                <div key={hour} className="h-20 border-b text-sm text-muted-foreground">
-                  {hour.toString().padStart(2, '0')}:00
+              {timeSlots.map((time) => (
+                <div key={time} className="h-20 border-b text-sm text-muted-foreground">
+                  {time}
                 </div>
               ))}
             </div>
@@ -93,8 +97,8 @@ export function DayCalendarView({
                       {location.name}
                     </div>
                     <div className="relative">
-                      {hours.map((hour) => (
-                        <div key={hour} className="h-20 border-b border-border/50" />
+                      {timeSlots.map((time) => (
+                        <div key={time} className="h-20 border-b border-border/50" />
                       ))}
 
                       <div className="absolute inset-0">

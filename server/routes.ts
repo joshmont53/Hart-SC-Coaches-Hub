@@ -13,6 +13,7 @@ import {
 } from "@shared/schema";
 import { calculateSessionDistancesAI, validateDistances } from "./aiParser";
 import { parseSessionText } from "@shared/sessionParser";
+import { getNextAvailableColor } from "./squadColors";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -138,6 +139,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/squads", isAuthenticated, async (req, res) => {
     try {
       const validatedData = insertSquadSchema.parse(req.body);
+      
+      if (!validatedData.color) {
+        const existingSquads = await storage.getSquads();
+        const existingColors = existingSquads.map(s => s.color);
+        validatedData.color = getNextAvailableColor(existingColors);
+      }
+      
       const squad = await storage.createSquad(validatedData);
       res.json(squad);
     } catch (error: any) {
