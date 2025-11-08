@@ -78,7 +78,7 @@ export function ManageSwimmers({ swimmers, squads, onBack }: ManageSwimmersProps
 
   return (
     <div className="flex flex-col h-screen bg-background" data-testid="view-manage-swimmers">
-      <div className="sticky top-0 z-10 bg-background border-b">
+      <div className="sticky top-0 z-10 bg-background">
         <div className="max-w-2xl mx-auto px-4 py-4">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
@@ -91,7 +91,7 @@ export function ManageSwimmers({ swimmers, squads, onBack }: ManageSwimmersProps
                 <ArrowLeft className="h-5 w-5" />
               </Button>
               <div>
-                <h1 className="text-2xl font-semibold">Swimmers</h1>
+                <h1 className="text-xl font-semibold">Swimmers</h1>
                 <p className="text-sm text-muted-foreground">Manage swimmers across all squads</p>
               </div>
             </div>
@@ -117,19 +117,19 @@ export function ManageSwimmers({ swimmers, squads, onBack }: ManageSwimmersProps
                   className="p-4"
                   data-testid={`swimmer-card-${swimmer.id}`}
                 >
-                  <div className="flex items-start justify-between gap-6">
-                    <div className="flex-1">
+                  <div className="grid grid-cols-[1fr_auto] gap-4 items-start">
+                    <div>
                       <h3 className="font-medium mb-2">{swimmer.name}</h3>
-                      <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-3">
                         <Badge variant="secondary">
                           {squads.find((s) => s.id === swimmer.squadId)?.name || 'No Squad'}
                         </Badge>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-sm text-muted-foreground flex-1">
                           ASA: {swimmer.asaNumber}
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 ml-auto">
+                    <div className="flex items-center gap-2">
                       <Button
                         variant="ghost"
                         size="sm"

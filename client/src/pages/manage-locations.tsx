@@ -73,7 +73,7 @@ export function ManageLocations({ locations, onBack }: ManageLocationsProps) {
 
   return (
     <div className="flex flex-col h-screen bg-background" data-testid="view-manage-locations">
-      <div className="sticky top-0 z-10 bg-background border-b">
+      <div className="sticky top-0 z-10 bg-background">
         <div className="max-w-2xl mx-auto px-4 py-4">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
@@ -86,7 +86,7 @@ export function ManageLocations({ locations, onBack }: ManageLocationsProps) {
                 <ArrowLeft className="h-5 w-5" />
               </Button>
               <div>
-                <h1 className="text-2xl font-semibold">Locations</h1>
+                <h1 className="text-xl font-semibold">Locations</h1>
                 <p className="text-sm text-muted-foreground">Manage pool locations</p>
               </div>
             </div>
@@ -112,14 +112,14 @@ export function ManageLocations({ locations, onBack }: ManageLocationsProps) {
                   className="p-4"
                   data-testid={`location-card-${location.id}`}
                 >
-                  <div className="flex items-start justify-between gap-6">
-                    <div className="flex-1">
+                  <div className="grid grid-cols-[1fr_auto] gap-4 items-start">
+                    <div>
                       <h3 className="font-medium mb-2">{location.name}</h3>
                       <Badge variant="secondary" className="text-xs">
                         {location.poolType}
                       </Badge>
                     </div>
-                    <div className="flex items-center gap-2 ml-auto">
+                    <div className="flex items-center gap-2">
                       <Button
                         variant="ghost"
                         size="sm"

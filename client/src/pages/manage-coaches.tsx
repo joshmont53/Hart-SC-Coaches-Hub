@@ -82,7 +82,7 @@ export function ManageCoaches({ coaches, onBack }: ManageCoachesProps) {
 
   return (
     <div className="flex flex-col h-screen bg-background" data-testid="view-manage-coaches">
-      <div className="sticky top-0 z-10 bg-background border-b">
+      <div className="sticky top-0 z-10 bg-background">
         <div className="max-w-2xl mx-auto px-4 py-4">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
@@ -95,7 +95,7 @@ export function ManageCoaches({ coaches, onBack }: ManageCoachesProps) {
                 <ArrowLeft className="h-5 w-5" />
               </Button>
               <div>
-                <h1 className="text-2xl font-semibold">Coaches</h1>
+                <h1 className="text-xl font-semibold">Coaches</h1>
                 <p className="text-sm text-muted-foreground">Manage coaching staff</p>
               </div>
             </div>
@@ -121,21 +121,21 @@ export function ManageCoaches({ coaches, onBack }: ManageCoachesProps) {
                   className="p-4"
                   data-testid={`coach-card-${coach.id}`}
                 >
-                  <div className="flex items-start justify-between gap-6">
-                    <div className="flex-1">
+                  <div className="grid grid-cols-[1fr_auto] gap-4 items-start">
+                    <div>
                       <h3 className="font-medium mb-2">{coach.name}</h3>
-                      <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-3">
                         <Badge 
                           variant={coach.level === 'Level 3' ? 'default' : 'secondary'}
                         >
                           {coach.level}
                         </Badge>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-sm text-muted-foreground flex-1">
                           DOB: {coach.dateOfBirth.toLocaleDateString('en-CA')}
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 ml-auto">
+                    <div className="flex items-center gap-2">
                       <Button
                         variant="ghost"
                         size="sm"

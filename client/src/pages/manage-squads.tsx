@@ -73,7 +73,7 @@ export function ManageSquads({ squads, coaches, onBack }: ManageSquadsProps) {
 
   return (
     <div className="flex flex-col h-screen bg-background" data-testid="view-manage-squads">
-      <div className="sticky top-0 z-10 bg-background border-b">
+      <div className="sticky top-0 z-10 bg-background">
         <div className="max-w-2xl mx-auto px-4 py-4">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
@@ -86,7 +86,7 @@ export function ManageSquads({ squads, coaches, onBack }: ManageSquadsProps) {
                 <ArrowLeft className="h-5 w-5" />
               </Button>
               <div>
-                <h1 className="text-2xl font-semibold">Squads</h1>
+                <h1 className="text-xl font-semibold">Squads</h1>
                 <p className="text-sm text-muted-foreground">Manage training squads</p>
               </div>
             </div>
@@ -112,14 +112,14 @@ export function ManageSquads({ squads, coaches, onBack }: ManageSquadsProps) {
                   className="p-4"
                   data-testid={`squad-card-${squad.id}`}
                 >
-                  <div className="flex items-start justify-between gap-6">
-                    <div className="flex-1">
+                  <div className="grid grid-cols-[1fr_auto] gap-4 items-start">
+                    <div>
                       <h3 className="font-medium mb-1">{squad.name}</h3>
                       <p className="text-sm text-muted-foreground">
                         Primary Coach: {coaches.find((c) => c.id === squad.primaryCoachId)?.name || '-'}
                       </p>
                     </div>
-                    <div className="flex items-center gap-2 ml-auto">
+                    <div className="flex items-center gap-2">
                       <Button
                         variant="ghost"
                         size="sm"
