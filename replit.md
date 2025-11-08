@@ -38,6 +38,18 @@ Preferred communication style: Simple, everyday language.
 - Instant visual feedback for all user actions
 - Information density balanced with clarity
 
+**Core Components** (November 2025):
+- **SessionDetail**: Three-tab interface (`client/src/pages/session-detail-view.tsx`)
+  - **Detail Tab**: Session metadata (date, time, location, focus, coaching team, total distance)
+  - **Session Tab**: RichTextEditor for session content with sliding distance breakdown sidebar
+    - RichTextEditor (`client/src/components/RichTextEditor.tsx`) provides rich formatting (bold, italic, underline, colors)
+    - Distance sidebar shows stroke-by-stroke breakdowns (swim/drill/kick/pull per stroke)
+    - Sidebar slides in from right on desktop, fullscreen overlay on mobile
+  - **Attendance Tab**: Attendance register with status ('Present', '1st half only', '2nd half only', 'Absent') and notes ('-', 'Late', 'Very Late') dropdowns
+    - Initializes attendance records for all squad swimmers
+    - Enforces business rule: Absent status forces notes to '-'
+    - Uses type-safe AttendanceRecord type from adapters
+
 ### Backend Architecture
 
 **Runtime**: Node.js with Express.js framework
