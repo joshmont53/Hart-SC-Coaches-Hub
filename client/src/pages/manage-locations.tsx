@@ -34,7 +34,7 @@ interface ManageLocationsProps {
   onBack: () => void;
 }
 
-const poolTypes = ['25m', '50m', '33.3m'];
+const poolTypes = ['25m', '50m'];
 
 export function ManageLocations({ locations, onBack }: ManageLocationsProps) {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);

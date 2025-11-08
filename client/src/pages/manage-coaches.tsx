@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { Coach } from '../lib/typeAdapters';
+import type { Coach, QualificationLevel } from '../lib/typeAdapters';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -12,6 +12,13 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { ArrowLeft, Plus, Pencil, Trash2 } from 'lucide-react';
 import {
   Table,
@@ -27,6 +34,13 @@ interface ManageCoachesProps {
   onBack: () => void;
 }
 
+const qualificationLevels: QualificationLevel[] = [
+  'No Qualification',
+  'Level 1',
+  'Level 2',
+  'Level 3',
+];
+
 export function ManageCoaches({ coaches, onBack }: ManageCoachesProps) {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingCoach, setEditingCoach] = useState<Coach | null>(null);
@@ -35,26 +49,24 @@ export function ManageCoaches({ coaches, onBack }: ManageCoachesProps) {
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
-    email: '',
-    phone: '',
-    qualifications: '',
+    level: 'Level 1' as QualificationLevel,
+    dateOfBirth: '',
   });
 
   const handleAdd = () => {
     console.log('Add coach:', formData);
     alert('Coach added successfully!');
     setIsAddDialogOpen(false);
-    setFormData({ firstName: '', lastName: '', email: '', phone: '', qualifications: '' });
+    setFormData({ firstName: '', lastName: '', level: 'Level 1' as QualificationLevel, dateOfBirth: '' });
   };
 
   const handleEdit = (coach: Coach) => {
     setEditingCoach(coach);
     setFormData({
-      firstName: coach.name.split(' ')[0] || '',
-      lastName: coach.name.split(' ').slice(1).join(' ') || '',
-      email: coach.email || '',
-      phone: coach.phone || '',
-      qualifications: coach.qualifications || '',
+      firstName: coach.firstName,
+      lastName: coach.lastName,
+      level: coach.level,
+      dateOfBirth: coach.dateOfBirth.toISOString().split('T')[0],
     });
   };
 
@@ -62,7 +74,7 @@ export function ManageCoaches({ coaches, onBack }: ManageCoachesProps) {
     console.log('Update coach:', editingCoach?.id, formData);
     alert('Coach updated successfully!');
     setEditingCoach(null);
-    setFormData({ firstName: '', lastName: '', email: '', phone: '', qualifications: '' });
+    setFormData({ firstName: '', lastName: '', level: 'Level 1' as QualificationLevel, dateOfBirth: '' });
   };
 
   const handleDelete = (coach: Coach) => {
@@ -99,16 +111,15 @@ export function ManageCoaches({ coaches, onBack }: ManageCoachesProps) {
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Qualifications</TableHead>
+                <TableHead>Date of Birth</TableHead>
+                <TableHead>Qualification Level</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {coaches.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground">
+                  <TableCell colSpan={4} className="text-center text-muted-foreground">
                     No coaches found. Add your first coach to get started.
                   </TableCell>
                 </TableRow>
@@ -116,9 +127,8 @@ export function ManageCoaches({ coaches, onBack }: ManageCoachesProps) {
                 coaches.map((coach) => (
                   <TableRow key={coach.id} data-testid={`coach-row-${coach.id}`}>
                     <TableCell>{coach.name}</TableCell>
-                    <TableCell>{coach.email || '-'}</TableCell>
-                    <TableCell>{coach.phone || '-'}</TableCell>
-                    <TableCell>{coach.qualifications || '-'}</TableCell>
+                    <TableCell>{coach.dateOfBirth.toLocaleDateString()}</TableCell>
+                    <TableCell>{coach.level}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
                         <Button
@@ -173,32 +183,32 @@ export function ManageCoaches({ coaches, onBack }: ManageCoachesProps) {
               />
             </div>
             <div>
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="dateOfBirth">Date of Birth *</Label>
               <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                data-testid="input-email"
+                id="dateOfBirth"
+                type="date"
+                value={formData.dateOfBirth}
+                onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
+                data-testid="input-date-of-birth"
               />
             </div>
             <div>
-              <Label htmlFor="phone">Phone</Label>
-              <Input
-                id="phone"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                data-testid="input-phone"
-              />
-            </div>
-            <div>
-              <Label htmlFor="qualifications">Qualifications</Label>
-              <Input
-                id="qualifications"
-                value={formData.qualifications}
-                onChange={(e) => setFormData({ ...formData, qualifications: e.target.value })}
-                data-testid="input-qualifications"
-              />
+              <Label htmlFor="level">Qualification Level *</Label>
+              <Select
+                value={formData.level}
+                onValueChange={(value) => setFormData({ ...formData, level: value as QualificationLevel })}
+              >
+                <SelectTrigger id="level" data-testid="select-level">
+                  <SelectValue placeholder="Select qualification level" />
+                </SelectTrigger>
+                <SelectContent>
+                  {qualificationLevels.map((level) => (
+                    <SelectItem key={level} value={level}>
+                      {level}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <DialogFooter>
@@ -238,32 +248,32 @@ export function ManageCoaches({ coaches, onBack }: ManageCoachesProps) {
               />
             </div>
             <div>
-              <Label htmlFor="edit-email">Email</Label>
+              <Label htmlFor="edit-dateOfBirth">Date of Birth *</Label>
               <Input
-                id="edit-email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                data-testid="input-edit-email"
+                id="edit-dateOfBirth"
+                type="date"
+                value={formData.dateOfBirth}
+                onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
+                data-testid="input-edit-date-of-birth"
               />
             </div>
             <div>
-              <Label htmlFor="edit-phone">Phone</Label>
-              <Input
-                id="edit-phone"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                data-testid="input-edit-phone"
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit-qualifications">Qualifications</Label>
-              <Input
-                id="edit-qualifications"
-                value={formData.qualifications}
-                onChange={(e) => setFormData({ ...formData, qualifications: e.target.value })}
-                data-testid="input-edit-qualifications"
-              />
+              <Label htmlFor="edit-level">Qualification Level *</Label>
+              <Select
+                value={formData.level}
+                onValueChange={(value) => setFormData({ ...formData, level: value as QualificationLevel })}
+              >
+                <SelectTrigger id="edit-level" data-testid="select-edit-level">
+                  <SelectValue placeholder="Select qualification level" />
+                </SelectTrigger>
+                <SelectContent>
+                  {qualificationLevels.map((level) => (
+                    <SelectItem key={level} value={level}>
+                      {level}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <DialogFooter>

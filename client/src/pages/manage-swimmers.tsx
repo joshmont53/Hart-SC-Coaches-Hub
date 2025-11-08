@@ -45,14 +45,14 @@ export function ManageSwimmers({ swimmers, squads, onBack }: ManageSwimmersProps
     lastName: '',
     dateOfBirth: '',
     squadId: '',
-    asaNumber: '',
+    asaNumber: 0,
   });
 
   const handleAdd = () => {
     console.log('Add swimmer:', formData);
     alert('Swimmer added successfully!');
     setIsAddDialogOpen(false);
-    setFormData({ firstName: '', lastName: '', dateOfBirth: '', squadId: '', asaNumber: '' });
+    setFormData({ firstName: '', lastName: '', dateOfBirth: '', squadId: '', asaNumber: 0 });
   };
 
   const handleEdit = (swimmer: Swimmer) => {
@@ -60,9 +60,9 @@ export function ManageSwimmers({ swimmers, squads, onBack }: ManageSwimmersProps
     setFormData({
       firstName: swimmer.firstName,
       lastName: swimmer.lastName,
-      dateOfBirth: swimmer.dateOfBirth || '',
+      dateOfBirth: swimmer.dateOfBirth.toISOString().split('T')[0],
       squadId: swimmer.squadId || '',
-      asaNumber: swimmer.asaNumber || '',
+      asaNumber: swimmer.asaNumber,
     });
   };
 
@@ -70,7 +70,7 @@ export function ManageSwimmers({ swimmers, squads, onBack }: ManageSwimmersProps
     console.log('Update swimmer:', editingSwimmer?.id, formData);
     alert('Swimmer updated successfully!');
     setEditingSwimmer(null);
-    setFormData({ firstName: '', lastName: '', dateOfBirth: '', squadId: '', asaNumber: '' });
+    setFormData({ firstName: '', lastName: '', dateOfBirth: '', squadId: '', asaNumber: 0 });
   };
 
   const handleDelete = (swimmer: Swimmer) => {
@@ -126,11 +126,12 @@ export function ManageSwimmers({ swimmers, squads, onBack }: ManageSwimmersProps
                     <TableCell>
                       {swimmer.firstName} {swimmer.lastName}
                     </TableCell>
-                    <TableCell>{swimmer.dateOfBirth || '-'}</TableCell>
+                    <TableCell>{swimmer.dateOfBirth.toLocaleDateString()}</TableCell>
+
                     <TableCell>
                       {squads.find((s) => s.id === swimmer.squadId)?.name || '-'}
                     </TableCell>
-                    <TableCell>{swimmer.asaNumber || '-'}</TableCell>
+                    <TableCell>{swimmer.asaNumber}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
                         <Button
@@ -216,8 +217,9 @@ export function ManageSwimmers({ swimmers, squads, onBack }: ManageSwimmersProps
               <Label htmlFor="asaNumber">ASA Number</Label>
               <Input
                 id="asaNumber"
+                type="number"
                 value={formData.asaNumber}
-                onChange={(e) => setFormData({ ...formData, asaNumber: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, asaNumber: parseInt(e.target.value) || 0 })}
                 data-testid="input-asa-number"
               />
             </div>
@@ -290,8 +292,9 @@ export function ManageSwimmers({ swimmers, squads, onBack }: ManageSwimmersProps
               <Label htmlFor="edit-asaNumber">ASA Number</Label>
               <Input
                 id="edit-asaNumber"
+                type="number"
                 value={formData.asaNumber}
-                onChange={(e) => setFormData({ ...formData, asaNumber: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, asaNumber: parseInt(e.target.value) || 0 })}
                 data-testid="input-edit-asa-number"
               />
             </div>
