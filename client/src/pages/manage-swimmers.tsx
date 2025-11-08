@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import type { Swimmer, Squad } from '../lib/typeAdapters';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -19,15 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ArrowLeft, Plus, Pencil, Trash2 } from 'lucide-react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { ArrowLeft, Plus, Pencil, Trash2, Menu } from 'lucide-react';
 
 interface ManageSwimmersProps {
   swimmers: Swimmer[];
@@ -84,81 +77,86 @@ export function ManageSwimmers({ swimmers, squads, onBack }: ManageSwimmersProps
   };
 
   return (
-    <div className="max-w-7xl mx-auto" data-testid="view-manage-swimmers">
-      <div className="mb-6">
-        <Button onClick={onBack} variant="ghost" size="sm" data-testid="button-back">
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Calendar
+    <div className="flex flex-col h-screen bg-background" data-testid="view-manage-swimmers">
+      <header className="border-b px-4 py-3 flex items-center gap-3">
+        <Button variant="ghost" size="icon" data-testid="button-menu">
+          <Menu className="h-5 w-5" />
         </Button>
-      </div>
+      </header>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Manage Swimmers</CardTitle>
+      <div className="flex-1 overflow-auto">
+        <div className="max-w-2xl mx-auto px-4 py-6">
+          <div className="flex items-start justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onBack}
+                data-testid="button-back"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <div>
+                <h1 className="text-2xl font-semibold">Swimmers</h1>
+                <p className="text-sm text-muted-foreground">Manage swimmers across all squads</p>
+              </div>
+            </div>
             <Button onClick={() => setIsAddDialogOpen(true)} data-testid="button-add-swimmer">
               <Plus className="h-4 w-4 mr-2" />
               Add Swimmer
             </Button>
           </div>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Date of Birth</TableHead>
-                <TableHead>Squad</TableHead>
-                <TableHead>ASA Number</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {swimmers.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground">
-                    No swimmers found. Add your first swimmer to get started.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                swimmers.map((swimmer) => (
-                  <TableRow key={swimmer.id} data-testid={`swimmer-row-${swimmer.id}`}>
-                    <TableCell>
-                      {swimmer.firstName} {swimmer.lastName}
-                    </TableCell>
-                    <TableCell>{swimmer.dateOfBirth.toLocaleDateString()}</TableCell>
 
-                    <TableCell>
-                      {squads.find((s) => s.id === swimmer.squadId)?.name || '-'}
-                    </TableCell>
-                    <TableCell>{swimmer.asaNumber}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEdit(swimmer)}
-                          data-testid={`button-edit-swimmer-${swimmer.id}`}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDelete(swimmer)}
-                          data-testid={`button-delete-swimmer-${swimmer.id}`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+          <div className="space-y-3">
+            {swimmers.length === 0 ? (
+              <Card className="p-8 text-center">
+                <p className="text-muted-foreground">No swimmers found. Add your first swimmer to get started.</p>
+              </Card>
+            ) : (
+              swimmers.map((swimmer) => (
+                <Card
+                  key={swimmer.id}
+                  className="p-4 flex items-start justify-between gap-4"
+                  data-testid={`swimmer-card-${swimmer.id}`}
+                >
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-medium text-lg mb-2">{swimmer.name}</h3>
+                    <Badge variant="secondary" className="mb-2">
+                      {squads.find((s) => s.id === swimmer.squadId)?.name || 'No Squad'}
+                    </Badge>
+                    <p className="text-sm text-muted-foreground">
+                      ASA: {swimmer.asaNumber}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      DOB: {swimmer.dateOfBirth.toLocaleDateString('en-CA')}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleEdit(swimmer)}
+                      data-testid={`button-edit-swimmer-${swimmer.id}`}
+                    >
+                      <Pencil className="h-4 w-4 mr-1" />
+                      Edit
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDelete(swimmer)}
+                      data-testid={`button-delete-swimmer-${swimmer.id}`}
+                    >
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Delete
+                    </Button>
+                  </div>
+                </Card>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
 
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
         <DialogContent data-testid="dialog-add-swimmer">
