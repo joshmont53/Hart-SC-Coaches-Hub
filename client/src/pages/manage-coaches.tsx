@@ -118,40 +118,43 @@ export function ManageCoaches({ coaches, onBack }: ManageCoachesProps) {
               coaches.map((coach) => (
                 <Card
                   key={coach.id}
-                  className="p-4 flex items-start justify-between gap-4"
+                  className="p-4"
                   data-testid={`coach-card-${coach.id}`}
                 >
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-lg mb-2 whitespace-nowrap overflow-hidden text-ellipsis">{coach.name}</h3>
-                    <Badge 
-                      variant={coach.level === 'Level 3' ? 'default' : 'secondary'}
-                      className="mb-1"
-                    >
-                      {coach.level}
-                    </Badge>
-                    <p className="text-sm text-muted-foreground whitespace-nowrap">
-                      DOB: {coach.dateOfBirth.toLocaleDateString('en-CA')}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleEdit(coach)}
-                      data-testid={`button-edit-coach-${coach.id}`}
-                    >
-                      <Pencil className="h-4 w-4 mr-1" />
-                      Edit
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDelete(coach)}
-                      data-testid={`button-delete-coach-${coach.id}`}
-                    >
-                      <Trash2 className="h-4 w-4 mr-1" />
-                      Delete
-                    </Button>
+                  <div className="flex items-start justify-between gap-6">
+                    <div className="flex-1">
+                      <h3 className="font-medium mb-2">{coach.name}</h3>
+                      <div className="flex items-center justify-between gap-4">
+                        <Badge 
+                          variant={coach.level === 'Level 3' ? 'default' : 'secondary'}
+                        >
+                          {coach.level}
+                        </Badge>
+                        <p className="text-sm text-muted-foreground">
+                          DOB: {coach.dateOfBirth.toLocaleDateString('en-CA')}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 ml-auto">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEdit(coach)}
+                        data-testid={`button-edit-coach-${coach.id}`}
+                      >
+                        <Pencil className="h-4 w-4 mr-1" />
+                        Edit
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete(coach)}
+                        data-testid={`button-delete-coach-${coach.id}`}
+                      >
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        Delete
+                      </Button>
+                    </div>
                   </div>
                 </Card>
               ))

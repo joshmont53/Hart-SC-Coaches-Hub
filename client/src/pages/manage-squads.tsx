@@ -109,34 +109,36 @@ export function ManageSquads({ squads, coaches, onBack }: ManageSquadsProps) {
               squads.map((squad) => (
                 <Card
                   key={squad.id}
-                  className="p-4 flex items-start justify-between gap-4"
+                  className="p-4"
                   data-testid={`squad-card-${squad.id}`}
                 >
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-lg mb-1 whitespace-nowrap overflow-hidden text-ellipsis">{squad.name}</h3>
-                    <p className="text-sm text-muted-foreground whitespace-nowrap overflow-hidden text-ellipsis">
-                      Primary Coach: {coaches.find((c) => c.id === squad.primaryCoachId)?.name || '-'}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleEdit(squad)}
-                      data-testid={`button-edit-squad-${squad.id}`}
-                    >
-                      <Pencil className="h-4 w-4 mr-1" />
-                      Edit
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDelete(squad)}
-                      data-testid={`button-delete-squad-${squad.id}`}
-                    >
-                      <Trash2 className="h-4 w-4 mr-1" />
-                      Delete
-                    </Button>
+                  <div className="flex items-start justify-between gap-6">
+                    <div className="flex-1">
+                      <h3 className="font-medium mb-1">{squad.name}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Primary Coach: {coaches.find((c) => c.id === squad.primaryCoachId)?.name || '-'}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 ml-auto">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEdit(squad)}
+                        data-testid={`button-edit-squad-${squad.id}`}
+                      >
+                        <Pencil className="h-4 w-4 mr-1" />
+                        Edit
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete(squad)}
+                        data-testid={`button-delete-squad-${squad.id}`}
+                      >
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        Delete
+                      </Button>
+                    </div>
                   </div>
                 </Card>
               ))

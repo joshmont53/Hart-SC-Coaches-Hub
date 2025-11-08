@@ -114,40 +114,41 @@ export function ManageSwimmers({ swimmers, squads, onBack }: ManageSwimmersProps
               swimmers.map((swimmer) => (
                 <Card
                   key={swimmer.id}
-                  className="p-4 flex items-start justify-between gap-4"
+                  className="p-4"
                   data-testid={`swimmer-card-${swimmer.id}`}
                 >
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-lg mb-2 whitespace-nowrap overflow-hidden text-ellipsis">{swimmer.name}</h3>
-                    <Badge variant="secondary" className="mb-2">
-                      {squads.find((s) => s.id === swimmer.squadId)?.name || 'No Squad'}
-                    </Badge>
-                    <p className="text-sm text-muted-foreground whitespace-nowrap">
-                      ASA: {swimmer.asaNumber}
-                    </p>
-                    <p className="text-sm text-muted-foreground whitespace-nowrap">
-                      DOB: {swimmer.dateOfBirth.toLocaleDateString('en-CA')}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleEdit(swimmer)}
-                      data-testid={`button-edit-swimmer-${swimmer.id}`}
-                    >
-                      <Pencil className="h-4 w-4 mr-1" />
-                      Edit
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDelete(swimmer)}
-                      data-testid={`button-delete-swimmer-${swimmer.id}`}
-                    >
-                      <Trash2 className="h-4 w-4 mr-1" />
-                      Delete
-                    </Button>
+                  <div className="flex items-start justify-between gap-6">
+                    <div className="flex-1">
+                      <h3 className="font-medium mb-2">{swimmer.name}</h3>
+                      <div className="flex items-center justify-between gap-4">
+                        <Badge variant="secondary">
+                          {squads.find((s) => s.id === swimmer.squadId)?.name || 'No Squad'}
+                        </Badge>
+                        <p className="text-sm text-muted-foreground">
+                          ASA: {swimmer.asaNumber}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 ml-auto">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEdit(swimmer)}
+                        data-testid={`button-edit-swimmer-${swimmer.id}`}
+                      >
+                        <Pencil className="h-4 w-4 mr-1" />
+                        Edit
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete(swimmer)}
+                        data-testid={`button-delete-swimmer-${swimmer.id}`}
+                      >
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        Delete
+                      </Button>
+                    </div>
                   </div>
                 </Card>
               ))

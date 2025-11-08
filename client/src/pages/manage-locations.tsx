@@ -109,34 +109,36 @@ export function ManageLocations({ locations, onBack }: ManageLocationsProps) {
               locations.map((location) => (
                 <Card
                   key={location.id}
-                  className="p-4 flex items-start justify-between gap-4"
+                  className="p-4"
                   data-testid={`location-card-${location.id}`}
                 >
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-lg mb-2 whitespace-nowrap overflow-hidden text-ellipsis">{location.name}</h3>
-                    <Badge variant="secondary" className="text-xs">
-                      {location.poolType}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleEdit(location)}
-                      data-testid={`button-edit-location-${location.id}`}
-                    >
-                      <Pencil className="h-4 w-4 mr-1" />
-                      Edit
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDelete(location)}
-                      data-testid={`button-delete-location-${location.id}`}
-                    >
-                      <Trash2 className="h-4 w-4 mr-1" />
-                      Delete
-                    </Button>
+                  <div className="flex items-start justify-between gap-6">
+                    <div className="flex-1">
+                      <h3 className="font-medium mb-2">{location.name}</h3>
+                      <Badge variant="secondary" className="text-xs">
+                        {location.poolType}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-2 ml-auto">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEdit(location)}
+                        data-testid={`button-edit-location-${location.id}`}
+                      >
+                        <Pencil className="h-4 w-4 mr-1" />
+                        Edit
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete(location)}
+                        data-testid={`button-delete-location-${location.id}`}
+                      >
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        Delete
+                      </Button>
+                    </div>
                   </div>
                 </Card>
               ))
