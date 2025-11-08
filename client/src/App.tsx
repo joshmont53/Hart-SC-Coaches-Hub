@@ -242,7 +242,7 @@ function CalendarApp() {
       </aside>
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="border-b bg-card p-4">
+        <header className="bg-card p-4" style={{ borderBottom: '1px solid #4B9A4A' }}>
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
