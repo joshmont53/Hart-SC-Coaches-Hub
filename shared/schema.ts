@@ -71,6 +71,7 @@ export type InsertCoach = z.infer<typeof insertCoachSchema>;
 export const squads = pgTable("squads", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   squadName: varchar("squad_name").notNull(),
+  color: varchar("color").notNull().default("#3B82F6"),
   primaryCoachId: varchar("primary_coach_id").references(() => coaches.id),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -140,7 +141,7 @@ export const swimmingSessions = pgTable("swimming_sessions", {
   secondCoachId: varchar("second_coach_id").references(() => coaches.id),
   helperId: varchar("helper_id").references(() => coaches.id),
   setWriterId: varchar("set_writer_id").references(() => coaches.id).notNull(),
-  focus: varchar("focus").notNull(), // "Aerobic capacity" | "Anaerobic capacity" | "Speed" | "Technique" | "Recovery"
+  focus: varchar("focus").notNull(), // "Aerobic capacity" | "Anaerobic capacity" | "Speed" | "Technique" | "Recovery" | "Starts & turns"
   
   // Session content (raw text written by coach)
   sessionContent: text("session_content"),
