@@ -177,9 +177,20 @@ function CalendarApp() {
       return await apiRequest('POST', '/api/sessions', backendSession);
     },
     onSuccess: async (backendSession: BackendSession) => {
+      // Refetch all data to ensure cache is up to date
       await queryClient.refetchQueries({ queryKey: ['/api/sessions'] });
-      const newSession = adaptSession(backendSession);
-      setSelectedSession(newSession);
+      
+      // Read the fresh data directly from the cache
+      const updatedBackendSessions = queryClient.getQueryData<BackendSession[]>(['/api/sessions']);
+      
+      if (updatedBackendSessions) {
+        // Find the newly created session in the fresh data
+        const freshSession = updatedBackendSessions.find(s => s.id === backendSession.id);
+        if (freshSession) {
+          const newSession = adaptSession(freshSession);
+          setSelectedSession(newSession);
+        }
+      }
       setManagementView('calendar');
     },
     onError: (error: Error) => {
