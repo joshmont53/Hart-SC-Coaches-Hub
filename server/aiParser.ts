@@ -79,14 +79,40 @@ CRITICAL RULES - Follow exactly:
    - "BK" or "Back" or "Backstroke" = Backstroke
    - "BR" or "Breast" or "Breaststroke" = Breaststroke
    - "Fly" or "FLY" or "Butterfly" = Butterfly
-   - "IM" = Individual Medley
-   - "No1" or "Best Stroke" = Swimmer's best stroke
+   - "IM" = Individual Medley (SPECIAL HANDLING - see Rule 11)
+   - "No1" or "no1" or "Best Stroke" or "Choice" = Swimmer's best stroke (No1 category)
 
-2. MULTIPLICATION:
+2. IM DISTANCE DISTRIBUTION (CRITICAL):
+   - NEVER count "IM" distances in totalIMSwim/Drill/Kick/Pull fields
+   - ALWAYS distribute IM distances equally across all 4 strokes
+   - Example: "4 x 50m IM" = 200m total
+     * 50m Front Crawl Swim
+     * 50m Backstroke Swim
+     * 50m Breaststroke Swim
+     * 50m Butterfly Swim
+     * 0m in totalIMSwim
+   - Example: "4 x 100m IM Kick" = 400m total
+     * 100m Front Crawl Kick
+     * 100m Backstroke Kick
+     * 100m Breaststroke Kick
+     * 100m Butterfly Kick
+     * 0m in totalIMKick
+   - This applies to all IM activities: Swim, Drill, Kick, Pull
+   - The totalIM fields should remain 0 unless explicitly instructed otherwise
+
+3. NO1 STROKE DETECTION (CRITICAL):
+   - "no1", "No1", "choice", "best stroke", "swimmer's choice" = No1 category
+   - When stroke is unspecified or ambiguous, default to No1 (NOT Front Crawl)
+   - Example: "8 x 200 – odds 100 kick/100 drill" with no stroke specified = No1
+   - Example: "4 no1 4fc" = split between No1 and FC
+   - If text says "choice in middle" or similar = No1
+   - Mini sets without stroke specification = No1
+
+4. MULTIPLICATION:
    - "4 x 100m" = 4 repetitions × 100m each = 400m TOTAL
    - "8 x 50m" = 8 repetitions × 50m each = 400m TOTAL
 
-3. BREAKDOWN FORMAT (CRITICAL):
+5. BREAKDOWN FORMAT (CRITICAL):
    - "as 25m X / 25m Y / 50m Z" describes subdivisions WITHIN EACH single repeat
    - Example: "4 x 100m FC as 25m Kick / 25m Drill / 50m Swim"
      * Each of the 4 repeats contains: 25m Kick + 25m Drill + 50m Swim
@@ -95,42 +121,58 @@ CRITICAL RULES - Follow exactly:
      * Each of the 2 repeats contains: 25m Kick + 75m Swim
      * TOTAL = 50m Kick + 150m Swim
 
-4. SLASH STROKE PATTERNS:
+6. SLASH STROKE PATTERNS:
    - "FC/BK Swim" = split distance evenly between strokes
    - Example: "4 x 100m FC/BK Swim" = 200m FC Swim + 200m BK Swim
+   - Example: "alt. lengths fc/bk" = split evenly
 
-5. POSITION MODIFIERS (CRITICAL):
+7. MIXED STROKE SETS (CRITICAL):
+   - "2pull as 1 bk 1 fc" = Split pull distance: half BK Pull, half FC Pull
+   - "2kick as 1 brst 1 fly kick both on back" = Half BR Kick, half Fly Kick
+   - Example: "4 x100 2pull as 1 bk 1 fc, 2kick as 1 brst 1 fly kick"
+     * Total = 400m
+     * 2 reps pull (200m): 100m BK Pull + 100m FC Pull
+     * 2 reps kick (200m): 100m BR Kick + 100m Fly Kick
+
+8. POSITION MODIFIERS (CRITICAL):
    - "Fly Kick on Back" = Butterfly Kick (NOT Backstroke)
    - "BR Kick on Back" = Breaststroke Kick (NOT Backstroke)
    - "on Back" or "on Front" describes POSITION only, not the stroke
    - The stroke mentioned BEFORE "on Back/Front" is the actual stroke
 
-6. ACTIVITY DETECTION:
+9. ACTIVITY DETECTION:
    - "Streamline Kick" = Kick activity (streamline is just a modifier)
    - "BR Arms + Fly Kick" = Drill activity (combination drills are always Drill)
    - "2 Kicks + 1 Pull" = Drill activity
    - "Catch Switch", "Doggy Paddle", "12/1/12", "Scull", "Fingertip Drag", "6 Kick Drill", "Zipper", "Single Arm" = all Drill activity
+   - "Pull" or "pull" = Pull activity
+   - "Kick" or "kick" = Kick activity
+   - "Drill" or "drill" = Drill activity
    - If activity not specified, default to "Swim"
 
-7. IGNORE THESE:
-   - Equipment: (Fins), (Snorkel), (Paddles), (Pull Buoy), etc. - don't affect distance
-   - Rest intervals: @1:30, @+10 secs rest, etc. - don't affect distance
-   - "AS" keyword - often appears before descriptions, just ignore it
-   - Section headers in [brackets] - just labels, no distance
+10. IGNORE THESE:
+    - Equipment: (Fins), (Snorkel), (Paddles), (Pull Buoy), etc. - don't affect distance
+    - Rest intervals: @1:30, @+10 secs rest, etc. - don't affect distance
+    - "AS" keyword - often appears before descriptions, just ignore it
+    - Section headers in [brackets] - just labels, no distance
 
-8. ODD/EVEN LANES:
-   - "ODD lanes do X // EVEN lanes do Y" = all swimmers do same TOTAL distance
-   - Split activities evenly between the two variations
-   - Example: "12 x 25m as ODD BR Arms + Fly Kick // EVEN BR Arms + FC Kick" = 300m BR Drill total
+11. ODD/EVEN PATTERNS (CRITICAL):
+    - "odds X / evens Y" = Split total distance between two variations
+    - Example: "8 x 200 – odds 100 kick/100 drill, evens kick/swim"
+      * Total = 1,600m
+      * Odds (4 reps): 400m Kick + 400m Drill
+      * Evens (4 reps): 400m Kick + 400m Swim
+    - If no stroke specified in odds/evens pattern = No1 stroke
 
-9. NESTED PATTERNS:
-   - "6 x 25m as 3 x ( Y <> EVF ) / 1 x BR Arm Pull" 
-   - Parse the total distance (6 x 25m = 150m) and classify as Drill
+12. NESTED PATTERNS:
+    - "6 x 25m as 3 x ( Y <> EVF ) / 1 x BR Arm Pull" 
+    - Parse the total distance (6 x 25m = 150m) and classify as Drill
 
-10. VALIDATION:
+13. VALIDATION:
     - All distances MUST be multiples of 25m or 50m (pool lengths)
     - Sum of all stroke/activity distances should make logical sense
     - Total distance = sum of all individual stroke/activity totals
+    - Remember: totalIMSwim/Drill/Kick/Pull should almost always be 0 (IM gets distributed to individual strokes)
 
 Return ONLY valid JSON with exact field names above. No explanation, no commentary.`;
 
