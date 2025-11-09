@@ -47,7 +47,6 @@ export default function Locations() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/locations"] });
-      toast({ title: "Success", description: "Location added successfully" });
       setDialogOpen(false);
       form.reset();
     },
@@ -109,7 +108,6 @@ export default function Locations() {
     form.reset({
       poolName: "",
       poolType: undefined,
-      location: "",
     });
   };
 

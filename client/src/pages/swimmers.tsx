@@ -54,7 +54,6 @@ export default function Swimmers() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/swimmers"] });
-      toast({ title: "Success", description: "Swimmer added successfully" });
       setDialogOpen(false);
       form.reset();
     },

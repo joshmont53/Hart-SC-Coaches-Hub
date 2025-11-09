@@ -47,7 +47,6 @@ export default function Squads() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/squads"] });
-      toast({ title: "Success", description: "Squad created successfully" });
       setDialogOpen(false);
       form.reset();
     },

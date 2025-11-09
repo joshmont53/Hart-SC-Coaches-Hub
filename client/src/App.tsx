@@ -177,10 +177,6 @@ function CalendarApp() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/sessions'] });
-      toast({
-        title: 'Session created',
-        description: 'The session has been successfully created.',
-      });
       setManagementView('calendar');
     },
     onError: (error: Error) => {

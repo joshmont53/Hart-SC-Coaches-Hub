@@ -60,10 +60,6 @@ export default function Coaches() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/coaches"] });
-      toast({
-        title: "Success",
-        description: "Coach added successfully",
-      });
       setDialogOpen(false);
       form.reset();
     },

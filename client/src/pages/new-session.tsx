@@ -214,10 +214,6 @@ export default function NewSession() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/sessions"] });
-      toast({
-        title: "Success",
-        description: "Session created successfully",
-      });
       navigate(`/sessions/${data.id}`);
     },
     onError: (error: Error) => {
