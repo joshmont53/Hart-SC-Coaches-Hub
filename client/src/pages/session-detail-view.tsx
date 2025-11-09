@@ -181,7 +181,7 @@ export function SessionDetail({
 
   const updateContentMutation = useMutation({
     mutationFn: async (content: string) => {
-      return await apiRequest('PUT', `/api/sessions/${session.id}`, { content });
+      return await apiRequest('PUT', `/api/sessions/${session.id}`, { sessionContent: content });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/sessions'] });
