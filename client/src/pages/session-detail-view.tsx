@@ -230,7 +230,7 @@ export function SessionDetail({
       date: formatSessionDate(session.date),
       startTime: session.startTime,
       endTime: session.endTime,
-      poolId: session.poolId,
+      poolId: session.locationId,
       focus: session.focus,
       leadCoachId: session.leadCoachId,
       secondCoachId: session.secondCoachId || 'none',
