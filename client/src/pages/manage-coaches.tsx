@@ -65,7 +65,6 @@ export function ManageCoaches({ coaches, onBack }: ManageCoachesProps) {
 
   const handleSaveEdit = () => {
     console.log('Update coach:', editingCoach?.id, formData);
-    alert('Coach updated successfully!');
     setEditingCoach(null);
     setFormData({ firstName: '', lastName: '', level: 'Level 1' as QualificationLevel, dateOfBirth: '' });
   };

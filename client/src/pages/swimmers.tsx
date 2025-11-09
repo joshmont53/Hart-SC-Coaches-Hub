@@ -68,7 +68,6 @@ export default function Swimmers() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/swimmers"] });
-      toast({ title: "Success", description: "Swimmer updated successfully" });
       setEditingSwimmer(null);
       setDialogOpen(false);
       form.reset();

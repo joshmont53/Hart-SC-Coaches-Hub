@@ -229,10 +229,6 @@ export default function EditSession() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/sessions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/sessions", sessionId] });
-      toast({
-        title: "Success",
-        description: "Session updated successfully",
-      });
       navigate(`/sessions/${sessionId}`);
     },
     onError: (error: Error) => {

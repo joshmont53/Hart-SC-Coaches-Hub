@@ -56,7 +56,6 @@ export function ManageSquads({ squads, coaches, onBack }: ManageSquadsProps) {
 
   const handleSaveEdit = () => {
     console.log('Update squad:', editingSquad?.id, formData);
-    alert('Squad updated successfully!');
     setEditingSquad(null);
     setFormData({ name: '', primaryCoachId: '', color: '#3B82F6' });
   };

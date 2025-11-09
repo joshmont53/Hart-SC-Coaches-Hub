@@ -61,7 +61,6 @@ export default function Squads() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/squads"] });
-      toast({ title: "Success", description: "Squad updated successfully" });
       setEditingSquad(null);
       setDialogOpen(false);
       form.reset();

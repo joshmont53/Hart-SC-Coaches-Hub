@@ -78,10 +78,6 @@ export default function Coaches() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/coaches"] });
-      toast({
-        title: "Success",
-        description: "Coach updated successfully",
-      });
       setEditingCoach(null);
       setDialogOpen(false);
       form.reset();

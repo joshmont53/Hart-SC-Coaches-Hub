@@ -61,7 +61,6 @@ export default function Locations() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/locations"] });
-      toast({ title: "Success", description: "Location updated successfully" });
       setEditingLocation(null);
       setDialogOpen(false);
       form.reset();

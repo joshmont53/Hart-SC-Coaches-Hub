@@ -110,7 +110,6 @@ export function SessionDetail({
   };
 
   const handleSaveSession = () => {
-    alert('Session content updated!');
     console.log('Session content:', sessionContent);
     setIsEditingSession(false);
   };

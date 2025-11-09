@@ -61,7 +61,6 @@ export function ManageSwimmers({ swimmers, squads, onBack }: ManageSwimmersProps
 
   const handleSaveEdit = () => {
     console.log('Update swimmer:', editingSwimmer?.id, formData);
-    alert('Swimmer updated successfully!');
     setEditingSwimmer(null);
     setFormData({ firstName: '', lastName: '', dateOfBirth: '', squadId: '', asaNumber: 0 });
   };

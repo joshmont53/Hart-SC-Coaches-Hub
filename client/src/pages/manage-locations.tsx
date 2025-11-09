@@ -56,7 +56,6 @@ export function ManageLocations({ locations, onBack }: ManageLocationsProps) {
 
   const handleSaveEdit = () => {
     console.log('Update location:', editingLocation?.id, formData);
-    alert('Location updated successfully!');
     setEditingLocation(null);
     setFormData({ name: '', poolType: '25m' });
   };
