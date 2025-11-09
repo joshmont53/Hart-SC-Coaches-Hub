@@ -1,5 +1,9 @@
 import { useState } from 'react';
+import { useMutation } from '@tanstack/react-query';
+import { apiRequest, queryClient } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
 import type { Coach, QualificationLevel } from '../lib/typeAdapters';
+import type { Coach as BackendCoach, InsertCoach } from '@shared/schema';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -35,6 +39,7 @@ const qualificationLevels: QualificationLevel[] = [
 ];
 
 export function ManageCoaches({ coaches, onBack }: ManageCoachesProps) {
+  const { toast } = useToast();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingCoach, setEditingCoach] = useState<Coach | null>(null);
   const [deletingCoach, setDeletingCoach] = useState<Coach | null>(null);
@@ -46,11 +51,89 @@ export function ManageCoaches({ coaches, onBack }: ManageCoachesProps) {
     dateOfBirth: '',
   });
 
+  const createMutation = useMutation({
+    mutationFn: async (data: InsertCoach) => {
+      return await apiRequest('POST', '/api/coaches', data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/coaches'] });
+      setIsAddDialogOpen(false);
+      setFormData({ firstName: '', lastName: '', level: 'Level 1' as QualificationLevel, dateOfBirth: '' });
+      toast({
+        title: 'Success',
+        description: 'Coach added successfully',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to add coach',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: InsertCoach }) => {
+      return await apiRequest('PATCH', `/api/coaches/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/coaches'] });
+      setEditingCoach(null);
+      setFormData({ firstName: '', lastName: '', level: 'Level 1' as QualificationLevel, dateOfBirth: '' });
+      toast({
+        title: 'Success',
+        description: 'Coach updated successfully',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update coach',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest('DELETE', `/api/coaches/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/coaches'] });
+      setDeletingCoach(null);
+      toast({
+        title: 'Success',
+        description: 'Coach deleted successfully',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to delete coach',
+        variant: 'destructive',
+      });
+    },
+  });
+
   const handleAdd = () => {
-    console.log('Add coach:', formData);
-    alert('Coach added successfully!');
-    setIsAddDialogOpen(false);
-    setFormData({ firstName: '', lastName: '', level: 'Level 1' as QualificationLevel, dateOfBirth: '' });
+    if (!formData.firstName || !formData.lastName || !formData.dateOfBirth) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please fill in all required fields',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const coachData: InsertCoach = {
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      level: formData.level,
+      dob: formData.dateOfBirth,
+    };
+
+    createMutation.mutate(coachData);
   };
 
   const handleEdit = (coach: Coach) => {
@@ -64,9 +147,25 @@ export function ManageCoaches({ coaches, onBack }: ManageCoachesProps) {
   };
 
   const handleSaveEdit = () => {
-    console.log('Update coach:', editingCoach?.id, formData);
-    setEditingCoach(null);
-    setFormData({ firstName: '', lastName: '', level: 'Level 1' as QualificationLevel, dateOfBirth: '' });
+    if (!editingCoach) return;
+
+    if (!formData.firstName || !formData.lastName || !formData.dateOfBirth) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please fill in all required fields',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const coachData: InsertCoach = {
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      level: formData.level,
+      dob: formData.dateOfBirth,
+    };
+
+    updateMutation.mutate({ id: editingCoach.id, data: coachData });
   };
 
   const handleDelete = (coach: Coach) => {
@@ -74,9 +173,8 @@ export function ManageCoaches({ coaches, onBack }: ManageCoachesProps) {
   };
 
   const confirmDelete = () => {
-    console.log('Delete coach:', deletingCoach?.id);
-    alert('Coach deleted successfully!');
-    setDeletingCoach(null);
+    if (!deletingCoach) return;
+    deleteMutation.mutate(deletingCoach.id);
   };
 
   return (

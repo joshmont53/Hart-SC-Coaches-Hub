@@ -1,5 +1,9 @@
 import { useState } from 'react';
+import { useMutation } from '@tanstack/react-query';
+import { apiRequest, queryClient } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
 import type { Swimmer, Squad } from '../lib/typeAdapters';
+import type { InsertSwimmer } from '@shared/schema';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -29,6 +33,7 @@ interface ManageSwimmersProps {
 }
 
 export function ManageSwimmers({ swimmers, squads, onBack }: ManageSwimmersProps) {
+  const { toast } = useToast();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingSwimmer, setEditingSwimmer] = useState<Swimmer | null>(null);
   const [deletingSwimmer, setDeletingSwimmer] = useState<Swimmer | null>(null);
@@ -41,11 +46,90 @@ export function ManageSwimmers({ swimmers, squads, onBack }: ManageSwimmersProps
     asaNumber: 0,
   });
 
+  const createMutation = useMutation({
+    mutationFn: async (data: InsertSwimmer) => {
+      return await apiRequest('POST', '/api/swimmers', data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/swimmers'] });
+      setIsAddDialogOpen(false);
+      setFormData({ firstName: '', lastName: '', dateOfBirth: '', squadId: '', asaNumber: 0 });
+      toast({
+        title: 'Success',
+        description: 'Swimmer added successfully',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to add swimmer',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: InsertSwimmer }) => {
+      return await apiRequest('PATCH', `/api/swimmers/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/swimmers'] });
+      setEditingSwimmer(null);
+      setFormData({ firstName: '', lastName: '', dateOfBirth: '', squadId: '', asaNumber: 0 });
+      toast({
+        title: 'Success',
+        description: 'Swimmer updated successfully',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update swimmer',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest('DELETE', `/api/swimmers/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/swimmers'] });
+      setDeletingSwimmer(null);
+      toast({
+        title: 'Success',
+        description: 'Swimmer deleted successfully',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to delete swimmer',
+        variant: 'destructive',
+      });
+    },
+  });
+
   const handleAdd = () => {
-    console.log('Add swimmer:', formData);
-    alert('Swimmer added successfully!');
-    setIsAddDialogOpen(false);
-    setFormData({ firstName: '', lastName: '', dateOfBirth: '', squadId: '', asaNumber: 0 });
+    if (!formData.firstName || !formData.lastName || !formData.squadId || !formData.dateOfBirth) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please fill in all required fields',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const swimmerData: InsertSwimmer = {
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      squadId: formData.squadId,
+      asaNumber: formData.asaNumber,
+      dob: formData.dateOfBirth,
+    };
+
+    createMutation.mutate(swimmerData);
   };
 
   const handleEdit = (swimmer: Swimmer) => {
@@ -60,9 +144,26 @@ export function ManageSwimmers({ swimmers, squads, onBack }: ManageSwimmersProps
   };
 
   const handleSaveEdit = () => {
-    console.log('Update swimmer:', editingSwimmer?.id, formData);
-    setEditingSwimmer(null);
-    setFormData({ firstName: '', lastName: '', dateOfBirth: '', squadId: '', asaNumber: 0 });
+    if (!editingSwimmer) return;
+
+    if (!formData.firstName || !formData.lastName || !formData.squadId || !formData.dateOfBirth) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please fill in all required fields',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const swimmerData: InsertSwimmer = {
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      squadId: formData.squadId,
+      asaNumber: formData.asaNumber,
+      dob: formData.dateOfBirth,
+    };
+
+    updateMutation.mutate({ id: editingSwimmer.id, data: swimmerData });
   };
 
   const handleDelete = (swimmer: Swimmer) => {
@@ -70,9 +171,8 @@ export function ManageSwimmers({ swimmers, squads, onBack }: ManageSwimmersProps
   };
 
   const confirmDelete = () => {
-    console.log('Delete swimmer:', deletingSwimmer?.id);
-    alert('Swimmer deleted successfully!');
-    setDeletingSwimmer(null);
+    if (!deletingSwimmer) return;
+    deleteMutation.mutate(deletingSwimmer.id);
   };
 
   return (
@@ -182,7 +282,7 @@ export function ManageSwimmers({ swimmers, squads, onBack }: ManageSwimmersProps
               />
             </div>
             <div>
-              <Label htmlFor="dateOfBirth">Date of Birth</Label>
+              <Label htmlFor="dateOfBirth">Date of Birth *</Label>
               <Input
                 id="dateOfBirth"
                 type="date"
@@ -257,7 +357,7 @@ export function ManageSwimmers({ swimmers, squads, onBack }: ManageSwimmersProps
               />
             </div>
             <div>
-              <Label htmlFor="edit-dateOfBirth">Date of Birth</Label>
+              <Label htmlFor="edit-dateOfBirth">Date of Birth *</Label>
               <Input
                 id="edit-dateOfBirth"
                 type="date"

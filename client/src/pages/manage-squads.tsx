@@ -1,5 +1,9 @@
 import { useState } from 'react';
+import { useMutation } from '@tanstack/react-query';
+import { apiRequest, queryClient } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
 import type { Squad, Coach } from '../lib/typeAdapters';
+import type { InsertSquad } from '@shared/schema';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import {
@@ -28,6 +32,7 @@ interface ManageSquadsProps {
 }
 
 export function ManageSquads({ squads, coaches, onBack }: ManageSquadsProps) {
+  const { toast } = useToast();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingSquad, setEditingSquad] = useState<Squad | null>(null);
   const [deletingSquad, setDeletingSquad] = useState<Squad | null>(null);
@@ -38,11 +43,88 @@ export function ManageSquads({ squads, coaches, onBack }: ManageSquadsProps) {
     color: '#3B82F6',
   });
 
+  const createMutation = useMutation({
+    mutationFn: async (data: InsertSquad) => {
+      return await apiRequest('POST', '/api/squads', data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/squads'] });
+      setIsAddDialogOpen(false);
+      setFormData({ name: '', primaryCoachId: '', color: '#3B82F6' });
+      toast({
+        title: 'Success',
+        description: 'Squad added successfully',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to add squad',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: InsertSquad }) => {
+      return await apiRequest('PATCH', `/api/squads/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/squads'] });
+      setEditingSquad(null);
+      setFormData({ name: '', primaryCoachId: '', color: '#3B82F6' });
+      toast({
+        title: 'Success',
+        description: 'Squad updated successfully',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update squad',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest('DELETE', `/api/squads/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/squads'] });
+      setDeletingSquad(null);
+      toast({
+        title: 'Success',
+        description: 'Squad deleted successfully',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to delete squad',
+        variant: 'destructive',
+      });
+    },
+  });
+
   const handleAdd = () => {
-    console.log('Add squad:', formData);
-    alert('Squad added successfully!');
-    setIsAddDialogOpen(false);
-    setFormData({ name: '', primaryCoachId: '', color: '#3B82F6' });
+    if (!formData.name || !formData.primaryCoachId) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please fill in all required fields',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const squadData: InsertSquad = {
+      squadName: formData.name,
+      primaryCoachId: formData.primaryCoachId,
+      color: formData.color,
+    };
+
+    createMutation.mutate(squadData);
   };
 
   const handleEdit = (squad: Squad) => {
@@ -55,9 +137,24 @@ export function ManageSquads({ squads, coaches, onBack }: ManageSquadsProps) {
   };
 
   const handleSaveEdit = () => {
-    console.log('Update squad:', editingSquad?.id, formData);
-    setEditingSquad(null);
-    setFormData({ name: '', primaryCoachId: '', color: '#3B82F6' });
+    if (!editingSquad) return;
+
+    if (!formData.name || !formData.primaryCoachId) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please fill in all required fields',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const squadData: InsertSquad = {
+      squadName: formData.name,
+      primaryCoachId: formData.primaryCoachId,
+      color: formData.color,
+    };
+
+    updateMutation.mutate({ id: editingSquad.id, data: squadData });
   };
 
   const handleDelete = (squad: Squad) => {
@@ -65,9 +162,8 @@ export function ManageSquads({ squads, coaches, onBack }: ManageSquadsProps) {
   };
 
   const confirmDelete = () => {
-    console.log('Delete squad:', deletingSquad?.id);
-    alert('Squad deleted successfully!');
-    setDeletingSquad(null);
+    if (!deletingSquad) return;
+    deleteMutation.mutate(deletingSquad.id);
   };
 
   return (

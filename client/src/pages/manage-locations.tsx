@@ -1,5 +1,9 @@
 import { useState } from 'react';
+import { useMutation } from '@tanstack/react-query';
+import { apiRequest, queryClient } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
 import type { Location } from '../lib/typeAdapters';
+import type { InsertLocation } from '@shared/schema';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -30,6 +34,7 @@ interface ManageLocationsProps {
 const poolTypes = ['25m', '50m'];
 
 export function ManageLocations({ locations, onBack }: ManageLocationsProps) {
+  const { toast } = useToast();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingLocation, setEditingLocation] = useState<Location | null>(null);
   const [deletingLocation, setDeletingLocation] = useState<Location | null>(null);
@@ -39,11 +44,87 @@ export function ManageLocations({ locations, onBack }: ManageLocationsProps) {
     poolType: '25m',
   });
 
+  const createMutation = useMutation({
+    mutationFn: async (data: InsertLocation) => {
+      return await apiRequest('POST', '/api/locations', data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/locations'] });
+      setIsAddDialogOpen(false);
+      setFormData({ name: '', poolType: '25m' });
+      toast({
+        title: 'Success',
+        description: 'Location added successfully',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to add location',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: InsertLocation }) => {
+      return await apiRequest('PATCH', `/api/locations/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/locations'] });
+      setEditingLocation(null);
+      setFormData({ name: '', poolType: '25m' });
+      toast({
+        title: 'Success',
+        description: 'Location updated successfully',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update location',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest('DELETE', `/api/locations/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/locations'] });
+      setDeletingLocation(null);
+      toast({
+        title: 'Success',
+        description: 'Location deleted successfully',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to delete location',
+        variant: 'destructive',
+      });
+    },
+  });
+
   const handleAdd = () => {
-    console.log('Add location:', formData);
-    alert('Location added successfully!');
-    setIsAddDialogOpen(false);
-    setFormData({ name: '', poolType: '25m' });
+    if (!formData.name || !formData.poolType) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please fill in all required fields',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const locationData: InsertLocation = {
+      poolName: formData.name,
+      poolType: formData.poolType,
+    };
+
+    createMutation.mutate(locationData);
   };
 
   const handleEdit = (location: Location) => {
@@ -55,9 +136,23 @@ export function ManageLocations({ locations, onBack }: ManageLocationsProps) {
   };
 
   const handleSaveEdit = () => {
-    console.log('Update location:', editingLocation?.id, formData);
-    setEditingLocation(null);
-    setFormData({ name: '', poolType: '25m' });
+    if (!editingLocation) return;
+
+    if (!formData.name || !formData.poolType) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please fill in all required fields',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const locationData: InsertLocation = {
+      poolName: formData.name,
+      poolType: formData.poolType,
+    };
+
+    updateMutation.mutate({ id: editingLocation.id, data: locationData });
   };
 
   const handleDelete = (location: Location) => {
@@ -65,9 +160,8 @@ export function ManageLocations({ locations, onBack }: ManageLocationsProps) {
   };
 
   const confirmDelete = () => {
-    console.log('Delete location:', deletingLocation?.id);
-    alert('Location deleted successfully!');
-    setDeletingLocation(null);
+    if (!deletingLocation) return;
+    deleteMutation.mutate(deletingLocation.id);
   };
 
   return (

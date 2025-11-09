@@ -1,8 +1,21 @@
 import { useState } from 'react';
+import { useMutation } from '@tanstack/react-query';
+import { apiRequest, queryClient } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
 import type { Session, Squad, Location, Coach, Swimmer, AttendanceRecord, SessionFocus } from '../lib/typeAdapters';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { ArrowLeft, Pencil, Trash2, Calendar as CalendarIcon, Clock, MapPin, ChevronRight, Target, Save } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -21,6 +34,15 @@ type TabType = 'detail' | 'session' | 'attendance';
 type AttendanceStatus = 'Present' | '1st half only' | '2nd half only' | 'Absent';
 type AttendanceNote = '-' | 'Late' | 'Very Late';
 
+const sessionFocusOptions: SessionFocus[] = [
+  'Aerobic capacity',
+  'Anaerobic capacity',
+  'Speed',
+  'Technique',
+  'Recovery',
+  'Starts & turns',
+];
+
 const attendanceStatusOptions: AttendanceStatus[] = [
   'Present',
   '1st half only',
@@ -38,9 +60,22 @@ export function SessionDetail({
   swimmers,
   onBack,
 }: SessionDetailProps) {
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<TabType>('detail');
   const [isEditingSession, setIsEditingSession] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    date: format(session.date, 'yyyy-MM-dd'),
+    startTime: session.startTime,
+    endTime: session.endTime,
+    poolId: session.poolId,
+    focus: session.focus,
+    leadCoachId: session.leadCoachId,
+    secondCoachId: session.secondCoachId || '',
+    helperId: session.helperId || '',
+    setWriterId: session.setWriterId,
+  });
 
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>(
     session.attendance ||
@@ -104,14 +139,114 @@ export function SessionDetail({
     );
   };
 
+  const updateAttendanceMutation = useMutation({
+    mutationFn: async (attendance: AttendanceRecord[]) => {
+      return await apiRequest('PUT', `/api/sessions/${session.id}`, { attendance });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/sessions'] });
+      toast({
+        title: 'Success',
+        description: 'Attendance saved successfully',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to save attendance',
+        variant: 'destructive',
+      });
+    },
+  });
+
   const handleSaveAttendance = () => {
-    alert('Attendance saved successfully!');
-    console.log('Attendance records:', attendanceRecords);
+    updateAttendanceMutation.mutate(attendanceRecords);
   };
 
+  const updateContentMutation = useMutation({
+    mutationFn: async (content: string) => {
+      return await apiRequest('PUT', `/api/sessions/${session.id}`, { content });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/sessions'] });
+      setIsEditingSession(false);
+      toast({
+        title: 'Success',
+        description: 'Session content updated successfully',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update session content',
+        variant: 'destructive',
+      });
+    },
+  });
+
   const handleSaveSession = () => {
-    console.log('Session content:', sessionContent);
-    setIsEditingSession(false);
+    updateContentMutation.mutate(sessionContent);
+  };
+
+  const updateSessionMutation = useMutation({
+    mutationFn: async (data: Partial<Session>) => {
+      return await apiRequest('PUT', `/api/sessions/${session.id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/sessions'] });
+      setIsEditDialogOpen(false);
+      toast({
+        title: 'Success',
+        description: 'Session updated successfully',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update session',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const handleEditClick = () => {
+    setEditFormData({
+      date: format(session.date, 'yyyy-MM-dd'),
+      startTime: session.startTime,
+      endTime: session.endTime,
+      poolId: session.poolId,
+      focus: session.focus,
+      leadCoachId: session.leadCoachId,
+      secondCoachId: session.secondCoachId || '',
+      helperId: session.helperId || '',
+      setWriterId: session.setWriterId,
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleSaveEdit = () => {
+    if (!editFormData.date || !editFormData.startTime || !editFormData.endTime || !editFormData.poolId || !editFormData.focus || !editFormData.leadCoachId || !editFormData.setWriterId) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please fill in all required fields',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const sessionData: Partial<Session> = {
+      date: new Date(editFormData.date),
+      startTime: editFormData.startTime,
+      endTime: editFormData.endTime,
+      poolId: editFormData.poolId,
+      focus: editFormData.focus as SessionFocus,
+      leadCoachId: editFormData.leadCoachId,
+      secondCoachId: editFormData.secondCoachId || undefined,
+      helperId: editFormData.helperId || undefined,
+      setWriterId: editFormData.setWriterId,
+    };
+
+    updateSessionMutation.mutate(sessionData);
   };
 
   const handleDelete = () => {
@@ -199,6 +334,15 @@ export function SessionDetail({
           <div className="space-y-4">
             <div className="flex items-center justify-between mb-4">
               <h2>Session Details</h2>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleEditClick}
+                data-testid="button-edit-session"
+              >
+                <Pencil className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
             </div>
 
             <div className="grid gap-6 md:grid-cols-2">
@@ -602,6 +746,176 @@ export function SessionDetail({
           </div>
         )}
       </div>
+
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Session Details</DialogTitle>
+            <DialogDescription>
+              Update the session information below
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="edit-date">Date *</Label>
+                <Input
+                  id="edit-date"
+                  type="date"
+                  value={editFormData.date}
+                  onChange={(e) => setEditFormData({ ...editFormData, date: e.target.value })}
+                  data-testid="input-edit-date"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-focus">Focus *</Label>
+                <Select
+                  value={editFormData.focus}
+                  onValueChange={(value) => setEditFormData({ ...editFormData, focus: value })}
+                >
+                  <SelectTrigger id="edit-focus" data-testid="select-edit-focus">
+                    <SelectValue placeholder="Select focus" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sessionFocusOptions.map((focus) => (
+                      <SelectItem key={focus} value={focus}>
+                        {focus}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="edit-startTime">Start Time *</Label>
+                <Input
+                  id="edit-startTime"
+                  type="time"
+                  value={editFormData.startTime}
+                  onChange={(e) => setEditFormData({ ...editFormData, startTime: e.target.value })}
+                  data-testid="input-edit-start-time"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-endTime">End Time *</Label>
+                <Input
+                  id="edit-endTime"
+                  type="time"
+                  value={editFormData.endTime}
+                  onChange={(e) => setEditFormData({ ...editFormData, endTime: e.target.value })}
+                  data-testid="input-edit-end-time"
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="edit-poolId">Location *</Label>
+              <Select
+                value={editFormData.poolId}
+                onValueChange={(value) => setEditFormData({ ...editFormData, poolId: value })}
+              >
+                <SelectTrigger id="edit-poolId" data-testid="select-edit-pool">
+                  <SelectValue placeholder="Select location" />
+                </SelectTrigger>
+                <SelectContent>
+                  {/* This will need to be populated with actual locations from props */}
+                  <SelectItem value={session.poolId}>{location.name}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="edit-leadCoachId">Lead Coach *</Label>
+              <Select
+                value={editFormData.leadCoachId}
+                onValueChange={(value) => setEditFormData({ ...editFormData, leadCoachId: value })}
+              >
+                <SelectTrigger id="edit-leadCoachId" data-testid="select-edit-lead-coach">
+                  <SelectValue placeholder="Select lead coach" />
+                </SelectTrigger>
+                <SelectContent>
+                  {coaches.map((coach) => (
+                    <SelectItem key={coach.id} value={coach.id}>
+                      {coach.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="edit-secondCoachId">Second Coach</Label>
+              <Select
+                value={editFormData.secondCoachId}
+                onValueChange={(value) => setEditFormData({ ...editFormData, secondCoachId: value })}
+              >
+                <SelectTrigger id="edit-secondCoachId" data-testid="select-edit-second-coach">
+                  <SelectValue placeholder="Select second coach (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">None</SelectItem>
+                  {coaches.map((coach) => (
+                    <SelectItem key={coach.id} value={coach.id}>
+                      {coach.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="edit-helperId">Helper</Label>
+              <Select
+                value={editFormData.helperId}
+                onValueChange={(value) => setEditFormData({ ...editFormData, helperId: value })}
+              >
+                <SelectTrigger id="edit-helperId" data-testid="select-edit-helper">
+                  <SelectValue placeholder="Select helper (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">None</SelectItem>
+                  {coaches.map((coach) => (
+                    <SelectItem key={coach.id} value={coach.id}>
+                      {coach.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="edit-setWriterId">Set Writer *</Label>
+              <Select
+                value={editFormData.setWriterId}
+                onValueChange={(value) => setEditFormData({ ...editFormData, setWriterId: value })}
+              >
+                <SelectTrigger id="edit-setWriterId" data-testid="select-edit-set-writer">
+                  <SelectValue placeholder="Select set writer" />
+                </SelectTrigger>
+                <SelectContent>
+                  {coaches.map((coach) => (
+                    <SelectItem key={coach.id} value={coach.id}>
+                      {coach.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} data-testid="button-cancel-edit">
+              Cancel
+            </Button>
+            <Button onClick={handleSaveEdit} data-testid="button-save-edit">
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
