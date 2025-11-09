@@ -25,6 +25,7 @@ interface SessionDetailProps {
   session: Session;
   squad: Squad | undefined;
   location: Location | undefined;
+  locations: Location[];
   coaches: Coach[];
   swimmers: Swimmer[];
   onBack: () => void;
@@ -56,6 +57,7 @@ export function SessionDetail({
   session,
   squad,
   location,
+  locations,
   coaches,
   swimmers,
   onBack,
@@ -835,8 +837,11 @@ export function SessionDetail({
                   <SelectValue placeholder="Select location" />
                 </SelectTrigger>
                 <SelectContent>
-                  {/* This will need to be populated with actual locations from props */}
-                  <SelectItem value={session.poolId}>{location?.name || 'Current Location'}</SelectItem>
+                  {locations.map((loc) => (
+                    <SelectItem key={loc.id} value={loc.id}>
+                      {loc.name} ({loc.poolType})
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

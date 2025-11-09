@@ -361,6 +361,7 @@ function CalendarApp() {
                 session={selectedSession}
                 squad={squads.find(s => s.id === selectedSession.squadId)!}
                 location={locations.find(l => l.id === selectedSession.locationId)!}
+                locations={locations}
                 coaches={coaches}
                 swimmers={swimmers}
                 onBack={handleBackFromSession}
