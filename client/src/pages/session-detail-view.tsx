@@ -54,6 +54,12 @@ const attendanceStatusOptions: AttendanceStatus[] = [
 
 const attendanceNoteOptions: AttendanceNote[] = ['-', 'Late', 'Very Late'];
 
+function stripHtmlTags(html: string): string {
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  return tmp.textContent || tmp.innerText || '';
+}
+
 export function SessionDetail({
   session,
   squad,
@@ -185,14 +191,17 @@ export function SessionDetail({
     mutationFn: async (content: string) => {
       console.log('[Session Save] Starting GPT distance parsing...');
       
-      const parseResult: any = await apiRequest('POST', '/api/sessions/parse-ai', { 
-        sessionContent: content 
+      const plainText = stripHtmlTags(content);
+      
+      const parseResultResponse = await apiRequest('POST', '/api/sessions/parse-ai', { 
+        sessionContent: plainText 
       });
+      const parseResult = await parseResultResponse.json();
       
       console.log('[Session Save] GPT parsing complete, saving to database...');
       
       return await apiRequest('PUT', `/api/sessions/${session.id}`, { 
-        sessionContent: content,
+        sessionContent: plainText,
         totalFrontCrawlSwim: parseResult.totalFrontCrawlSwim || 0,
         totalFrontCrawlDrill: parseResult.totalFrontCrawlDrill || 0,
         totalFrontCrawlKick: parseResult.totalFrontCrawlKick || 0,
