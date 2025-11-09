@@ -5,6 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { Session, Squad, Location, Coach, Swimmer, AttendanceRecord, SessionFocus } from '../lib/typeAdapters';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Dialog,
@@ -16,7 +17,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, Pencil, Trash2, Calendar as CalendarIcon, Clock, MapPin, ChevronRight, Target, Save } from 'lucide-react';
+import { ArrowLeft, Pencil, Trash2, Calendar as CalendarIcon, Clock, MapPin, ChevronRight, Target, Save, Loader2 } from 'lucide-react';
 import { format, isValid } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { RichTextEditor } from '@/components/RichTextEditor';
@@ -67,6 +68,7 @@ export function SessionDetail({
   const [isEditingSession, setIsEditingSession] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const formatSessionDate = (date: Date | string): string => {
     if (!date) return '';
     if (typeof date === 'string') return date;
@@ -80,7 +82,7 @@ export function SessionDetail({
     date: formatSessionDate(session.date),
     startTime: session.startTime,
     endTime: session.endTime,
-    poolId: session.poolId,
+    poolId: session.locationId,
     focus: session.focus,
     leadCoachId: session.leadCoachId,
     secondCoachId: session.secondCoachId || '',
@@ -181,26 +183,64 @@ export function SessionDetail({
 
   const updateContentMutation = useMutation({
     mutationFn: async (content: string) => {
-      return await apiRequest('PUT', `/api/sessions/${session.id}`, { sessionContent: content });
+      console.log('[Session Save] Starting GPT distance parsing...');
+      
+      const parseResult: any = await apiRequest('POST', '/api/sessions/parse-ai', { 
+        sessionContent: content 
+      });
+      
+      console.log('[Session Save] GPT parsing complete, saving to database...');
+      
+      return await apiRequest('PUT', `/api/sessions/${session.id}`, { 
+        sessionContent: content,
+        totalFrontCrawlSwim: parseResult.totalFrontCrawlSwim || 0,
+        totalFrontCrawlDrill: parseResult.totalFrontCrawlDrill || 0,
+        totalFrontCrawlKick: parseResult.totalFrontCrawlKick || 0,
+        totalFrontCrawlPull: parseResult.totalFrontCrawlPull || 0,
+        totalBackstrokeSwim: parseResult.totalBackstrokeSwim || 0,
+        totalBackstrokeDrill: parseResult.totalBackstrokeDrill || 0,
+        totalBackstrokeKick: parseResult.totalBackstrokeKick || 0,
+        totalBackstrokePull: parseResult.totalBackstrokePull || 0,
+        totalBreaststrokeSwim: parseResult.totalBreaststrokeSwim || 0,
+        totalBreaststrokeDrill: parseResult.totalBreaststrokeDrill || 0,
+        totalBreaststrokeKick: parseResult.totalBreaststrokeKick || 0,
+        totalBreaststrokePull: parseResult.totalBreaststrokePull || 0,
+        totalButterflySwim: parseResult.totalButterflySwim || 0,
+        totalButterflyDrill: parseResult.totalButterflyDrill || 0,
+        totalButterflyKick: parseResult.totalButterflyKick || 0,
+        totalButterflyPull: parseResult.totalButterflyPull || 0,
+        totalIMSwim: parseResult.totalIMSwim || 0,
+        totalIMDrill: parseResult.totalIMDrill || 0,
+        totalIMKick: parseResult.totalIMKick || 0,
+        totalIMPull: parseResult.totalIMPull || 0,
+        totalNo1Swim: parseResult.totalNo1Swim || 0,
+        totalNo1Drill: parseResult.totalNo1Drill || 0,
+        totalNo1Kick: parseResult.totalNo1Kick || 0,
+        totalNo1Pull: parseResult.totalNo1Pull || 0,
+        totalDistance: parseResult.totalDistance || 0,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/sessions'] });
       setIsEditingSession(false);
+      setIsSaving(false);
       toast({
         title: 'Success',
-        description: 'Session content updated successfully',
+        description: 'Session content and distances saved successfully',
       });
     },
     onError: (error: Error) => {
+      setIsSaving(false);
       toast({
         title: 'Error',
-        description: error.message || 'Failed to update session content',
+        description: error.message || 'Failed to update session',
         variant: 'destructive',
       });
     },
   });
 
   const handleSaveSession = () => {
+    setIsSaving(true);
     updateContentMutation.mutate(sessionContent);
   };
 
@@ -254,7 +294,7 @@ export function SessionDetail({
       date: new Date(editFormData.date),
       startTime: editFormData.startTime,
       endTime: editFormData.endTime,
-      poolId: editFormData.poolId,
+      locationId: editFormData.poolId,
       focus: editFormData.focus as SessionFocus,
       leadCoachId: editFormData.leadCoachId,
       secondCoachId: editFormData.secondCoachId === 'none' ? undefined : editFormData.secondCoachId,
@@ -788,7 +828,7 @@ export function SessionDetail({
                 <Label htmlFor="edit-focus">Focus *</Label>
                 <Select
                   value={editFormData.focus}
-                  onValueChange={(value) => setEditFormData({ ...editFormData, focus: value })}
+                  onValueChange={(value) => setEditFormData({ ...editFormData, focus: value as SessionFocus })}
                 >
                   <SelectTrigger id="edit-focus" data-testid="select-edit-focus">
                     <SelectValue placeholder="Select focus" />
@@ -935,6 +975,22 @@ export function SessionDetail({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {isSaving && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+          <Card className="p-8">
+            <div className="text-center space-y-4">
+              <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" />
+              <div>
+                <h3 className="text-lg font-semibold">Calculating distances...</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Please wait while we analyze your session content
+                </p>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
