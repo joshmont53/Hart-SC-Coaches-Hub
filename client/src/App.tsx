@@ -176,8 +176,8 @@ function CalendarApp() {
       const backendSession = adaptSessionToBackend(session);
       return await apiRequest('POST', '/api/sessions', backendSession);
     },
-    onSuccess: (backendSession: BackendSession) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/sessions'] });
+    onSuccess: async (backendSession: BackendSession) => {
+      await queryClient.refetchQueries({ queryKey: ['/api/sessions'] });
       const newSession = adaptSession(backendSession);
       setSelectedSession(newSession);
       setManagementView('calendar');
