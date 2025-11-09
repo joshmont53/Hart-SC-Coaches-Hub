@@ -231,8 +231,8 @@ export function SessionDetail({
       poolId: session.poolId,
       focus: session.focus,
       leadCoachId: session.leadCoachId,
-      secondCoachId: session.secondCoachId || '',
-      helperId: session.helperId || '',
+      secondCoachId: session.secondCoachId || 'none',
+      helperId: session.helperId || 'none',
       setWriterId: session.setWriterId,
     });
     setIsEditDialogOpen(true);
@@ -255,8 +255,8 @@ export function SessionDetail({
       poolId: editFormData.poolId,
       focus: editFormData.focus as SessionFocus,
       leadCoachId: editFormData.leadCoachId,
-      secondCoachId: editFormData.secondCoachId || undefined,
-      helperId: editFormData.helperId || undefined,
+      secondCoachId: editFormData.secondCoachId === 'none' ? undefined : editFormData.secondCoachId,
+      helperId: editFormData.helperId === 'none' ? undefined : editFormData.helperId,
       setWriterId: editFormData.setWriterId,
     };
 
@@ -870,7 +870,7 @@ export function SessionDetail({
                   <SelectValue placeholder="Select second coach (optional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
+                  <SelectItem value="none">None</SelectItem>
                   {coaches.map((coach) => (
                     <SelectItem key={coach.id} value={coach.id}>
                       {coach.name}
@@ -890,7 +890,7 @@ export function SessionDetail({
                   <SelectValue placeholder="Select helper (optional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
+                  <SelectItem value="none">None</SelectItem>
                   {coaches.map((coach) => (
                     <SelectItem key={coach.id} value={coach.id}>
                       {coach.name}
