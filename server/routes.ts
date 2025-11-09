@@ -316,7 +316,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/sessions/:id", isAuthenticated, async (req, res) => {
     try {
+      console.log('[Session Update] Received body:', JSON.stringify(req.body).substring(0, 500));
+      console.log('[Session Update] Distance fields in request:', {
+        totalDistance: req.body.totalDistance,
+        totalFrontCrawlSwim: req.body.totalFrontCrawlSwim,
+        totalFrontCrawlDrill: req.body.totalFrontCrawlDrill,
+      });
+      
       const validatedData = insertSwimmingSessionSchema.partial().parse(req.body);
+      
+      console.log('[Session Update] After validation:', {
+        totalDistance: validatedData.totalDistance,
+        totalFrontCrawlSwim: validatedData.totalFrontCrawlSwim,
+        totalFrontCrawlDrill: validatedData.totalFrontCrawlDrill,
+      });
+      
       const session = await storage.updateSession(req.params.id, validatedData);
       res.json(session);
     } catch (error: any) {
