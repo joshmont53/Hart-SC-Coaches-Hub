@@ -17,14 +17,14 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ArrowLeft, Pencil, Trash2, Calendar as CalendarIcon, Clock, MapPin, ChevronRight, Target, Save } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, isValid } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { RichTextEditor } from '@/components/RichTextEditor';
 
 interface SessionDetailProps {
   session: Session;
-  squad: Squad;
-  location: Location;
+  squad: Squad | undefined;
+  location: Location | undefined;
   coaches: Coach[];
   swimmers: Swimmer[];
   onBack: () => void;
@@ -65,8 +65,17 @@ export function SessionDetail({
   const [isEditingSession, setIsEditingSession] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const formatSessionDate = (date: Date | string): string => {
+    if (!date) return '';
+    if (typeof date === 'string') return date;
+    if (date instanceof Date && isValid(date)) {
+      return format(date, 'yyyy-MM-dd');
+    }
+    return '';
+  };
+
   const [editFormData, setEditFormData] = useState({
-    date: format(session.date, 'yyyy-MM-dd'),
+    date: formatSessionDate(session.date),
     startTime: session.startTime,
     endTime: session.endTime,
     poolId: session.poolId,
@@ -110,12 +119,17 @@ export function SessionDetail({
   };
 
   const calculateDuration = (start: string, end: string) => {
-    const [startHour, startMin] = start.split(':').map(Number);
-    const [endHour, endMin] = end.split(':').map(Number);
-    const durationMin = (endHour * 60 + endMin) - (startHour * 60 + startMin);
-    const hours = Math.floor(durationMin / 60);
-    const mins = durationMin % 60;
-    return `${hours}h ${mins}m`;
+    if (!start || !end) return 'Duration unavailable';
+    try {
+      const [startHour, startMin] = start.split(':').map(Number);
+      const [endHour, endMin] = end.split(':').map(Number);
+      const durationMin = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+      const hours = Math.floor(durationMin / 60);
+      const mins = durationMin % 60;
+      return `${hours}h ${mins}m`;
+    } catch {
+      return 'Duration unavailable';
+    }
   };
 
   const handleAttendanceChange = (
@@ -211,7 +225,7 @@ export function SessionDetail({
 
   const handleEditClick = () => {
     setEditFormData({
-      date: format(session.date, 'yyyy-MM-dd'),
+      date: formatSessionDate(session.date),
       startTime: session.startTime,
       endTime: session.endTime,
       poolId: session.poolId,
@@ -265,9 +279,9 @@ export function SessionDetail({
                 <ArrowLeft className="h-5 w-5" />
               </Button>
               <div className="min-w-0">
-                <h1 className="truncate">{squad.name} - {session.focus}</h1>
+                <h1 className="truncate">{squad?.name || 'Unknown Squad'} - {session.focus}</h1>
                 <p className="text-sm text-muted-foreground">
-                  {format(session.date, 'EEEE, MMMM dd, yyyy')}
+                  {session.date && isValid(new Date(session.date)) ? format(session.date, 'EEEE, MMMM dd, yyyy') : 'Date unavailable'}
                 </p>
               </div>
             </div>
@@ -355,7 +369,7 @@ export function SessionDetail({
                       <CalendarIcon className="h-5 w-5 text-muted-foreground" />
                       <div>
                         <p className="text-sm text-muted-foreground">Date</p>
-                        <p>{format(session.date, 'MMMM dd, yyyy')}</p>
+                        <p>{session.date && isValid(new Date(session.date)) ? format(session.date, 'MMMM dd, yyyy') : 'Date unavailable'}</p>
                       </div>
                     </div>
 
@@ -373,7 +387,7 @@ export function SessionDetail({
                       <MapPin className="h-5 w-5 text-muted-foreground" />
                       <div>
                         <p className="text-sm text-muted-foreground">Location</p>
-                        <p>{location.name} ({location.poolType})</p>
+                        <p>{location?.name || 'Unknown'} ({location?.poolType || 'Unknown'})</p>
                       </div>
                     </div>
 
@@ -822,7 +836,7 @@ export function SessionDetail({
                 </SelectTrigger>
                 <SelectContent>
                   {/* This will need to be populated with actual locations from props */}
-                  <SelectItem value={session.poolId}>{location.name}</SelectItem>
+                  <SelectItem value={session.poolId}>{location?.name || 'Current Location'}</SelectItem>
                 </SelectContent>
               </Select>
             </div>

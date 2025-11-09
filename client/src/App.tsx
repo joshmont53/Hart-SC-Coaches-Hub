@@ -146,6 +146,7 @@ function CalendarApp() {
   };
 
   const handleManagementClick = (viewType: ManagementView) => {
+    setSelectedSession(null);
     setManagementView(viewType);
     setSidebarOpen(false);
   };
