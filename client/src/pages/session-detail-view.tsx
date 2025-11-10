@@ -724,7 +724,7 @@ export function SessionDetail({
                           {session.distanceBreakdown.no1 > 0 && session.distanceBreakdown.no1Breakdown && (
                             <div className="border rounded-lg p-3">
                               <div className="flex items-center justify-between mb-2 gap-2">
-                                <span className="whitespace-nowrap">Swimmer's Choice</span>
+                                <span className="whitespace-nowrap">No 1</span>
                                 <span className="text-primary whitespace-nowrap">{session.distanceBreakdown.no1}m</span>
                               </div>
                               <div className="pl-3 space-y-1 text-sm text-muted-foreground">
