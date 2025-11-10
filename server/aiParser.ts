@@ -168,11 +168,58 @@ CRITICAL RULES - Follow exactly:
     - "6 x 25m as 3 x ( Y <> EVF ) / 1 x BR Arm Pull" 
     - Parse the total distance (6 x 25m = 150m) and classify as Drill
 
-13. VALIDATION:
+13. STROKE TRANSITION PATTERNS:
+    - "X to Y" or "X/Y" within a SINGLE rep = Split distance between strokes
+    - Example: "1x100 Fly to Back" = 50m Fly Swim + 50m BK Swim
+    - Example: "1x100 Bs to Fc" = 50m BR Swim + 50m FC Swim
+    - Example: "1x150 Fly, BK, BS" = 50m Fly + 50m BK + 50m BR
+    - "Drill to Swim" = Split activity within rep
+    - Example: "4x75 Free Drill to Swim" = 150m FC Drill + 150m FC Swim
+
+14. EQUIPMENT-IMPLIED STROKES:
+    - "snorkel" at end of line (e.g., "400 pull snorkel") = FC Pull (unless stroke specified AFTER snorkel)
+    - "400 pull snorkel Fly" = 400m Butterfly Pull (Fly specified after snorkel)
+    - "snorkel" in middle = check for stroke specification at END of line
+
+15. UNSPECIFIED STROKE PATTERNS (CRITICAL):
+    - "Max UW" (underwater) = No1 Kick
+    - "Build" = Swim activity (stroke as specified or No1 if unspecified)
+    - "Fast" = Swim activity (stroke as specified or No1 if unspecified)
+    - "Active Recovery" = Swim activity
+    - If no stroke and no drill/kick/pull keyword = No1 Swim
+
+16. STROKE NAME VARIATIONS:
+    - "Free" = Front Crawl (FC)
+    - "Breast" or "BS" or "BR" = Breaststroke
+    - "Back" = Backstroke (BK)
+    - "Fly" = Butterfly
+
+17. COMPLEX SET PATTERNS:
+    - "#1, #2, #3" indicates numbered variations within a set
+    - Example: "3 x 75m as [#1 50m Fly/25m BK #2 50m BK/25m BR #3 50m BR/25m FC]"
+      * Rep 1: 50m Fly + 25m BK
+      * Rep 2: 50m BK + 25m BR
+      * Rep 3: 50m BR + 25m FC
+      * Total: 50m Fly + 75m BK + 75m BR + 25m FC
+    
+18. MULTIPLE ROUNDS WITH VARIATIONS:
+    - "3 x" prefix before a multi-line set means repeat ALL following items 3 times
+    - "RD 1-2 = X / RD 3 = Y" means rounds 1-2 use one stroke, round 3 uses another
+    - Example: "3 x { 4 x 100m No1 }" with "RD 1-2 = No1 / RD 3 = No2"
+      * Total reps: 12 (3 rounds × 4 reps)
+      * Rounds 1-2: 800m No1
+      * Round 3: 400m No2 (still No1 stroke since No2 is also swimmer's choice)
+
+19. SPECIAL IM VARIATIONS:
+    - "Rolling IM" = Continuous IM (all 4 strokes) - distribute evenly
+    - Example: "3 x 50m Rolling IM" = 150m total distributed as IM (not valid for 25m pools, so count as 150m IM Swim temporarily)
+
+20. VALIDATION:
     - All distances MUST be multiples of 25m or 50m (pool lengths)
     - Sum of all stroke/activity distances should make logical sense
     - Total distance = sum of all individual stroke/activity totals
     - Remember: totalIMSwim/Drill/Kick/Pull should almost always be 0 (IM gets distributed to individual strokes)
+    - EXCEPTION: "Rolling IM" on distances that don't divide evenly by 4 should be counted in totalIMSwim
 
 Return ONLY valid JSON with exact field names above. No explanation, no commentary.`;
 
