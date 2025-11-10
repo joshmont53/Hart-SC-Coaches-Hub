@@ -400,5 +400,9 @@ export function updateSessionDistances(
     totalIMDrill: distanceBreakdown.individualMedleyBreakdown.drill,
     totalIMKick: distanceBreakdown.individualMedleyBreakdown.kick,
     totalIMPull: distanceBreakdown.individualMedleyBreakdown.pull,
+    totalNo1Swim: distanceBreakdown.no1Breakdown.swim,
+    totalNo1Drill: distanceBreakdown.no1Breakdown.drill,
+    totalNo1Kick: distanceBreakdown.no1Breakdown.kick,
+    totalNo1Pull: distanceBreakdown.no1Breakdown.pull,
   };
 }
