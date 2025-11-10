@@ -720,6 +720,33 @@ export function SessionDetail({
                               </div>
                             </div>
                           )}
+
+                          {session.distanceBreakdown.no1 > 0 && session.distanceBreakdown.no1Breakdown && (
+                            <div className="border rounded-lg p-3">
+                              <div className="flex items-center justify-between mb-2 gap-2">
+                                <span className="whitespace-nowrap">Swimmer's Choice</span>
+                                <span className="text-primary whitespace-nowrap">{session.distanceBreakdown.no1}m</span>
+                              </div>
+                              <div className="pl-3 space-y-1 text-sm text-muted-foreground">
+                                <div className="flex justify-between">
+                                  <span>Swim</span>
+                                  <span>{session.distanceBreakdown.no1Breakdown.swim}m</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span>Drill</span>
+                                  <span>{session.distanceBreakdown.no1Breakdown.drill}m</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span>Kick</span>
+                                  <span>{session.distanceBreakdown.no1Breakdown.kick}m</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span>Pull</span>
+                                  <span>{session.distanceBreakdown.no1Breakdown.pull}m</span>
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}

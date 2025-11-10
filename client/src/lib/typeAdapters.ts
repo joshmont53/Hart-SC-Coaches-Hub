@@ -79,6 +79,8 @@ export interface DistanceBreakdown {
   butterflyBreakdown: StrokeBreakdown;
   individualMedley: number;
   individualMedleyBreakdown: StrokeBreakdown;
+  no1: number;
+  no1Breakdown: StrokeBreakdown;
 }
 
 export interface Session {
@@ -289,6 +291,17 @@ export function adaptSession(backend: BackendSession, attendance?: BackendAttend
       drill: backend.totalIMDrill,
       kick: backend.totalIMKick,
       pull: backend.totalIMPull,
+    },
+    no1:
+      backend.totalNo1Swim +
+      backend.totalNo1Drill +
+      backend.totalNo1Kick +
+      backend.totalNo1Pull,
+    no1Breakdown: {
+      swim: backend.totalNo1Swim,
+      drill: backend.totalNo1Drill,
+      kick: backend.totalNo1Kick,
+      pull: backend.totalNo1Pull,
     },
   };
 
