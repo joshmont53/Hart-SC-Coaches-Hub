@@ -43,8 +43,10 @@ Preferred communication style: Simple, everyday language.
   - **Detail Tab**: Session metadata (date, time, location, focus, coaching team, total distance)
   - **Session Tab**: RichTextEditor for session content with sliding distance breakdown sidebar
     - RichTextEditor (`client/src/components/RichTextEditor.tsx`) provides rich formatting (bold, italic, underline, colors)
-    - Distance sidebar shows stroke-by-stroke breakdowns (swim/drill/kick/pull per stroke)
+    - Distance sidebar shows stroke-by-stroke breakdowns (swim/drill/kick/pull per stroke) for all 6 stroke types
+    - Displays: Front Crawl, Backstroke, Breaststroke, Butterfly, Individual Medley, and Swimmer's Choice (No1)
     - Sidebar slides in from right on desktop, fullscreen overlay on mobile
+    - **Fix (Nov 10, 2025)**: Added No1/Swimmer's Choice display - previously missing from DistanceBreakdown interface and UI
   - **Attendance Tab**: Attendance register with status ('Present', '1st half only', '2nd half only', 'Absent') and notes ('-', 'Late', 'Very Late') dropdowns
     - Initializes attendance records for all squad swimmers
     - Enforces business rule: Absent status forces notes to '-'
