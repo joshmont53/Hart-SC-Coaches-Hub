@@ -113,9 +113,7 @@ function CalendarApp() {
   );
 
   // Find current coach based on authenticated user
-  const currentCoachId = coaches.find(c => 
-    `${c.firstName} ${c.lastName}` === `${user?.firstName} ${user?.lastName}`
-  )?.id;
+  const currentCoachId = coaches.find(c => c.userId === user?.id)?.id;
   
   const currentCoach = coaches.find(c => c.id === currentCoachId);
   

@@ -26,6 +26,7 @@ export type QualificationLevel = 'No Qualification' | 'Level 1' | 'Level 2' | 'L
 
 export interface Coach {
   id: string;
+  userId?: string | null;
   firstName: string;
   lastName: string;
   name: string;
@@ -136,6 +137,7 @@ export function adaptLocationToBackend(frontend: Omit<Location, 'id'>): Omit<Bac
 export function adaptCoach(backend: BackendCoach): Coach {
   return {
     id: backend.id,
+    userId: backend.userId,
     firstName: backend.firstName,
     lastName: backend.lastName,
     name: `${backend.firstName} ${backend.lastName}`,
