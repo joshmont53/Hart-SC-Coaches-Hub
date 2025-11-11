@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -136,18 +136,139 @@ export function SessionDetail({
         })) : [])
   );
 
-  const [sessionContent, setSessionContent] = useState(() => {
-    if (!session) return '';
-    const htmlContent = session.contentHtml;
-    if (htmlContent) {
-      return htmlContent;
-    }
-    const content = session.content || '';
-    if (content && !content.includes('<')) {
-      return content.replace(/\n/g, '<br>');
-    }
-    return content;
+  const [sessionContent, setSessionContent] = useState('');
+
+  // ALL MUTATIONS MUST BE DEFINED BEFORE ANY CONDITIONAL RETURNS
+  const updateAttendanceMutation = useMutation({
+    mutationFn: async (attendance: AttendanceRecord[]) => {
+      return await apiRequest('PUT', `/api/sessions/${sessionId}`, { attendance });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/sessions'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to save attendance',
+        variant: 'destructive',
+      });
+    },
   });
+
+  const updateContentMutation = useMutation({
+    mutationFn: async (content: string) => {
+      console.log('[Session Save] Starting GPT distance parsing...');
+      
+      const plainText = stripHtmlTags(content);
+      
+      const parseResultResponse = await apiRequest('POST', '/api/sessions/parse-ai', { 
+        sessionContent: plainText 
+      });
+      const parseResult = await parseResultResponse.json();
+      
+      console.log('[Session Save] GPT parsing complete, saving to database...');
+      
+      return await apiRequest('PUT', `/api/sessions/${sessionId}`, { 
+        sessionContent: plainText,
+        sessionContentHtml: content,
+        totalFrontCrawlSwim: parseResult.totalFrontCrawlSwim || 0,
+        totalFrontCrawlDrill: parseResult.totalFrontCrawlDrill || 0,
+        totalFrontCrawlKick: parseResult.totalFrontCrawlKick || 0,
+        totalFrontCrawlPull: parseResult.totalFrontCrawlPull || 0,
+        totalBackstrokeSwim: parseResult.totalBackstrokeSwim || 0,
+        totalBackstrokeDrill: parseResult.totalBackstrokeDrill || 0,
+        totalBackstrokeKick: parseResult.totalBackstrokeKick || 0,
+        totalBackstrokePull: parseResult.totalBackstrokePull || 0,
+        totalBreaststrokeSwim: parseResult.totalBreaststrokeSwim || 0,
+        totalBreaststrokeDrill: parseResult.totalBreaststrokeDrill || 0,
+        totalBreaststrokeKick: parseResult.totalBreaststrokeKick || 0,
+        totalBreaststrokePull: parseResult.totalBreaststrokePull || 0,
+        totalButterflySwim: parseResult.totalButterflySwim || 0,
+        totalButterflyDrill: parseResult.totalButterflyDrill || 0,
+        totalButterflyKick: parseResult.totalButterflyKick || 0,
+        totalButterflyPull: parseResult.totalButterflyPull || 0,
+        totalIMSwim: parseResult.totalIMSwim || 0,
+        totalIMDrill: parseResult.totalIMDrill || 0,
+        totalIMKick: parseResult.totalIMKick || 0,
+        totalIMPull: parseResult.totalIMPull || 0,
+        totalNo1Swim: parseResult.totalNo1Swim || 0,
+        totalNo1Drill: parseResult.totalNo1Drill || 0,
+        totalNo1Kick: parseResult.totalNo1Kick || 0,
+        totalNo1Pull: parseResult.totalNo1Pull || 0,
+        totalDistance: parseResult.totalDistance || 0,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/sessions'] });
+      setIsEditingSession(false);
+      setIsSaving(false);
+    },
+    onError: (error: Error) => {
+      setIsSaving(false);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update session',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const updateSessionMutation = useMutation({
+    mutationFn: async (data: Partial<Session>) => {
+      return await apiRequest('PUT', `/api/sessions/${sessionId}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/sessions'] });
+      setIsEditDialogOpen(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update session',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Update state when session data loads
+  useEffect(() => {
+    if (session) {
+      const htmlContent = session.contentHtml;
+      if (htmlContent) {
+        setSessionContent(htmlContent);
+      } else {
+        const content = session.content || '';
+        if (content && !content.includes('<')) {
+          setSessionContent(content.replace(/\n/g, '<br>'));
+        } else {
+          setSessionContent(content);
+        }
+      }
+      
+      setEditFormData({
+        date: formatSessionDate(session.date),
+        startTime: session.startTime,
+        endTime: session.endTime,
+        poolId: session.locationId,
+        focus: session.focus,
+        leadCoachId: session.leadCoachId,
+        secondCoachId: session.secondCoachId || '',
+        helperId: session.helperId || '',
+        setWriterId: session.setWriterId,
+      });
+      
+      setAttendanceRecords(
+        session.attendance ||
+          swimmers
+            .filter((s) => s.squadId === session.squadId)
+            .map((s) => ({
+              swimmerId: s.id,
+              status: 'Present' as AttendanceStatus,
+              notes: '-' as AttendanceNote,
+            }))
+      );
+    }
+  }, [session, swimmers]);
 
   // Show loading state while data is being fetched
   if (sessionLoading || squadsLoading || !session) {
@@ -218,105 +339,14 @@ export function SessionDetail({
     );
   };
 
-  const updateAttendanceMutation = useMutation({
-    mutationFn: async (attendance: AttendanceRecord[]) => {
-      return await apiRequest('PUT', `/api/sessions/${session.id}`, { attendance });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/sessions'] });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to save attendance',
-        variant: 'destructive',
-      });
-    },
-  });
-
   const handleSaveAttendance = () => {
     updateAttendanceMutation.mutate(attendanceRecords);
   };
-
-  const updateContentMutation = useMutation({
-    mutationFn: async (content: string) => {
-      console.log('[Session Save] Starting GPT distance parsing...');
-      
-      const plainText = stripHtmlTags(content);
-      
-      const parseResultResponse = await apiRequest('POST', '/api/sessions/parse-ai', { 
-        sessionContent: plainText 
-      });
-      const parseResult = await parseResultResponse.json();
-      
-      console.log('[Session Save] GPT parsing complete, saving to database...');
-      
-      return await apiRequest('PUT', `/api/sessions/${session.id}`, { 
-        sessionContent: plainText,
-        sessionContentHtml: content,
-        totalFrontCrawlSwim: parseResult.totalFrontCrawlSwim || 0,
-        totalFrontCrawlDrill: parseResult.totalFrontCrawlDrill || 0,
-        totalFrontCrawlKick: parseResult.totalFrontCrawlKick || 0,
-        totalFrontCrawlPull: parseResult.totalFrontCrawlPull || 0,
-        totalBackstrokeSwim: parseResult.totalBackstrokeSwim || 0,
-        totalBackstrokeDrill: parseResult.totalBackstrokeDrill || 0,
-        totalBackstrokeKick: parseResult.totalBackstrokeKick || 0,
-        totalBackstrokePull: parseResult.totalBackstrokePull || 0,
-        totalBreaststrokeSwim: parseResult.totalBreaststrokeSwim || 0,
-        totalBreaststrokeDrill: parseResult.totalBreaststrokeDrill || 0,
-        totalBreaststrokeKick: parseResult.totalBreaststrokeKick || 0,
-        totalBreaststrokePull: parseResult.totalBreaststrokePull || 0,
-        totalButterflySwim: parseResult.totalButterflySwim || 0,
-        totalButterflyDrill: parseResult.totalButterflyDrill || 0,
-        totalButterflyKick: parseResult.totalButterflyKick || 0,
-        totalButterflyPull: parseResult.totalButterflyPull || 0,
-        totalIMSwim: parseResult.totalIMSwim || 0,
-        totalIMDrill: parseResult.totalIMDrill || 0,
-        totalIMKick: parseResult.totalIMKick || 0,
-        totalIMPull: parseResult.totalIMPull || 0,
-        totalNo1Swim: parseResult.totalNo1Swim || 0,
-        totalNo1Drill: parseResult.totalNo1Drill || 0,
-        totalNo1Kick: parseResult.totalNo1Kick || 0,
-        totalNo1Pull: parseResult.totalNo1Pull || 0,
-        totalDistance: parseResult.totalDistance || 0,
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/sessions'] });
-      setIsEditingSession(false);
-      setIsSaving(false);
-    },
-    onError: (error: Error) => {
-      setIsSaving(false);
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to update session',
-        variant: 'destructive',
-      });
-    },
-  });
 
   const handleSaveSession = () => {
     setIsSaving(true);
     updateContentMutation.mutate(sessionContent);
   };
-
-  const updateSessionMutation = useMutation({
-    mutationFn: async (data: Partial<Session>) => {
-      return await apiRequest('PUT', `/api/sessions/${session.id}`, data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/sessions'] });
-      setIsEditDialogOpen(false);
-    },
-    onError: (error: Error) => {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to update session',
-        variant: 'destructive',
-      });
-    },
-  });
 
   const handleEditClick = () => {
     setEditFormData({
