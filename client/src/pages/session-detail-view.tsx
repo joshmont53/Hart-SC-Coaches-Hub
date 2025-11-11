@@ -1,12 +1,15 @@
-import { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useState, useMemo } from 'react';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import type { Session, Squad, Location, Coach, Swimmer, AttendanceRecord, SessionFocus } from '../lib/typeAdapters';
+import { adaptSession, adaptSquad } from '../lib/typeAdapters';
+import type { SwimmingSession as BackendSession, Squad as BackendSquad } from '@shared/schema';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Dialog,
   DialogContent,
@@ -23,9 +26,7 @@ import { cn } from '@/lib/utils';
 import { RichTextEditor } from '@/components/RichTextEditor';
 
 interface SessionDetailProps {
-  session: Session;
-  squad: Squad | undefined;
-  location: Location | undefined;
+  sessionId: string;
   locations: Location[];
   coaches: Coach[];
   swimmers: Swimmer[];
@@ -61,20 +62,48 @@ function stripHtmlTags(html: string): string {
 }
 
 export function SessionDetail({
-  session,
-  squad,
-  location,
+  sessionId,
   locations,
   coaches,
   swimmers,
   onBack,
 }: SessionDetailProps) {
   const { toast } = useToast();
+  
+  // Fetch session data
+  const { data: backendSession, isLoading: sessionLoading } = useQuery<BackendSession>({
+    queryKey: ['/api/sessions', sessionId],
+    queryFn: async () => {
+      const response = await apiRequest('GET', `/api/sessions/${sessionId}`);
+      return response.json();
+    },
+  });
+
+  // Fetch squads data to find the squad for this session
+  const { data: backendSquads = [], isLoading: squadsLoading } = useQuery<BackendSquad[]>({
+    queryKey: ['/api/squads'],
+  });
+
+  // Adapt backend data to frontend types
+  const session = useMemo(
+    () => backendSession ? adaptSession(backendSession) : null,
+    [backendSession]
+  );
+
+  const squads = useMemo(
+    () => backendSquads.map(s => adaptSquad(s)),
+    [backendSquads]
+  );
+
+  const squad = squads.find(s => s.id === session?.squadId);
+  const location = locations.find(l => l.id === session?.locationId);
+
   const [activeTab, setActiveTab] = useState<TabType>('detail');
   const [isEditingSession, setIsEditingSession] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  
   const formatSessionDate = (date: Date | string): string => {
     if (!date) return '';
     if (typeof date === 'string') return date;
@@ -85,29 +114,30 @@ export function SessionDetail({
   };
 
   const [editFormData, setEditFormData] = useState({
-    date: formatSessionDate(session.date),
-    startTime: session.startTime,
-    endTime: session.endTime,
-    poolId: session.locationId,
-    focus: session.focus,
-    leadCoachId: session.leadCoachId,
-    secondCoachId: session.secondCoachId || '',
-    helperId: session.helperId || '',
-    setWriterId: session.setWriterId,
+    date: session ? formatSessionDate(session.date) : '',
+    startTime: session?.startTime || '',
+    endTime: session?.endTime || '',
+    poolId: session?.locationId || '',
+    focus: session?.focus || 'Aerobic capacity',
+    leadCoachId: session?.leadCoachId || '',
+    secondCoachId: session?.secondCoachId || '',
+    helperId: session?.helperId || '',
+    setWriterId: session?.setWriterId || '',
   });
 
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>(
-    session.attendance ||
-      swimmers
+    session?.attendance ||
+      (session ? swimmers
         .filter((s) => s.squadId === session.squadId)
         .map((s) => ({
           swimmerId: s.id,
           status: 'Present' as AttendanceStatus,
           notes: '-' as AttendanceNote,
-        }))
+        })) : [])
   );
 
   const [sessionContent, setSessionContent] = useState(() => {
+    if (!session) return '';
     const htmlContent = session.contentHtml;
     if (htmlContent) {
       return htmlContent;
@@ -118,6 +148,27 @@ export function SessionDetail({
     }
     return content;
   });
+
+  // Show loading state while data is being fetched
+  if (sessionLoading || squadsLoading || !session) {
+    return (
+      <div className="flex flex-col h-full max-w-7xl mx-auto p-4 md:p-6" data-testid="view-session-detail">
+        <div className="mb-4 md:mb-6">
+          <div className="flex items-center gap-2 md:gap-4">
+            <Button variant="ghost" size="icon" onClick={onBack} data-testid="button-back">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <Skeleton className="h-8 w-64" />
+          </div>
+        </div>
+        <div className="space-y-4">
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-64 w-full" />
+        </div>
+      </div>
+    );
+  }
 
   const leadCoach = coaches.find((c) => c.id === session.leadCoachId);
   const secondCoach = coaches.find((c) => c.id === session.secondCoachId);

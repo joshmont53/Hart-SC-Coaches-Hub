@@ -58,7 +58,7 @@ function CalendarApp() {
   const { toast } = useToast();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [selectedSession, setSelectedSession] = useState<Session | null>(null);
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [view, setView] = useState<View>('month');
   const [mobileView, setMobileView] = useState<MobileView>('calendar');
   const [managementView, setManagementView] = useState<ManagementView>('calendar');
@@ -144,7 +144,7 @@ function CalendarApp() {
   };
 
   const handleManagementClick = (viewType: ManagementView) => {
-    setSelectedSession(null);
+    setSelectedSessionId(null);
     setManagementView(viewType);
     setSidebarOpen(false);
   };
@@ -154,11 +154,11 @@ function CalendarApp() {
   };
 
   const handleSessionClick = (session: Session) => {
-    setSelectedSession(session);
+    setSelectedSessionId(session.id);
   };
 
   const handleBackFromSession = () => {
-    setSelectedSession(null);
+    setSelectedSessionId(null);
   };
 
   const handleAddSession = () => {
@@ -172,23 +172,15 @@ function CalendarApp() {
   const createSessionMutation = useMutation({
     mutationFn: async (session: Omit<Session, 'id'>) => {
       const backendSession = adaptSessionToBackend(session);
-      return await apiRequest('POST', '/api/sessions', backendSession);
+      const response = await apiRequest('POST', '/api/sessions', backendSession);
+      return response.json();
     },
     onSuccess: async (backendSession: BackendSession) => {
       // Refetch all data to ensure cache is up to date
       await queryClient.refetchQueries({ queryKey: ['/api/sessions'] });
       
-      // Read the fresh data directly from the cache
-      const updatedBackendSessions = queryClient.getQueryData<BackendSession[]>(['/api/sessions']);
-      
-      if (updatedBackendSessions) {
-        // Find the newly created session in the fresh data
-        const freshSession = updatedBackendSessions.find(s => s.id === backendSession.id);
-        if (freshSession) {
-          const newSession = adaptSession(freshSession);
-          setSelectedSession(newSession);
-        }
-      }
+      // Set the newly created session as selected
+      setSelectedSessionId(backendSession.id);
       setManagementView('calendar');
     },
     onError: (error: Error) => {
@@ -354,14 +346,12 @@ function CalendarApp() {
 
         <main className={cn(
           "flex-1 overflow-auto",
-          selectedSession ? "p-0" : "p-4 md:p-6"
+          selectedSessionId ? "p-0" : "p-4 md:p-6"
         )}>
-          {selectedSession ? (
+          {selectedSessionId ? (
             <div className="h-full p-4 md:p-6">
               <SessionDetail
-                session={selectedSession}
-                squad={squads.find(s => s.id === selectedSession.squadId)!}
-                location={locations.find(l => l.id === selectedSession.locationId)!}
+                sessionId={selectedSessionId}
                 locations={locations}
                 coaches={coaches}
                 swimmers={swimmers}
