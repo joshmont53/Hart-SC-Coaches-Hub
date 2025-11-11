@@ -96,6 +96,7 @@ export interface Session {
   endTime: string;
   focus: SessionFocus;
   content?: string | null;
+  contentHtml?: string | null;
   distanceBreakdown?: DistanceBreakdown;
   attendance?: AttendanceRecord[];
 }
@@ -318,6 +319,7 @@ export function adaptSession(backend: BackendSession, attendance?: BackendAttend
     endTime: backend.endTime,
     focus: backend.focus as SessionFocus,
     content: backend.sessionContent,
+    contentHtml: backend.sessionContentHtml,
     distanceBreakdown,
     attendance: attendance?.map(adaptAttendance),
   };
@@ -345,6 +347,7 @@ export function adaptSessionToBackend(
     setWriterId: frontend.setWriterId,
     focus: frontend.focus,
     sessionContent: frontend.content || null,
+    sessionContentHtml: frontend.contentHtml || null,
     totalDistance: 0,
     totalFrontCrawlSwim: 0,
     totalFrontCrawlDrill: 0,
