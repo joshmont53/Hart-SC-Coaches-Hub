@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { ArrowLeft, ArrowRight, Save, CheckCircle2, AlertCircle } from "lucide-react";
+import { ArrowLeft, ArrowRight, Save, AlertCircle } from "lucide-react";
 import { useLocation, useRoute } from "wouter";
 import type { Coach, Squad, Location, Swimmer, SwimmingSession } from "@shared/schema";
 
