@@ -74,10 +74,6 @@ export function ManageLocations({ locations, onBack }: ManageLocationsProps) {
       queryClient.invalidateQueries({ queryKey: ['/api/locations'] });
       setEditingLocation(null);
       setFormData({ name: '', poolType: '25m' });
-      toast({
-        title: 'Success',
-        description: 'Location updated successfully',
-      });
     },
     onError: (error: Error) => {
       toast({

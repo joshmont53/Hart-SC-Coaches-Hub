@@ -76,10 +76,6 @@ export function ManageSwimmers({ swimmers, squads, onBack }: ManageSwimmersProps
       queryClient.invalidateQueries({ queryKey: ['/api/swimmers'] });
       setEditingSwimmer(null);
       setFormData({ firstName: '', lastName: '', dateOfBirth: '', squadId: '', asaNumber: 0 });
-      toast({
-        title: 'Success',
-        description: 'Swimmer updated successfully',
-      });
     },
     onError: (error: Error) => {
       toast({

@@ -73,10 +73,6 @@ export function ManageSquads({ squads, coaches, onBack }: ManageSquadsProps) {
       queryClient.invalidateQueries({ queryKey: ['/api/squads'] });
       setEditingSquad(null);
       setFormData({ name: '', primaryCoachId: '', color: '#3B82F6' });
-      toast({
-        title: 'Success',
-        description: 'Squad updated successfully',
-      });
     },
     onError: (error: Error) => {
       toast({

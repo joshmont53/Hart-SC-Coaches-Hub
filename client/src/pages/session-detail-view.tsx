@@ -173,10 +173,6 @@ export function SessionDetail({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/sessions'] });
-      toast({
-        title: 'Success',
-        description: 'Attendance saved successfully',
-      });
     },
     onError: (error: Error) => {
       toast({
@@ -238,10 +234,6 @@ export function SessionDetail({
       queryClient.invalidateQueries({ queryKey: ['/api/sessions'] });
       setIsEditingSession(false);
       setIsSaving(false);
-      toast({
-        title: 'Success',
-        description: 'Session content and distances saved successfully',
-      });
     },
     onError: (error: Error) => {
       setIsSaving(false);
@@ -265,10 +257,6 @@ export function SessionDetail({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/sessions'] });
       setIsEditDialogOpen(false);
-      toast({
-        title: 'Success',
-        description: 'Session updated successfully',
-      });
     },
     onError: (error: Error) => {
       toast({

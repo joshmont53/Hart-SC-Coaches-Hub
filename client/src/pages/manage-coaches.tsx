@@ -81,10 +81,6 @@ export function ManageCoaches({ coaches, onBack }: ManageCoachesProps) {
       queryClient.invalidateQueries({ queryKey: ['/api/coaches'] });
       setEditingCoach(null);
       setFormData({ firstName: '', lastName: '', level: 'Level 1' as QualificationLevel, dateOfBirth: '' });
-      toast({
-        title: 'Success',
-        description: 'Coach updated successfully',
-      });
     },
     onError: (error: Error) => {
       toast({
