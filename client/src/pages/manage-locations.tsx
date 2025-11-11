@@ -52,10 +52,6 @@ export function ManageLocations({ locations, onBack }: ManageLocationsProps) {
       queryClient.invalidateQueries({ queryKey: ['/api/locations'] });
       setIsAddDialogOpen(false);
       setFormData({ name: '', poolType: '25m' });
-      toast({
-        title: 'Success',
-        description: 'Location added successfully',
-      });
     },
     onError: (error: Error) => {
       toast({
@@ -91,10 +87,6 @@ export function ManageLocations({ locations, onBack }: ManageLocationsProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/locations'] });
       setDeletingLocation(null);
-      toast({
-        title: 'Success',
-        description: 'Location deleted successfully',
-      });
     },
     onError: (error: Error) => {
       toast({
