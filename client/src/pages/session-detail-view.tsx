@@ -108,6 +108,10 @@ export function SessionDetail({
   );
 
   const [sessionContent, setSessionContent] = useState(() => {
+    const htmlContent = session.contentHtml;
+    if (htmlContent) {
+      return htmlContent;
+    }
     const content = session.content || '';
     if (content && !content.includes('<')) {
       return content.replace(/\n/g, '<br>');
