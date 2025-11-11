@@ -117,7 +117,7 @@ export function ManageLocations({ locations, onBack }: ManageLocationsProps) {
 
     const locationData: InsertLocation = {
       poolName: formData.name,
-      poolType: formData.poolType,
+      poolType: formData.poolType === '25m' ? 'SC' : 'LC',
     };
 
     createMutation.mutate(locationData);
@@ -145,7 +145,7 @@ export function ManageLocations({ locations, onBack }: ManageLocationsProps) {
 
     const locationData: InsertLocation = {
       poolName: formData.name,
-      poolType: formData.poolType,
+      poolType: formData.poolType === '25m' ? 'SC' : 'LC',
     };
 
     updateMutation.mutate({ id: editingLocation.id, data: locationData });
