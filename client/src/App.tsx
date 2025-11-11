@@ -348,14 +348,6 @@ function CalendarApp() {
                   </TabsList>
                 </Tabs>
               </div>
-              
-              {showMySessionsOnly && (
-                <div className="text-xs sm:text-sm text-muted-foreground ml-auto" data-testid="text-session-count">
-                  <span className="text-primary">
-                    {filteredSessions.length} of {sessions.length} sessions
-                  </span>
-                </div>
-              )}
             </div>
           )}
         </header>
