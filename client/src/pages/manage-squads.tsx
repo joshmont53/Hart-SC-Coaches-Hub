@@ -51,10 +51,6 @@ export function ManageSquads({ squads, coaches, onBack }: ManageSquadsProps) {
       queryClient.invalidateQueries({ queryKey: ['/api/squads'] });
       setIsAddDialogOpen(false);
       setFormData({ name: '', primaryCoachId: '', color: '#3B82F6' });
-      toast({
-        title: 'Success',
-        description: 'Squad added successfully',
-      });
     },
     onError: (error: Error) => {
       toast({
@@ -90,10 +86,6 @@ export function ManageSquads({ squads, coaches, onBack }: ManageSquadsProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/squads'] });
       setDeletingSquad(null);
-      toast({
-        title: 'Success',
-        description: 'Squad deleted successfully',
-      });
     },
     onError: (error: Error) => {
       toast({

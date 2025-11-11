@@ -54,10 +54,6 @@ export function ManageSwimmers({ swimmers, squads, onBack }: ManageSwimmersProps
       queryClient.invalidateQueries({ queryKey: ['/api/swimmers'] });
       setIsAddDialogOpen(false);
       setFormData({ firstName: '', lastName: '', dateOfBirth: '', squadId: '', asaNumber: 0 });
-      toast({
-        title: 'Success',
-        description: 'Swimmer added successfully',
-      });
     },
     onError: (error: Error) => {
       toast({
@@ -93,10 +89,6 @@ export function ManageSwimmers({ swimmers, squads, onBack }: ManageSwimmersProps
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/swimmers'] });
       setDeletingSwimmer(null);
-      toast({
-        title: 'Success',
-        description: 'Swimmer deleted successfully',
-      });
     },
     onError: (error: Error) => {
       toast({

@@ -59,10 +59,6 @@ export function ManageCoaches({ coaches, onBack }: ManageCoachesProps) {
       queryClient.invalidateQueries({ queryKey: ['/api/coaches'] });
       setIsAddDialogOpen(false);
       setFormData({ firstName: '', lastName: '', level: 'Level 1' as QualificationLevel, dateOfBirth: '' });
-      toast({
-        title: 'Success',
-        description: 'Coach added successfully',
-      });
     },
     onError: (error: Error) => {
       toast({
@@ -98,10 +94,6 @@ export function ManageCoaches({ coaches, onBack }: ManageCoachesProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/coaches'] });
       setDeletingCoach(null);
-      toast({
-        title: 'Success',
-        description: 'Coach deleted successfully',
-      });
     },
     onError: (error: Error) => {
       toast({
