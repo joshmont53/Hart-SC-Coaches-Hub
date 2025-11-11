@@ -41,6 +41,11 @@ export function DayCalendarView({
     '19:00', '20:00', '21:00', '22:00'
   ];
 
+  const timeToMinutes = (time: string): number => {
+    const [hour, min] = time.split(':').map(Number);
+    return hour * 60 + min;
+  };
+
   const getSessionPosition = (session: Session) => {
     const [startHour, startMin] = session.startTime.split(':').map(Number);
     const [endHour, endMin] = session.endTime.split(':').map(Number);
@@ -107,14 +112,30 @@ export function DayCalendarView({
                           if (!squad) return null;
 
                           const { top, height } = getSessionPosition(session);
-                          const sessionsAtSameTime = locationSessions.filter((s) => {
-                            const sameStart = s.startTime === session.startTime;
-                            return sameStart;
+                          
+                          const sessionStart = timeToMinutes(session.startTime);
+                          const sessionEnd = timeToMinutes(session.endTime);
+                          
+                          const overlappingSessions = locationSessions.filter((s) => {
+                            if (s.id === session.id) return true;
+                            
+                            const otherStart = timeToMinutes(s.startTime);
+                            const otherEnd = timeToMinutes(s.endTime);
+                            
+                            return sessionStart < otherEnd && otherStart < sessionEnd;
                           });
-                          const sessionIndex = sessionsAtSameTime.indexOf(session);
-                          const totalConcurrent = sessionsAtSameTime.length;
-                          const width = totalConcurrent > 1 ? `${100 / totalConcurrent}%` : '100%';
-                          const left = totalConcurrent > 1 ? `${(sessionIndex / totalConcurrent) * 100}%` : '0%';
+                          
+                          const sortedOverlapping = overlappingSessions.sort((a, b) => {
+                            if (a.startTime !== b.startTime) {
+                              return a.startTime.localeCompare(b.startTime);
+                            }
+                            return a.id.localeCompare(b.id);
+                          });
+                          
+                          const sessionIndex = sortedOverlapping.findIndex(s => s.id === session.id);
+                          const totalConcurrent = sortedOverlapping.length;
+                          const width = `${100 / totalConcurrent}%`;
+                          const left = `${(sessionIndex / totalConcurrent) * 100}%`;
 
                           return (
                             <div
