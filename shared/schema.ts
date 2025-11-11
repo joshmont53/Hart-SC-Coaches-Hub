@@ -147,6 +147,7 @@ export const swimmingSessions = pgTable("swimming_sessions", {
   
   // Session content (raw text written by coach)
   sessionContent: text("session_content"),
+  sessionContentHtml: text("session_content_html"),
   
   // Distance fields
   totalDistance: integer("total_distance").notNull().default(0),
