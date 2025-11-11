@@ -202,6 +202,7 @@ export function SessionDetail({
       
       return await apiRequest('PUT', `/api/sessions/${session.id}`, { 
         sessionContent: plainText,
+        sessionContentHtml: content,
         totalFrontCrawlSwim: parseResult.totalFrontCrawlSwim || 0,
         totalFrontCrawlDrill: parseResult.totalFrontCrawlDrill || 0,
         totalFrontCrawlKick: parseResult.totalFrontCrawlKick || 0,
