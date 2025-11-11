@@ -1025,7 +1025,7 @@ export function SessionDetail({
               <div>
                 <h3 className="text-lg font-semibold">Calculating distances...</h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Please wait while we analyze your session content
+                  Calculating the session distance breakdowns, please wait...
                 </p>
               </div>
             </div>
