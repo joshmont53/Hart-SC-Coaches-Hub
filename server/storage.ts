@@ -23,7 +23,7 @@ import {
   type InsertAttendance,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (required for Replit Auth)
@@ -117,7 +117,7 @@ export class DatabaseStorage implements IStorage {
 
   // Coach operations
   async getCoaches(): Promise<Coach[]> {
-    return await db.select().from(coaches);
+    return await db.select().from(coaches).where(eq(coaches.recordStatus, 'active'));
   }
 
   async getCoach(id: string): Promise<Coach | undefined> {
@@ -148,7 +148,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteCoach(id: string): Promise<void> {
-    const result = await db.delete(coaches).where(eq(coaches.id, id)).returning();
+    const result = await db
+      .update(coaches)
+      .set({ recordStatus: 'inactive' })
+      .where(eq(coaches.id, id))
+      .returning();
     if (result.length === 0) {
       throw new Error("Coach not found");
     }
@@ -156,7 +160,7 @@ export class DatabaseStorage implements IStorage {
 
   // Squad operations
   async getSquads(): Promise<Squad[]> {
-    return await db.select().from(squads);
+    return await db.select().from(squads).where(eq(squads.recordStatus, 'active'));
   }
 
   async getSquad(id: string): Promise<Squad | undefined> {
@@ -182,7 +186,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteSquad(id: string): Promise<void> {
-    const result = await db.delete(squads).where(eq(squads.id, id)).returning();
+    const result = await db
+      .update(squads)
+      .set({ recordStatus: 'inactive' })
+      .where(eq(squads.id, id))
+      .returning();
     if (result.length === 0) {
       throw new Error("Squad not found");
     }
@@ -190,7 +198,7 @@ export class DatabaseStorage implements IStorage {
 
   // Swimmer operations
   async getSwimmers(): Promise<Swimmer[]> {
-    return await db.select().from(swimmers);
+    return await db.select().from(swimmers).where(eq(swimmers.recordStatus, 'active'));
   }
 
   async getSwimmer(id: string): Promise<Swimmer | undefined> {
@@ -216,7 +224,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteSwimmer(id: string): Promise<void> {
-    const result = await db.delete(swimmers).where(eq(swimmers.id, id)).returning();
+    const result = await db
+      .update(swimmers)
+      .set({ recordStatus: 'inactive' })
+      .where(eq(swimmers.id, id))
+      .returning();
     if (result.length === 0) {
       throw new Error("Swimmer not found");
     }
@@ -224,7 +236,7 @@ export class DatabaseStorage implements IStorage {
 
   // Location operations
   async getLocations(): Promise<Location[]> {
-    return await db.select().from(locations);
+    return await db.select().from(locations).where(eq(locations.recordStatus, 'active'));
   }
 
   async getLocation(id: string): Promise<Location | undefined> {
@@ -250,7 +262,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteLocation(id: string): Promise<void> {
-    const result = await db.delete(locations).where(eq(locations.id, id)).returning();
+    const result = await db
+      .update(locations)
+      .set({ recordStatus: 'inactive' })
+      .where(eq(locations.id, id))
+      .returning();
     if (result.length === 0) {
       throw new Error("Location not found");
     }
@@ -258,7 +274,7 @@ export class DatabaseStorage implements IStorage {
 
   // Session operations
   async getSessions(): Promise<SwimmingSession[]> {
-    return await db.select().from(swimmingSessions);
+    return await db.select().from(swimmingSessions).where(eq(swimmingSessions.recordStatus, 'active'));
   }
 
   async getSession(id: string): Promise<SwimmingSession | undefined> {
@@ -293,15 +309,26 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteSession(id: string): Promise<void> {
-    const result = await db.delete(swimmingSessions).where(eq(swimmingSessions.id, id)).returning();
+    // Soft delete the session
+    const result = await db
+      .update(swimmingSessions)
+      .set({ recordStatus: 'inactive' })
+      .where(eq(swimmingSessions.id, id))
+      .returning();
     if (result.length === 0) {
       throw new Error("Session not found");
     }
+    
+    // Also soft delete all associated attendance records
+    await db
+      .update(attendance)
+      .set({ recordStatus: 'inactive' })
+      .where(eq(attendance.sessionId, id));
   }
 
   // Attendance operations
   async getAttendanceBySession(sessionId: string): Promise<Attendance[]> {
-    return await db.select().from(attendance).where(eq(attendance.sessionId, sessionId));
+    return await db.select().from(attendance).where(and(eq(attendance.sessionId, sessionId), eq(attendance.recordStatus, 'active')));
   }
 
   async createAttendance(attendanceRecord: InsertAttendance): Promise<Attendance> {
