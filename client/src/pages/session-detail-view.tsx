@@ -262,16 +262,28 @@ export function SessionDetail({
         setWriterId: session.setWriterId,
       });
       
-      setAttendanceRecords(
-        session.attendance ||
-          swimmers
-            .filter((s) => s.squadId === session.squadId)
-            .map((s) => ({
-              swimmerId: s.id,
-              status: 'Present' as AttendanceStatus,
-              notes: '-' as AttendanceNote,
-            }))
-      );
+      // Build attendance records by merging saved attendance with current squad swimmers
+      const currentSquadSwimmers = swimmers.filter((s) => s.squadId === session.squadId);
+      const savedAttendance = session.attendance || [];
+      
+      const mergedAttendance = currentSquadSwimmers.map((swimmer) => {
+        // Check if this swimmer has saved attendance
+        const saved = savedAttendance.find((a) => a.swimmerId === swimmer.id);
+        
+        if (saved) {
+          // Use saved attendance for current squad members
+          return saved;
+        } else {
+          // Use defaults for new squad members
+          return {
+            swimmerId: swimmer.id,
+            status: 'Present' as AttendanceStatus,
+            notes: '-' as AttendanceNote,
+          };
+        }
+      });
+      
+      setAttendanceRecords(mergedAttendance);
     }
   }, [session, swimmers]);
 

@@ -182,12 +182,15 @@ function adaptAttendanceStatus(backend: string): AttendanceStatus {
     case 'Present':
       return 'Present';
     case 'First Half Only':
+    case '1st half only':  // Handle both formats
       return '1st half only';
     case 'Second Half Only':
+    case '2nd half only':  // Handle both formats
       return '2nd half only';
     case 'Absent':
       return 'Absent';
     default:
+      console.warn(`Unknown attendance status: ${backend}, defaulting to Absent`);
       return 'Absent';
   }
 }
@@ -237,7 +240,7 @@ export function adaptAttendanceToBackend(
   };
 }
 
-export function adaptSession(backend: BackendSession, attendance?: BackendAttendance[]): Session {
+export function adaptSession(backend: BackendSession & { attendance?: BackendAttendance[] }): Session {
   const distanceBreakdown: DistanceBreakdown = {
     total: backend.totalDistance,
     frontCrawl:
@@ -323,7 +326,7 @@ export function adaptSession(backend: BackendSession, attendance?: BackendAttend
     content: backend.sessionContent,
     contentHtml: backend.sessionContentHtml,
     distanceBreakdown,
-    attendance: attendance?.map(adaptAttendance),
+    attendance: backend.attendance?.map(adaptAttendance),
   };
 }
 

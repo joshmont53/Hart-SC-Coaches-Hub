@@ -292,11 +292,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/sessions/:id", isAuthenticated, async (req, res) => {
     try {
-      const session = await storage.getSession(req.params.id);
-      if (!session) {
+      const result = await storage.getSessionWithAttendance(req.params.id);
+      if (!result) {
         return res.status(404).json({ message: "Session not found" });
       }
-      res.json(session);
+      // Return session with attendance embedded
+      res.json({ ...result.session, attendance: result.attendance });
     } catch (error) {
       console.error("Error fetching session:", error);
       res.status(500).json({ message: "Failed to fetch session" });
