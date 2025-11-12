@@ -48,6 +48,7 @@ export const coaches = pgTable("coaches", {
   lastName: varchar("last_name").notNull(),
   level: varchar("level").notNull(), // "Level 3" | "Level 2" | "Level 1" | "No qualification"
   dob: date("dob").notNull(),
+  recordStatus: varchar("record_status").notNull().default("active"), // "active" | "inactive"
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -64,7 +65,7 @@ export const coachesRelations = relations(coaches, ({ one, many }) => ({
 }));
 
 export type Coach = typeof coaches.$inferSelect;
-export const insertCoachSchema = createInsertSchema(coaches).omit({ id: true, createdAt: true });
+export const insertCoachSchema = createInsertSchema(coaches).omit({ id: true, createdAt: true, recordStatus: true });
 export type InsertCoach = z.infer<typeof insertCoachSchema>;
 
 // Squads table
@@ -73,6 +74,7 @@ export const squads = pgTable("squads", {
   squadName: varchar("squad_name").notNull(),
   color: varchar("color").notNull().default("#3B82F6"),
   primaryCoachId: varchar("primary_coach_id").references(() => coaches.id),
+  recordStatus: varchar("record_status").notNull().default("active"), // "active" | "inactive"
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -86,7 +88,7 @@ export const squadsRelations = relations(squads, ({ one, many }) => ({
 }));
 
 export type Squad = typeof squads.$inferSelect;
-export const insertSquadSchema = createInsertSchema(squads).omit({ id: true, createdAt: true }).extend({
+export const insertSquadSchema = createInsertSchema(squads).omit({ id: true, createdAt: true, recordStatus: true }).extend({
   color: z.string().optional(),
 });
 export type InsertSquad = z.infer<typeof insertSquadSchema>;
@@ -99,6 +101,7 @@ export const swimmers = pgTable("swimmers", {
   squadId: varchar("squad_id").references(() => squads.id).notNull(),
   asaNumber: integer("asa_number").notNull(),
   dob: date("dob").notNull(),
+  recordStatus: varchar("record_status").notNull().default("active"), // "active" | "inactive"
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -111,7 +114,7 @@ export const swimmersRelations = relations(swimmers, ({ one, many }) => ({
 }));
 
 export type Swimmer = typeof swimmers.$inferSelect;
-export const insertSwimmerSchema = createInsertSchema(swimmers).omit({ id: true, createdAt: true });
+export const insertSwimmerSchema = createInsertSchema(swimmers).omit({ id: true, createdAt: true, recordStatus: true });
 export type InsertSwimmer = z.infer<typeof insertSwimmerSchema>;
 
 // Locations table
@@ -119,6 +122,7 @@ export const locations = pgTable("locations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   poolName: varchar("pool_name").notNull(),
   poolType: varchar("pool_type").notNull(), // "SC" (Short Course/25m) | "LC" (Long Course/50m)
+  recordStatus: varchar("record_status").notNull().default("active"), // "active" | "inactive"
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -127,7 +131,7 @@ export const locationsRelations = relations(locations, ({ many }) => ({
 }));
 
 export type Location = typeof locations.$inferSelect;
-export const insertLocationSchema = createInsertSchema(locations).omit({ id: true, createdAt: true });
+export const insertLocationSchema = createInsertSchema(locations).omit({ id: true, createdAt: true, recordStatus: true });
 export type InsertLocation = z.infer<typeof insertLocationSchema>;
 
 // Swimming Sessions table
@@ -188,6 +192,7 @@ export const swimmingSessions = pgTable("swimming_sessions", {
   totalNo1Kick: integer("total_no1_kick").notNull().default(0),
   totalNo1Pull: integer("total_no1_pull").notNull().default(0),
   
+  recordStatus: varchar("record_status").notNull().default("active"), // "active" | "inactive"
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -228,7 +233,8 @@ export type SwimmingSession = typeof swimmingSessions.$inferSelect;
 export const insertSwimmingSessionSchema = createInsertSchema(swimmingSessions).omit({ 
   id: true, 
   createdAt: true, 
-  updatedAt: true 
+  updatedAt: true,
+  recordStatus: true
 });
 export type InsertSwimmingSession = z.infer<typeof insertSwimmingSessionSchema>;
 
@@ -239,6 +245,7 @@ export const attendance = pgTable("attendance", {
   swimmerId: varchar("swimmer_id").references(() => swimmers.id).notNull(),
   status: varchar("status").notNull(), // "Present" | "First Half Only" | "Second Half Only" | "Absent"
   notes: varchar("notes"), // "Late" | "Very Late" | null (timeliness indicator)
+  recordStatus: varchar("record_status").notNull().default("active"), // "active" | "inactive"
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -254,5 +261,5 @@ export const attendanceRelations = relations(attendance, ({ one }) => ({
 }));
 
 export type Attendance = typeof attendance.$inferSelect;
-export const insertAttendanceSchema = createInsertSchema(attendance).omit({ id: true, createdAt: true });
+export const insertAttendanceSchema = createInsertSchema(attendance).omit({ id: true, createdAt: true, recordStatus: true });
 export type InsertAttendance = z.infer<typeof insertAttendanceSchema>;
