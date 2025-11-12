@@ -141,10 +141,15 @@ export function SessionDetail({
   // ALL MUTATIONS MUST BE DEFINED BEFORE ANY CONDITIONAL RETURNS
   const updateAttendanceMutation = useMutation({
     mutationFn: async (attendance: AttendanceRecord[]) => {
-      return await apiRequest('PUT', `/api/sessions/${sessionId}`, { attendance });
+      return await apiRequest('POST', `/api/attendance/${sessionId}`, { attendance });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/sessions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/sessions', sessionId] });
+      toast({
+        title: 'Success',
+        description: 'Attendance saved successfully',
+      });
     },
     onError: (error: Error) => {
       toast({
