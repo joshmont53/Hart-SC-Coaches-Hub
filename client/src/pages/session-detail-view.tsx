@@ -103,6 +103,7 @@ export function SessionDetail({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
   const formatSessionDate = (date: Date | string): string => {
     if (!date) return '';
@@ -230,6 +231,29 @@ export function SessionDetail({
       toast({
         title: 'Error',
         description: error.message || 'Failed to update session',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const deleteSessionMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest('DELETE', `/api/sessions/${sessionId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/sessions'] });
+      queryClient.removeQueries({ queryKey: ['/api/sessions', sessionId] });
+      setIsDeleteDialogOpen(false);
+      toast({
+        title: 'Session deleted',
+        description: 'Returned to calendar.',
+      });
+      onBack();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to delete session',
         variant: 'destructive',
       });
     },
@@ -406,9 +430,12 @@ export function SessionDetail({
   };
 
   const handleDelete = () => {
-    if (confirm('Are you sure you want to delete this session?')) {
-      alert('Delete functionality coming soon!');
-    }
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (deleteSessionMutation.isPending) return;
+    deleteSessionMutation.mutate();
   };
 
   return (
@@ -1098,6 +1125,34 @@ export function SessionDetail({
             </Button>
             <Button onClick={handleSaveEdit} data-testid="button-save-edit">
               Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent data-testid="dialog-delete-session">
+          <DialogHeader>
+            <DialogTitle>Delete Session</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this session ({session?.focus} - {session?.date && isValid(new Date(session.date)) ? format(session.date, 'MMM dd, yyyy') : 'Unknown date'})? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsDeleteDialogOpen(false)}
+              data-testid="button-cancel-delete"
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={confirmDelete}
+              disabled={deleteSessionMutation.isPending}
+              data-testid="button-confirm-delete-session"
+            >
+              {deleteSessionMutation.isPending ? 'Deleting...' : 'Delete'}
             </Button>
           </DialogFooter>
         </DialogContent>
