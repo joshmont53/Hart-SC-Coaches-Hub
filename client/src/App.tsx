@@ -198,7 +198,7 @@ function CalendarApp() {
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
-      <div className="p-6 border-b">
+      <div className="p-6 border-b" style={{ borderBottomColor: '#4B9A4A' }}>
         <div className="flex items-center gap-2">
           <span>Hart SC Coaches Hub</span>
         </div>
