@@ -132,6 +132,16 @@ Preferred communication style: Simple, everyday language.
 - Comprehensive stroke distance tracking (swim/drill/kick/pull for each stroke type)
 - Flexible coach assignment (lead, second, helper, set writer roles)
 
+**Soft Delete System** (November 2025):
+- All core entities use soft deletes instead of hard deletes
+- `record_status` column: 'active' (default) or 'inactive'
+- Applies to: coaches, swimmers, squads, locations, swimming_sessions, attendance
+- **Storage Layer**: All read operations automatically filter by `record_status='active'`
+- **Delete Operations**: Set `record_status='inactive'` instead of removing records
+- **Cascade Behavior**: Session deletion marks both session and all related attendance records as inactive
+- **Benefits**: Data preservation for historical reporting, accidental deletion recovery, audit trails
+- **UI Behavior**: Inactive records disappear immediately from all lists and views
+
 **Schema Validation**: Drizzle-Zod integration generates Zod schemas from database schema for runtime validation
 
 ### Authentication & Authorization
