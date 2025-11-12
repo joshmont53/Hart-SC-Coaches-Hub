@@ -121,12 +121,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getCoach(id: string): Promise<Coach | undefined> {
-    const [coach] = await db.select().from(coaches).where(eq(coaches.id, id));
+    const [coach] = await db.select().from(coaches).where(and(eq(coaches.id, id), eq(coaches.recordStatus, 'active')));
     return coach;
   }
 
   async getCoachByUserId(userId: string): Promise<Coach | undefined> {
-    const [coach] = await db.select().from(coaches).where(eq(coaches.userId, userId));
+    const [coach] = await db.select().from(coaches).where(and(eq(coaches.userId, userId), eq(coaches.recordStatus, 'active')));
     return coach;
   }
 
@@ -164,7 +164,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getSquad(id: string): Promise<Squad | undefined> {
-    const [squad] = await db.select().from(squads).where(eq(squads.id, id));
+    const [squad] = await db.select().from(squads).where(and(eq(squads.id, id), eq(squads.recordStatus, 'active')));
     return squad;
   }
 
@@ -202,7 +202,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getSwimmer(id: string): Promise<Swimmer | undefined> {
-    const [swimmer] = await db.select().from(swimmers).where(eq(swimmers.id, id));
+    const [swimmer] = await db.select().from(swimmers).where(and(eq(swimmers.id, id), eq(swimmers.recordStatus, 'active')));
     return swimmer;
   }
 
@@ -240,7 +240,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getLocation(id: string): Promise<Location | undefined> {
-    const [location] = await db.select().from(locations).where(eq(locations.id, id));
+    const [location] = await db.select().from(locations).where(and(eq(locations.id, id), eq(locations.recordStatus, 'active')));
     return location;
   }
 
@@ -278,16 +278,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getSession(id: string): Promise<SwimmingSession | undefined> {
-    const [session] = await db.select().from(swimmingSessions).where(eq(swimmingSessions.id, id));
+    const [session] = await db.select().from(swimmingSessions).where(and(eq(swimmingSessions.id, id), eq(swimmingSessions.recordStatus, 'active')));
     return session;
   }
 
   async getSessionWithAttendance(id: string): Promise<{ session: SwimmingSession; attendance: Attendance[] } | undefined> {
-    const [session] = await db.select().from(swimmingSessions).where(eq(swimmingSessions.id, id));
+    const [session] = await db.select().from(swimmingSessions).where(and(eq(swimmingSessions.id, id), eq(swimmingSessions.recordStatus, 'active')));
     if (!session) {
       return undefined;
     }
-    const attendanceRecords = await db.select().from(attendance).where(eq(attendance.sessionId, id));
+    const attendanceRecords = await db.select().from(attendance).where(and(eq(attendance.sessionId, id), eq(attendance.recordStatus, 'active')));
     return { session, attendance: attendanceRecords };
   }
 
@@ -337,7 +337,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteAttendanceBySession(sessionId: string): Promise<void> {
-    await db.delete(attendance).where(eq(attendance.sessionId, sessionId));
+    await db
+      .update(attendance)
+      .set({ recordStatus: 'inactive' })
+      .where(eq(attendance.sessionId, sessionId));
   }
 }
 
