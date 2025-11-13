@@ -99,13 +99,12 @@ export function AddSession({ squads, locations, coaches, onSave, onCancel }: Add
 
       {/* Form Content */}
       <div className="flex-1 overflow-auto p-4 md:p-6">
-        <div className="max-w-3xl mx-auto">
-          <div className="bg-card rounded-lg border p-4 md:p-6 space-y-6">
-            <div>
-              <h2 className="text-xl font-semibold mb-2">Session Details</h2>
-              <p className="text-sm text-muted-foreground mb-6">
-                Fill in all required fields to create a new session
-              </p>
+        <div className="max-w-3xl mx-auto space-y-6">
+          <div>
+            <h2 className="text-xl font-semibold mb-2">Session Details</h2>
+            <p className="text-sm text-muted-foreground mb-6">
+              Fill in all required fields to create a new session
+            </p>
 
               <div className="space-y-4">
                 {/* Date */}
@@ -320,7 +319,6 @@ export function AddSession({ squads, locations, coaches, onSave, onCancel }: Add
                 Create Session
               </Button>
             </div>
-          </div>
         </div>
       </div>
     </div>
