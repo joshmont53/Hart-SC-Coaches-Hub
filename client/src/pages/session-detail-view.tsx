@@ -901,7 +901,7 @@ export function SessionDetail({
                   return (
                     <div
                       key={swimmer.id}
-                      className="grid grid-cols-[1fr_130px_90px] md:grid-cols-[1fr_150px_100px] gap-2 md:gap-3 items-center p-2 md:p-3"
+                      className="grid grid-cols-[1fr_100px_75px] md:grid-cols-[1fr_110px_80px] gap-2 md:gap-3 items-center p-2 md:p-3"
                       data-testid={`attendance-row-${swimmer.id}`}
                     >
                       <div className="min-w-0">
@@ -916,7 +916,7 @@ export function SessionDetail({
                             handleAttendanceChange(swimmer.id, 'status', value)
                           }
                         >
-                          <SelectTrigger className="h-8 w-full text-xs md:text-sm [&>span]:truncate" data-testid={`select-status-${swimmer.id}`}>
+                          <SelectTrigger className="h-8 w-full text-xs md:text-sm [&>span]:truncate [&>svg]:hidden" data-testid={`select-status-${swimmer.id}`}>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -936,7 +936,7 @@ export function SessionDetail({
                           }
                           disabled={isAbsent}
                         >
-                          <SelectTrigger disabled={isAbsent} className="h-8 w-full text-xs md:text-sm [&>span]:truncate" data-testid={`select-notes-${swimmer.id}`}>
+                          <SelectTrigger disabled={isAbsent} className="h-8 w-full text-xs md:text-sm [&>span]:truncate [&>svg]:hidden" data-testid={`select-notes-${swimmer.id}`}>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
