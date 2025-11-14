@@ -11,6 +11,8 @@ import {
   decimal,
   time,
   text,
+  boolean,
+  unique,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -26,13 +28,18 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
-// User storage table - Required for Replit Auth (linked to coaches)
+// User storage table - Supports both Replit Auth (legacy) and Email/Password Auth (new)
 export const users = pgTable("users", {
   id: varchar("id").primaryKey(),
   email: varchar("email").unique(),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
+  // New fields for email/password authentication
+  passwordHash: varchar("password_hash"), // bcrypt hashed password
+  isEmailVerified: boolean("is_email_verified").default(false),
+  accountStatus: varchar("account_status").default("pending"), // "pending" | "active" | "suspended"
+  role: varchar("role").default("coach"), // "coach" | "admin"
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -43,7 +50,7 @@ export type User = typeof users.$inferSelect;
 // Coaches table
 export const coaches = pgTable("coaches", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").references(() => users.id),
+  userId: varchar("user_id").unique().references(() => users.id), // Made unique - one user per coach
   firstName: varchar("first_name").notNull(),
   lastName: varchar("last_name").notNull(),
   level: varchar("level").notNull(), // "Level 3" | "Level 2" | "Level 1" | "No qualification"
@@ -263,3 +270,58 @@ export const attendanceRelations = relations(attendance, ({ one }) => ({
 export type Attendance = typeof attendance.$inferSelect;
 export const insertAttendanceSchema = createInsertSchema(attendance).omit({ id: true, createdAt: true, recordStatus: true });
 export type InsertAttendance = z.infer<typeof insertAttendanceSchema>;
+
+// Authorized Invitations table - For invite-based registration
+export const authorizedInvitations = pgTable("authorized_invitations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: varchar("email").notNull().unique(), // Email invited
+  coachId: varchar("coach_id").notNull().unique().references(() => coaches.id), // Pre-linked coach
+  inviteToken: varchar("invite_token").notNull().unique(), // Unique token for registration link
+  status: varchar("status").notNull().default("pending"), // "pending" | "accepted" | "expired" | "revoked"
+  expiresAt: timestamp("expires_at").notNull(), // Token expiration (48 hours)
+  createdBy: varchar("created_by").references(() => users.id), // Admin who sent invite
+  createdAt: timestamp("created_at").defaultNow(),
+  acceptedAt: timestamp("accepted_at"),
+});
+
+export const authorizedInvitationsRelations = relations(authorizedInvitations, ({ one }) => ({
+  coach: one(coaches, {
+    fields: [authorizedInvitations.coachId],
+    references: [coaches.id],
+  }),
+  creator: one(users, {
+    fields: [authorizedInvitations.createdBy],
+    references: [users.id],
+  }),
+}));
+
+export type AuthorizedInvitation = typeof authorizedInvitations.$inferSelect;
+export const insertAuthorizedInvitationSchema = createInsertSchema(authorizedInvitations).omit({ 
+  id: true, 
+  createdAt: true, 
+  acceptedAt: true 
+});
+export type InsertAuthorizedInvitation = z.infer<typeof insertAuthorizedInvitationSchema>;
+
+// Email Verification Tokens table
+export const emailVerificationTokens = pgTable("email_verification_tokens", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  token: varchar("token").notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(), // 24 hours
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const emailVerificationTokensRelations = relations(emailVerificationTokens, ({ one }) => ({
+  user: one(users, {
+    fields: [emailVerificationTokens.userId],
+    references: [users.id],
+  }),
+}));
+
+export type EmailVerificationToken = typeof emailVerificationTokens.$inferSelect;
+export const insertEmailVerificationTokenSchema = createInsertSchema(emailVerificationTokens).omit({ 
+  id: true, 
+  createdAt: true 
+});
+export type InsertEmailVerificationToken = z.infer<typeof insertEmailVerificationTokenSchema>;
