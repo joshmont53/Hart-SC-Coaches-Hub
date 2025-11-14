@@ -44,6 +44,7 @@ export interface IStorage {
   getCoachByUserId(userId: string): Promise<Coach | undefined>;
   createCoach(coach: InsertCoach): Promise<Coach>;
   updateCoach(id: string, coach: Partial<InsertCoach>): Promise<Coach>;
+  linkUserToCoach(coachId: string, userId: string): Promise<void>;
   deleteCoach(id: string): Promise<void>;
   
   // Squad operations
@@ -85,6 +86,8 @@ export interface IStorage {
   getInvitationByToken(token: string): Promise<AuthorizedInvitation | undefined>;
   getInvitationByEmail(email: string): Promise<AuthorizedInvitation | undefined>;
   updateInvitationStatus(id: string, status: string, acceptedAt?: Date): Promise<AuthorizedInvitation>;
+  claimInvitation(id: string): Promise<AuthorizedInvitation>;
+  revertInvitationToPending(id: string): Promise<void>;
   getAllInvitations(): Promise<AuthorizedInvitation[]>;
   
   // Email verification operations
@@ -165,6 +168,17 @@ export class DatabaseStorage implements IStorage {
       throw new Error("Coach not found");
     }
     return updatedCoach;
+  }
+
+  async linkUserToCoach(coachId: string, userId: string): Promise<void> {
+    const result = await db
+      .update(coaches)
+      .set({ userId })
+      .where(eq(coaches.id, coachId))
+      .returning();
+    if (result.length === 0) {
+      throw new Error("Coach not found");
+    }
   }
 
   async deleteCoach(id: string): Promise<void> {
@@ -400,6 +414,35 @@ export class DatabaseStorage implements IStorage {
       throw new Error("Invitation not found");
     }
     return updatedInvitation;
+  }
+
+  // Atomically claim an invitation (only succeeds if status is 'pending')
+  async claimInvitation(id: string): Promise<AuthorizedInvitation> {
+    const [claimedInvitation] = await db
+      .update(authorizedInvitations)
+      .set({ status: 'processing' })
+      .where(and(
+        eq(authorizedInvitations.id, id),
+        eq(authorizedInvitations.status, 'pending')
+      ))
+      .returning();
+    
+    if (!claimedInvitation) {
+      throw new Error("Invitation not available (already claimed or invalid status)");
+    }
+    
+    return claimedInvitation;
+  }
+
+  // Revert invitation back to pending (for error recovery)
+  async revertInvitationToPending(id: string): Promise<void> {
+    await db
+      .update(authorizedInvitations)
+      .set({ status: 'pending' })
+      .where(and(
+        eq(authorizedInvitations.id, id),
+        eq(authorizedInvitations.status, 'processing')
+      ));
   }
 
   async getAllInvitations(): Promise<AuthorizedInvitation[]> {

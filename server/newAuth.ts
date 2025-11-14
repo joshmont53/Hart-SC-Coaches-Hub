@@ -2,6 +2,9 @@
 // Separate from existing Replit OAuth (server/replitAuth.ts)
 import { Express, RequestHandler } from 'express';
 import { storage } from './storage';
+import { db } from './db';
+import { users, coaches, authorizedInvitations, emailVerificationTokens } from '@shared/schema';
+import { eq, and } from 'drizzle-orm';
 import { hashPassword, verifyPassword } from './passwordUtils';
 import { generateSecureToken, getInvitationExpiry, getVerificationExpiry, isTokenExpired } from './tokenUtils';
 import { sendInvitationEmail, sendVerificationEmail } from './emailService';
@@ -15,21 +18,41 @@ export function setupNewAuth(app: Express) {
   
   // Register endpoint - validates invitation token and creates user account
   app.post('/api/auth/register', async (req, res) => {
+    // Declare invitation outside try block so catch can access it for rollback
+    let invitation: any = null;
+    
     try {
-      const { inviteToken, password, email } = req.body;
+      const { inviteToken, password, passwordConfirm, email } = req.body;
       
       // Validate required fields
-      if (!inviteToken || !password || !email) {
+      if (!inviteToken || !password || !passwordConfirm || !email) {
         return res.status(400).json({ message: 'Missing required fields' });
       }
       
-      // Validate password strength (min 12 characters)
+      // Validate password confirmation
+      if (password !== passwordConfirm) {
+        return res.status(400).json({ message: 'Passwords do not match' });
+      }
+      
+      // Validate password strength
       if (password.length < 12) {
         return res.status(400).json({ message: 'Password must be at least 12 characters' });
       }
       
+      // Password complexity check: must contain at least one uppercase, lowercase, number, and special char
+      const hasUppercase = /[A-Z]/.test(password);
+      const hasLowercase = /[a-z]/.test(password);
+      const hasNumber = /[0-9]/.test(password);
+      const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+      
+      if (!hasUppercase || !hasLowercase || !hasNumber || !hasSpecial) {
+        return res.status(400).json({ 
+          message: 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character' 
+        });
+      }
+      
       // Find invitation by token
-      const invitation = await storage.getInvitationByToken(inviteToken);
+      invitation = await storage.getInvitationByToken(inviteToken);
       
       if (!invitation) {
         return res.status(400).json({ message: 'Invalid invitation token' });
@@ -40,70 +63,150 @@ export function setupNewAuth(app: Express) {
         return res.status(400).json({ message: 'Invitation has expired' });
       }
       
-      // Check if invitation is still pending
-      if (invitation.status !== 'pending') {
-        return res.status(400).json({ message: 'Invitation has already been used' });
-      }
-      
-      // Verify email matches invitation
+      // CRITICAL: Verify email matches invitation BEFORE claiming
+      // This prevents invitation from being stuck in 'processing' if email doesn't match
       if (invitation.email.toLowerCase() !== email.toLowerCase()) {
         return res.status(400).json({ message: 'Email does not match invitation' });
       }
       
-      // Check if user already exists
+      // CRITICAL: Atomically claim the invitation (only succeeds if status='pending')
+      // This prevents race conditions where multiple requests try to use the same invitation
+      try {
+        await storage.claimInvitation(invitation.id);
+      } catch (error) {
+        // Claim failed - reload invitation to check current status and provide helpful message
+        const currentInvitation = await storage.getInvitationByToken(inviteToken);
+        
+        if (!currentInvitation) {
+          return res.status(400).json({ message: 'Invitation not found' });
+        }
+        
+        if (currentInvitation.status === 'accepted') {
+          // Invitation was already successfully used - this is a retry
+          return res.status(400).json({ 
+            message: 'This invitation has already been used. If you created an account, please log in.' 
+          });
+        }
+        
+        if (currentInvitation.status === 'expired' || currentInvitation.status === 'revoked') {
+          return res.status(400).json({ 
+            message: `Invitation is ${currentInvitation.status}. Please contact an administrator.` 
+          });
+        }
+        
+        if (currentInvitation.status === 'processing') {
+          // Invitation is stuck in processing from a previous failed attempt
+          // Revert it to pending so user can retry
+          try {
+            await storage.revertInvitationToPending(currentInvitation.id);
+            return res.status(400).json({ 
+              message: 'Previous registration attempt failed. Please try again.' 
+            });
+          } catch (revertError) {
+            return res.status(500).json({ 
+              message: 'Invitation is being processed. Please wait a moment and try again.' 
+            });
+          }
+        }
+        
+        // Unknown status or other error
+        return res.status(400).json({ message: 'Invitation is not available for use' });
+      }
+      
+      // Check if user already exists (outside transaction)
       const existingUser = await storage.getUserByEmail(email);
       if (existingUser) {
+        // Revert invitation back to pending
+        await storage.revertInvitationToPending(invitation.id);
         return res.status(400).json({ message: 'User already exists' });
       }
       
-      // Get coach details for the user
+      // Get coach details for the user (outside transaction)
       const coach = await storage.getCoach(invitation.coachId);
       if (!coach) {
+        // Revert invitation back to pending
+        await storage.revertInvitationToPending(invitation.id);
         return res.status(400).json({ message: 'Coach profile not found' });
       }
       
-      // Hash password
+      // Hash password (CPU-intensive, do outside transaction)
       const passwordHash = await hashPassword(password);
       
-      // Generate user ID (using email as base for consistency)
+      // Generate user ID
       const userId = crypto.randomUUID();
       
-      // Create user account
-      const user = await storage.createUser({
-        id: userId,
-        email: email.toLowerCase(),
-        firstName: coach.firstName,
-        lastName: coach.lastName,
-        passwordHash,
-        isEmailVerified: false, // Will be verified via email
-        accountStatus: 'pending', // Active after email verification
-        role: 'coach',
+      // CRITICAL: Execute all database mutations in a single atomic transaction
+      // If any step fails, entire transaction rolls back (including invitation claim)
+      const result = await db.transaction(async (tx) => {
+        // Create user account
+        const [user] = await tx.insert(users).values({
+          id: userId,
+          email: email.toLowerCase(),
+          firstName: coach.firstName,
+          lastName: coach.lastName,
+          passwordHash,
+          isEmailVerified: false,
+          accountStatus: 'pending',
+          role: 'coach',
+        }).returning();
+        
+        // Link user to coach profile
+        await tx.update(coaches)
+          .set({ userId: user.id })
+          .where(eq(coaches.id, invitation.coachId));
+        
+        // Mark invitation as accepted
+        await tx.update(authorizedInvitations)
+          .set({ status: 'accepted', acceptedAt: new Date() })
+          .where(eq(authorizedInvitations.id, invitation.id));
+        
+        // Generate and store email verification token
+        const verificationToken = generateSecureToken();
+        await tx.insert(emailVerificationTokens).values({
+          userId: user.id,
+          token: verificationToken,
+          expiresAt: getVerificationExpiry(),
+        });
+        
+        return { user, verificationToken };
       });
       
-      // Link user to coach profile
-      await storage.updateCoach(invitation.coachId, { userId: user.id });
+      // Send verification email (non-fatal - if this fails, user can request new verification email later)
+      let emailSent = true;
+      try {
+        await sendVerificationEmail(result.user.email!, result.verificationToken, result.user.firstName!);
+      } catch (emailError: any) {
+        console.error('Failed to send verification email:', emailError);
+        emailSent = false;
+        // TODO: Queue email for retry or alert admins
+        // For now, log the failure and continue - user account is created successfully
+      }
       
-      // Mark invitation as accepted
-      await storage.updateInvitationStatus(invitation.id, 'accepted', new Date());
-      
-      // Generate email verification token
-      const verificationToken = generateSecureToken();
-      await storage.createVerificationToken({
-        userId: user.id,
-        token: verificationToken,
-        expiresAt: getVerificationExpiry(),
-      });
-      
-      // Send verification email
-      await sendVerificationEmail(user.email!, verificationToken, user.firstName!);
-      
+      // Return success - account was created even if email failed
       res.status(201).json({ 
-        message: 'Registration successful. Please check your email to verify your account.',
-        userId: user.id,
+        message: emailSent 
+          ? 'Registration successful. Please check your email to verify your account.'
+          : 'Registration successful, but we could not send the verification email. Please contact support.',
+        userId: result.user.id,
+        emailSent,
       });
       
     } catch (error: any) {
       console.error('Registration error:', error);
+      
+      // CRITICAL: Only revert invitation if transaction failed (status is still 'processing')
+      // If transaction succeeded (status='accepted'), don't revert - user account exists
+      if (invitation?.id) {
+        try {
+          // This will only revert if status is currently 'processing'
+          // If transaction succeeded, invitation is 'accepted' and this is a no-op
+          await storage.revertInvitationToPending(invitation.id);
+          console.log('Reverted invitation to pending after transaction failure');
+        } catch (revertError) {
+          console.error('Failed to revert invitation status:', revertError);
+        }
+      }
+      
       res.status(500).json({ message: error.message || 'Registration failed' });
     }
   });

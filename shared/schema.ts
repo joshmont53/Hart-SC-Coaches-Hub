@@ -75,6 +75,10 @@ export type Coach = typeof coaches.$inferSelect;
 export const insertCoachSchema = createInsertSchema(coaches).omit({ id: true, createdAt: true, recordStatus: true });
 export type InsertCoach = z.infer<typeof insertCoachSchema>;
 
+// Schema for updating coach with userId (used when linking user to coach)
+export const updateCoachWithUserSchema = createInsertSchema(coaches).pick({ userId: true });
+export type UpdateCoachWithUser = z.infer<typeof updateCoachWithUserSchema>;
+
 // Squads table
 export const squads = pgTable("squads", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
