@@ -1,9 +1,12 @@
+import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { motion } from 'framer-motion';
 import { useMutation } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
+import { useLocation } from 'wouter';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { loginSchema, type LoginInput } from '@shared/schema';
@@ -18,6 +21,15 @@ import {
 
 export default function LoginPage() {
   const { toast } = useToast();
+  const { isAuthenticated, isLoading } = useAuth();
+  const [, setLocation] = useLocation();
+
+  // Redirect authenticated users to app
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      setLocation('/app');
+    }
+  }, [isLoading, isAuthenticated, setLocation]);
 
   const form = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),

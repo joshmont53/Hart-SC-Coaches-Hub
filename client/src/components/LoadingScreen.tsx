@@ -1,6 +1,6 @@
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 
-export function LoadingScreen() {
+export default function LoadingScreen() {
   return (
     <div 
       className="h-screen w-full flex items-center justify-center overflow-hidden"

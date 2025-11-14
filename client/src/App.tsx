@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
@@ -6,7 +6,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import Landing from "@/pages/landing";
+import { Route, Switch, useLocation } from "wouter";
+import LoadingScreen from "@/components/LoadingScreen";
+import LoginPage from "@/pages/login-page";
+import RegistrationPage from "@/pages/registration-page";
 import { MonthCalendarView } from '@/pages/month-calendar-view';
 import { DayCalendarView } from '@/pages/day-calendar-view';
 import { DayListView } from '@/pages/day-list-view';
@@ -17,7 +20,7 @@ import { ManageSquads } from '@/pages/manage-squads';
 import { ManageSwimmers } from '@/pages/manage-swimmers';
 import { ManageLocations } from '@/pages/manage-locations';
 import { Button } from './components/ui/button';
-import { Switch } from './components/ui/switch';
+import { Switch as ToggleSwitch } from './components/ui/switch';
 import { Label } from './components/ui/label';
 import { Tabs, TabsList, TabsTrigger } from './components/ui/tabs';
 import {
@@ -52,6 +55,36 @@ import type {
 type View = 'month' | 'day';
 type MobileView = 'calendar' | 'list';
 type ManagementView = 'calendar' | 'coaches' | 'squads' | 'swimmers' | 'locations' | 'addSession';
+
+// Landing page with loading screen logic - ONLY for "/" route
+function LandingPage() {
+  const [redirectAfterDelay, setRedirectAfterDelay] = useState(false);
+  const { isAuthenticated, isLoading } = useAuth();
+  const [, setLocation] = useLocation();
+
+  // Show loading screen for 2 seconds, then enable redirect
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setRedirectAfterDelay(true);
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // After 2s delay AND auth check completes, redirect based on auth status
+  useEffect(() => {
+    if (redirectAfterDelay && !isLoading) {
+      if (isAuthenticated) {
+        setLocation('/app');
+      } else {
+        setLocation('/login');
+      }
+    }
+  }, [redirectAfterDelay, isLoading, isAuthenticated, setLocation]);
+
+  // Always show loading screen (this component is ONLY rendered on "/" route)
+  return <LoadingScreen />;
+}
 
 function CalendarApp() {
   const { user } = useAuth();
@@ -172,8 +205,8 @@ function CalendarApp() {
   const createSessionMutation = useMutation({
     mutationFn: async (session: Omit<Session, 'id'>) => {
       const backendSession = adaptSessionToBackend(session);
-      const response = await apiRequest('POST', '/api/sessions', backendSession);
-      return response.json();
+      const response = await apiRequest('/api/sessions', 'POST', backendSession);
+      return response;
     },
     onSuccess: async (backendSession: BackendSession) => {
       // Refetch all data to ensure cache is up to date
@@ -302,7 +335,7 @@ function CalendarApp() {
                     <Label htmlFor="my-sessions-toggle" className="text-xs sm:text-sm cursor-pointer whitespace-nowrap">
                       My Sessions
                     </Label>
-                    <Switch
+                    <ToggleSwitch
                       id="my-sessions-toggle"
                       checked={showMySessionsOnly}
                       onCheckedChange={setShowMySessionsOnly}
@@ -415,8 +448,16 @@ function CalendarApp() {
   );
 }
 
-function Router() {
+// Protected route wrapper
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      setLocation('/login');
+    }
+  }, [isLoading, isAuthenticated, setLocation]);
 
   if (isLoading) {
     return (
@@ -427,10 +468,31 @@ function Router() {
   }
 
   if (!isAuthenticated) {
-    return <Landing />;
+    return null;
   }
 
-  return <CalendarApp />;
+  return <>{children}</>;
+}
+
+function Router() {
+  return (
+    <Switch>
+      {/* Longer paths MUST come first to avoid "/" prefix matching */}
+      <Route path="/login" component={LoginPage} />
+      <Route path="/register" component={RegistrationPage} />
+      <Route path="/app">
+        <ProtectedRoute>
+          <CalendarApp />
+        </ProtectedRoute>
+      </Route>
+      {/* Root path at the end - only matches exact "/" */}
+      <Route path="/" component={LandingPage} />
+      {/* 404 fallback - no path prop means it matches anything not already matched */}
+      <Route>
+        <LandingPage />
+      </Route>
+    </Switch>
+  );
 }
 
 export default function App() {

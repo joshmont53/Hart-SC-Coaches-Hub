@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { useMutation } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { useLocation, useSearch } from 'wouter';
 import { CheckCircle2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
@@ -25,9 +26,17 @@ export default function RegistrationPage() {
   const [emailSent, setEmailSent] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState('');
   const { toast } = useToast();
+  const { isAuthenticated, isLoading } = useAuth();
   const [, setLocation] = useLocation();
   const searchParams = useSearch();
   const redirectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Redirect authenticated users to app
+  useEffect(() => {
+    if (!isLoading && isAuthenticated && !registrationComplete) {
+      setLocation('/app');
+    }
+  }, [isLoading, isAuthenticated, registrationComplete, setLocation]);
 
   const form = useForm<RegistrationInput>({
     resolver: zodResolver(registrationSchema),
