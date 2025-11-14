@@ -329,3 +329,41 @@ export const insertEmailVerificationTokenSchema = createInsertSchema(emailVerifi
   createdAt: true 
 });
 export type InsertEmailVerificationToken = z.infer<typeof insertEmailVerificationTokenSchema>;
+
+// ============================================================================
+// Authentication Schemas (Email/Password)
+// ============================================================================
+
+// Strong password validation (reusable)
+const strongPasswordSchema = z.string()
+  .min(12, 'Password must be at least 12 characters')
+  .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+  .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+  .regex(/[0-9]/, 'Password must contain at least one number')
+  .regex(/[!@#$%^&*(),.?":{}|<>]/, 'Password must contain at least one special character');
+
+// Login schema
+export const loginSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(1, 'Password required'),
+});
+
+export type LoginInput = z.infer<typeof loginSchema>;
+
+// Registration schema
+export const registrationSchema = z.object({
+  inviteToken: z.string().min(1, 'Invitation token required'),
+  email: z.string().email('Invalid email address'),
+  password: strongPasswordSchema,
+  passwordConfirm: z.string(),
+}).superRefine((data, ctx) => {
+  if (data.password !== data.passwordConfirm) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Passwords do not match',
+      path: ['passwordConfirm'],
+    });
+  }
+});
+
+export type RegistrationInput = z.infer<typeof registrationSchema>;
