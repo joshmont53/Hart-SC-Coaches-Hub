@@ -41,7 +41,7 @@ export default function LoginPage() {
 
   const loginMutation = useMutation({
     mutationFn: async (data: LoginInput) => {
-      return await apiRequest('/api/auth/login', 'POST', data);
+      return await apiRequest('POST', '/api/auth/login', data);
     },
     onSuccess: () => {
       // Invalidate auth status to trigger re-fetch
