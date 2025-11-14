@@ -146,22 +146,82 @@ Preferred communication style: Simple, everyday language.
 
 ### Authentication & Authorization
 
-**Provider**: Replit OAuth (OpenID Connect)
+**Current System**: Dual authentication (Replit OAuth + Email/Password)
+- **Replit OAuth**: Legacy authentication for Replit-hosted development (active)
+- **Email/Password**: New production authentication for standalone deployment (Phase 1 complete)
 
-**Implementation**:
+**Email/Password Authentication** (November 2025 - Phase 1 Complete):
+
+**Implementation Philosophy**:
+- Admin-controlled invite system (no public registration)
+- Atomic database transactions for data consistency
+- Race condition protection via optimistic locking
+- Non-fatal email delivery with retry support
+- Comprehensive error handling and status recovery
+
+**Core Components**:
+- `server/newAuth.ts` - Registration, login, email verification endpoints
+- `server/passwordUtils.ts` - bcrypt password hashing (10 rounds)
+- `server/tokenUtils.ts` - Crypto-secure token generation
+- `server/emailService.ts` - Email delivery abstraction (SendGrid/Resend ready)
+
+**Database Schema**:
+- `authorizedInvitations` - Invite tokens with status tracking (pending/processing/accepted/expired/revoked)
+- `emailVerificationTokens` - 24-hour verification tokens
+- `users` - Extended with password_hash, is_email_verified, account_status, role
+- `coaches` - Enhanced with unique userId constraint for 1:1 linking
+
+**Registration Flow**:
+1. Admin creates invitation → 48-hour expiry, unique email/coach pairing
+2. User receives invitation link with secure token
+3. User submits registration (email, password, firstName, lastName, confirmation)
+4. Backend validates:
+   - Invitation exists and not expired
+   - Email matches invitation
+   - User doesn't already exist
+   - Coach exists in system
+5. Atomic transaction:
+   - Create user with hashed password
+   - Link user to coach (coaches.userId)
+   - Mark invitation 'accepted'
+   - Create email verification token (24-hour expiry)
+6. Send verification email (non-fatal - user can request resend)
+7. Return 201 success with emailSent flag
+
+**Security Features**:
+- Password complexity validation (min 8 chars, uppercase, lowercase, number)
+- bcrypt hashing with 10 rounds
+- Invitation tokens: crypto-secure 32-byte hex strings
+- Email verification tokens: crypto-secure 32-byte hex strings
+- Atomic invitation claiming (WHERE status='pending')
+- Race condition protection via status transitions
+- Account status tracking (pending → active upon email verification)
+
+**Error Handling & Recovery**:
+- Email mismatch → invitation not claimed (retriable)
+- Duplicate user → invitation reverted to 'pending' (retriable)
+- Missing coach → invitation reverted to 'pending' (retriable)
+- Transaction failure → automatic rollback + invitation reverted (retriable)
+- Stuck 'processing' invitation → auto-recovery to 'pending' (retriable)
+- Email delivery failure → 201 success with warning (user can request new email)
+- Already-used invitation → clear message to log in instead
+
+**Remaining Work** (Phase 2):
+- Login endpoint implementation
+- Session management
+- Frontend UI (loading screen, login/registration forms)
+- Email service activation (SendGrid or Resend)
+- Integration testing
+- Removal of Replit OAuth (after testing)
+
+**Legacy Replit OAuth** (To be removed in Phase 3):
 - Passport.js strategy for OIDC authentication
 - Server-side session management with PostgreSQL storage
 - User profile synchronization on login
 - Protected routes via `isAuthenticated` middleware
+- Currently active - will be replaced by email/password auth after testing
 
-**User Flow**:
-- Unauthenticated users see landing page with login button
-- Authentication redirects to Replit OAuth
-- Successful auth creates/updates user record and establishes session
-- Frontend queries `/api/auth/user` to check authentication status
-- Client-side routing protects authenticated pages
-
-**Security Measures**:
+**Security Measures** (Both Systems):
 - HTTP-only secure cookies
 - Session secrets from environment variables
 - CSRF protection via session tokens
