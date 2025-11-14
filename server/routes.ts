@@ -3,6 +3,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupNewAuth } from "./newAuth";
 import {
   insertCoachSchema,
   insertSquadSchema,
@@ -16,8 +17,11 @@ import { parseSessionText } from "@shared/sessionParser";
 import { getNextAvailableColor } from "./squadColors";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Auth middleware
+  // Legacy Replit OAuth auth middleware (will be removed in Phase 3)
   await setupAuth(app);
+  
+  // New email/password authentication (Phase 2)
+  setupNewAuth(app);
 
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {

@@ -1,15 +1,27 @@
 import { useQuery } from "@tanstack/react-query";
-import type { User } from "@shared/schema";
+
+interface AuthStatusResponse {
+  authenticated: boolean;
+  user?: {
+    id: string;
+    email: string | null;
+    firstName: string | null;
+    lastName: string | null;
+    role: string | null;
+  };
+}
 
 export function useAuth() {
-  const { data: user, isLoading } = useQuery<User>({
-    queryKey: ["/api/auth/user"],
+  const { data, isLoading, error } = useQuery<AuthStatusResponse>({
+    queryKey: ["/api/auth/status"],
     retry: false,
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
   return {
-    user,
+    user: data?.user || null,
     isLoading,
-    isAuthenticated: !!user,
+    isAuthenticated: data?.authenticated || false,
+    error,
   };
 }
