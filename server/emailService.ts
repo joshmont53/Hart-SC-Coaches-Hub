@@ -95,7 +95,11 @@ export async function sendInvitationEmail(
   inviteToken: string,
   coachName: string
 ): Promise<void> {
-  const registrationUrl = `${process.env.APP_URL || 'http://localhost:5000'}/register?token=${inviteToken}`;
+  // Use Replit dev domain in development, or APP_URL in production
+  const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+    ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
+    : (process.env.APP_URL || 'http://localhost:5000');
+  const registrationUrl = `${baseUrl}/register?token=${inviteToken}`;
   
   await sendEmail({
     to: email,
