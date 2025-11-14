@@ -52,7 +52,8 @@ async function getResendClient() {
   const { apiKey, fromEmail } = await getCredentials();
   return {
     client: new Resend(apiKey),
-    fromEmail: fromEmail || 'onboarding@resend.dev' // Fallback to Resend test domain
+    // Force use of Resend's test domain for development
+    fromEmail: process.env.NODE_ENV === 'development' ? 'onboarding@resend.dev' : (fromEmail || 'onboarding@resend.dev')
   };
 }
 
