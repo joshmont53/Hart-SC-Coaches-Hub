@@ -138,6 +138,9 @@ export function setupNewAuth(app: Express) {
       // CRITICAL: Execute all database mutations in a single atomic transaction
       // If any step fails, entire transaction rolls back (including invitation claim)
       const result = await db.transaction(async (tx) => {
+        // Development mode: Auto-activate accounts to simplify testing
+        const isDevelopment = process.env.NODE_ENV === 'development';
+        
         // Create user account
         const [user] = await tx.insert(users).values({
           id: userId,
@@ -145,8 +148,8 @@ export function setupNewAuth(app: Express) {
           firstName: coach.firstName,
           lastName: coach.lastName,
           passwordHash,
-          isEmailVerified: false,
-          accountStatus: 'pending',
+          isEmailVerified: isDevelopment, // Auto-verify in development
+          accountStatus: isDevelopment ? 'active' : 'pending', // Auto-activate in development
           role: 'coach',
         }).returning();
         
@@ -172,21 +175,29 @@ export function setupNewAuth(app: Express) {
       });
       
       // Send verification email (non-fatal - if this fails, user can request new verification email later)
-      let emailSent = true;
-      try {
-        await sendVerificationEmail(result.user.email!, result.verificationToken, result.user.firstName!);
-      } catch (emailError: any) {
-        console.error('Failed to send verification email:', emailError);
-        emailSent = false;
-        // TODO: Queue email for retry or alert admins
-        // For now, log the failure and continue - user account is created successfully
+      // Skip in development mode since account is auto-verified
+      const isDevelopment = process.env.NODE_ENV === 'development';
+      let emailSent = false;
+      
+      if (!isDevelopment) {
+        try {
+          await sendVerificationEmail(result.user.email!, result.verificationToken, result.user.firstName!);
+          emailSent = true;
+        } catch (emailError: any) {
+          console.error('Failed to send verification email:', emailError);
+          emailSent = false;
+          // TODO: Queue email for retry or alert admins
+          // For now, log the failure and continue - user account is created successfully
+        }
       }
       
       // Return success - account was created even if email failed
       res.status(201).json({ 
-        message: emailSent 
-          ? 'Registration successful. Please check your email to verify your account.'
-          : 'Registration successful, but we could not send the verification email. Please contact support.',
+        message: isDevelopment 
+          ? 'Registration successful! Your account is ready (development mode: auto-verified).'
+          : emailSent 
+            ? 'Registration successful. Please check your email to verify your account.'
+            : 'Registration successful, but we could not send the verification email. Please contact support.',
         userId: result.user.id,
         emailSent,
       });

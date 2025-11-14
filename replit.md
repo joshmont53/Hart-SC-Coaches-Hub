@@ -185,7 +185,9 @@ Preferred communication style: Simple, everyday language.
    - Link user to coach (coaches.userId)
    - Mark invitation 'accepted'
    - Create email verification token (24-hour expiry)
+   - **Development Mode Auto-Activation**: When `NODE_ENV=development`, account is automatically verified (`is_email_verified=true`) and activated (`account_status='active'`) for seamless testing
 6. Send verification email (non-fatal - user can request resend)
+   - **Skipped in development mode** since account is already verified
 7. Return 201 success with emailSent flag
 
 **Security Features**:
