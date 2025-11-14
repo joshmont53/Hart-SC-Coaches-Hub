@@ -2,7 +2,7 @@
 
 ## Overview
 
-SwimCoach is a professional swimming coaching session logging platform designed for poolside use on tablets and mobile devices. The application enables coaches to record detailed training sessions, track swimmer attendance, manage squads, and analyze performance data. Built with a mobile-first approach, it prioritizes efficiency and usability in wet, poolside environments with generous touch targets and clear visual hierarchy.
+SwimCoach is a professional swimming coaching session logging platform for poolside use on tablets and mobile devices. It enables coaches to record training sessions, track attendance, manage squads, and analyze performance data. The platform is designed with a mobile-first approach, prioritizing efficiency and usability in wet, poolside environments through generous touch targets and a clear visual hierarchy.
 
 ## User Preferences
 
@@ -12,169 +12,78 @@ Preferred communication style: Simple, everyday language.
 
 ### Frontend Architecture
 
-**Framework**: React with TypeScript, using Vite as the build tool and bundler.
-
-**Routing**: Client-side routing implemented with Wouter, a lightweight routing library that provides a simple API for single-page application navigation.
-
-**UI Component System**: shadcn/ui components (New York style variant) built on Radix UI primitives. This provides:
-- Accessible, unstyled component primitives from Radix UI
-- Customizable components styled with Tailwind CSS
-- Consistent design system across the application
-
-**Styling Approach**: Tailwind CSS with custom CSS variables for theming. The design system uses:
-- Inter font family via Google Fonts CDN
-- HSL-based color system with CSS custom properties for easy theme switching
-- Mobile-first responsive design with defined breakpoints
-- Productivity-focused design inspired by Linear and Notion
-
-**State Management**: 
-- TanStack Query (React Query) for server state management, data fetching, and caching
-- React Hook Form with Zod for form state and validation
-- React context for auth state
-
-**Key Design Principles**:
-- Mobile-first with generous touch targets (minimum 44px)
-- Progressive disclosure - complex features hidden until needed
-- Instant visual feedback for all user actions
-- Information density balanced with clarity
-
-**Core Components** (November 2025):
-- **SessionDetail**: Three-tab interface (`client/src/pages/session-detail-view.tsx`)
-  - **Detail Tab**: Session metadata (date, time, location, focus, coaching team, total distance)
-  - **Session Tab**: RichTextEditor for session content with sliding distance breakdown sidebar
-    - RichTextEditor (`client/src/components/RichTextEditor.tsx`) provides rich formatting (bold, italic, underline, colors)
-    - Distance sidebar shows stroke-by-stroke breakdowns (swim/drill/kick/pull per stroke) for all 6 stroke types
-    - Displays: Front Crawl, Backstroke, Breaststroke, Butterfly, Individual Medley, and Swimmer's Choice (No1)
-    - Sidebar slides in from right on desktop, fullscreen overlay on mobile
-    - **Fix (Nov 10, 2025)**: Added No1/Swimmer's Choice display - previously missing from DistanceBreakdown interface and UI
-  - **Attendance Tab**: Attendance register with status ('Present', '1st half only', '2nd half only', 'Absent') and notes ('-', 'Late', 'Very Late') dropdowns
-    - Initializes attendance records for all squad swimmers
-    - Enforces business rule: Absent status forces notes to '-'
-    - Uses type-safe AttendanceRecord type from adapters
+**Framework & Tooling**: React with TypeScript, Vite for bundling, Wouter for client-side routing.
+**UI/UX**: shadcn/ui (New York style) built on Radix UI primitives, styled with Tailwind CSS and custom HSL-based CSS variables. Features Inter font, mobile-first responsive design, and productivity-focused aesthetics.
+**State Management**: TanStack Query for server state, React Hook Form with Zod for form state and validation, React context for authentication.
+**Core Features**:
+- **SessionDetail**: A three-tab interface for session metadata, rich-text session content with a sliding distance breakdown sidebar (showing stroke-by-stroke distances for 6 stroke types and 4 activity types), and an attendance register.
+- **Attendance Register**: Manages swimmer attendance with status ('Present', '1st half only', '2nd half only', 'Absent') and notes ('-', 'Late', 'Very Late') dropdowns, initializing records for all squad swimmers and enforcing business rules (e.g., 'Absent' status forces notes to '-').
 
 ### Backend Architecture
 
-**Runtime**: Node.js with Express.js framework
-
-**Language**: TypeScript throughout (shared types between frontend and backend)
-
-**API Design**: RESTful API with JSON responses
-- Authentication-protected endpoints via middleware
-- Structured route handlers in `server/routes.ts`
-- Centralized data access through storage layer abstraction
-
-**Data Access Layer**: Storage interface pattern (`server/storage.ts`) provides:
-- Abstraction over database operations
-- Type-safe CRUD operations for all entities
-- Separation of concerns between route handlers and data access
-
-**AI-Powered Session Parsing** (November 2025):
-- **Purpose**: Automatically extract distance totals from natural language session text written by coaches
-- **Implementation**: GPT-5 Mini via Replit AI Integrations (`server/aiParser.ts`)
-- **Accuracy**: Targets >95% accuracy (improved from ~75% baseline of rule-based parser)
-- **Flow**: 
-  1. Frontend debounces session text input (800ms delay)
-  2. POST to `/api/sessions/parse-ai` endpoint
-  3. AI analyzes text for stroke types, activity types, and distances
-  4. Validation ensures distances are multiples of 25m/50m
-  5. Falls back to rule-based parser if AI fails
-  6. Returns 24 distance fields (6 strokes × 4 activity types)
-- **Cost**: ~0.5-1 Replit credit per session (~$5-10/year for 1,000 sessions)
-- **Integration**: Configured in `replit.nix` with `OPENAI_API_KEY` environment variable
-- **Strokes**: Front Crawl (FC), Backstroke (BK), Breaststroke (BR), Butterfly (FL), IM, No1 (swimmer's choice)
-- **Activities**: Swim, Drill, Kick, Pull
-- **Prompt Engineering**: Comprehensive parsing rules for abbreviations, multipliers, breakdowns, and edge cases
-- **Legacy**: Rule-based parser (`shared/sessionParser.ts`) maintained as fallback only
-
-**Session Management**: 
-- Express sessions with PostgreSQL session store (connect-pg-simple)
-- Server-side session storage in dedicated `sessions` table
-- HTTP-only secure cookies with 1-week TTL
-
-**Development Environment**:
-- Hot module replacement via Vite in development
-- Express middleware mode for Vite integration
-- Custom logging middleware for API request tracking
+**Runtime & API**: Node.js with Express.js, TypeScript. RESTful API with JSON responses and authentication via middleware.
+**Data Access**: Drizzle ORM for type-safe PostgreSQL operations, abstracted via a storage interface pattern.
+**AI Integration**: GPT-5 Mini via Replit AI for automated extraction of distance totals from natural language session text (targeting >95% accuracy), with a rule-based parser as fallback.
+**Session Management**: Express sessions with a PostgreSQL store (`connect-pg-simple`), using HTTP-only secure cookies.
+**Authentication**: Admin-controlled Email/Password Authentication with a single-email invitation flow. Features bcrypt hashing, crypto-secure tokens, Resend email integration, and role-based access control (`requireAdmin` middleware). All core entities now use a soft delete system (`record_status='active'` or `'inactive'`) for data preservation and audit trails, with read operations automatically filtering active records.
 
 ### Database Architecture
 
-**ORM**: Drizzle ORM for type-safe database operations
+**Database**: PostgreSQL (Neon serverless).
+**ORM**: Drizzle ORM for type-safe interactions.
+**Schema**:
+- **Core Entities**: `users`, `coaches`, `squads`, `swimmers`, `locations`, `swimming_sessions`, `attendance`.
+- **Relationships**: Comprehensive relationships linking users to coaches, squads to coaches, swimmers to squads, sessions to various entities, and attendance to sessions/swimmers.
+- **Data Model**: Uses UUID primary keys, timestamp tracking, and detailed stroke/distance tracking.
+- **Soft Deletes**: Implemented across all core entities using a `record_status` column. Delete operations set `record_status='inactive'`, preserving data while making it invisible in standard views.
+- **Validation**: Drizzle-Zod for schema validation.
 
-**Database**: PostgreSQL (via Neon serverless PostgreSQL)
-- WebSocket-based connection pooling
-- Environment-based connection string configuration
+## Authentication & Authorization
 
-**Schema Design**:
+**Current System**: Email/Password Authentication with Admin-Controlled Invitations (Phase 3 Complete - November 2025)
+- **Production-ready standalone authentication** - No external OAuth dependencies
+- **Single-email invitation flow** - Invitation token proves email ownership (no separate verification needed)
+- **Admin-controlled access** - No public registration, all users invited by administrators
+- **End-to-end tested** - Complete flow validated: invitation → email → registration → login
 
-**Core Entities**:
-- `users` - Authentication and profile data (linked to Replit OAuth)
-- `coaches` - Coaching staff with qualifications and details
-- `squads` - Training groups with primary coach assignments
-- `swimmers` - Athlete records with squad membership and ASA numbers
-- `locations` - Pool facilities with type classification
-- `swimming_sessions` - Training session records with comprehensive stroke/distance tracking
-- `attendance` - Session attendance tracking with two separate fields:
-  - `status` field: Records attendance presence/duration with options: Present, First Half Only, Second Half Only, Absent (defaults to "Present")
-  - `notes` field: Records timeliness with options: null (blank), Late, Very Late (defaults to null)
-  - Records are created for ALL swimmers in a squad (not just attendees)
-  - When status is "Absent", notes must be null (enforced in both frontend and backend)
-
-**Key Relationships**:
-- Users → Coaches (one-to-one via userId foreign key)
-- Squads → Coaches (many-to-one via primaryCoachId)
-- Swimmers → Squads (many-to-one via squadId)
-- Sessions → Multiple foreign keys (poolId, squadId, leadCoachId, optional secondCoachId/helperId/setWriterId)
-- Attendance → Sessions and Swimmers (junction table with status tracking)
-
-**Data Model Characteristics**:
-- UUID primary keys generated via PostgreSQL `gen_random_uuid()`
-- Timestamp tracking (createdAt/updatedAt) on most entities
-- Comprehensive stroke distance tracking (swim/drill/kick/pull for each stroke type)
-- Flexible coach assignment (lead, second, helper, set writer roles)
-
-**Soft Delete System** (November 2025):
-- All core entities use soft deletes instead of hard deletes
-- `record_status` column: 'active' (default) or 'inactive'
-- Applies to: coaches, swimmers, squads, locations, swimming_sessions, attendance
-- **Storage Layer**: All read operations automatically filter by `record_status='active'`
-- **Delete Operations**: Set `record_status='inactive'` instead of removing records
-- **Cascade Behavior**: Session deletion marks both session and all related attendance records as inactive
-- **Benefits**: Data preservation for historical reporting, accidental deletion recovery, audit trails
-- **UI Behavior**: Inactive records disappear immediately from all lists and views
-
-**Schema Validation**: Drizzle-Zod integration generates Zod schemas from database schema for runtime validation
-
-### Authentication & Authorization
-
-**Current System**: Dual authentication (Replit OAuth + Email/Password)
-- **Replit OAuth**: Legacy authentication for Replit-hosted development (active)
-- **Email/Password**: New production authentication for standalone deployment (Phase 1 complete)
-
-**Email/Password Authentication** (November 2025 - Phase 1 Complete):
+**Email/Password Authentication** (November 2025 - Phase 3 Complete):
 
 **Implementation Philosophy**:
 - Admin-controlled invite system (no public registration)
+- Single-email flow: invitation token proves email ownership
 - Atomic database transactions for data consistency
 - Race condition protection via optimistic locking
 - Non-fatal email delivery with retry support
 - Comprehensive error handling and status recovery
 
 **Core Components**:
-- `server/newAuth.ts` - Registration, login, email verification endpoints
+- `server/newAuth.ts` - Registration, login, session management, admin middleware
 - `server/passwordUtils.ts` - bcrypt password hashing (10 rounds)
 - `server/tokenUtils.ts` - Crypto-secure token generation
-- `server/emailService.ts` - Email delivery abstraction (SendGrid/Resend ready)
+- `server/emailService.ts` - Resend email integration with HTML templates
+- `server/routes.ts` - Invitation CRUD APIs (list, create, resend, revoke)
+- `client/src/pages/manage-invitations.tsx` - Admin invitation management UI
+- `client/src/pages/login-page.tsx` - Login interface
+- `client/src/pages/registration-page.tsx` - Registration interface
 
 **Database Schema**:
 - `authorizedInvitations` - Invite tokens with status tracking (pending/processing/accepted/expired/revoked)
-- `emailVerificationTokens` - 24-hour verification tokens
+- `emailVerificationTokens` - 24-hour verification tokens (legacy - not used in single-email flow)
 - `users` - Extended with password_hash, is_email_verified, account_status, role
 - `coaches` - Enhanced with unique userId constraint for 1:1 linking
 
-**Registration Flow**:
-1. Admin creates invitation → 48-hour expiry, unique email/coach pairing
-2. User receives invitation link with secure token
-3. User submits registration (email, password, firstName, lastName, confirmation)
+**Invitation Flow** (Admin Side):
+1. Admin navigates to Invitations management page
+2. Admin creates invitation: selects coach + enters email
+3. Backend generates crypto-secure 48-hour invitation token
+4. Email sent via Resend with branded HTML template
+5. Invitation stored with status='pending'
+6. Admin can resend emails or revoke invitations
+
+**Registration & Login Flow** (Coach Side):
+1. Coach receives invitation email with registration link
+2. Coach clicks link → lands on registration page with pre-filled token
+3. Coach submits: email, password, confirmation
 4. Backend validates:
    - Invitation exists and not expired
    - Email matches invitation
@@ -184,20 +93,34 @@ Preferred communication style: Simple, everyday language.
    - Create user with hashed password
    - Link user to coach (coaches.userId)
    - Mark invitation 'accepted'
-   - Create email verification token (24-hour expiry)
-   - **Development Mode Auto-Activation**: When `NODE_ENV=development`, account is automatically verified (`is_email_verified=true`) and activated (`account_status='active'`) for seamless testing
-6. Send verification email (non-fatal - user can request resend)
-   - **Skipped in development mode** since account is already verified
-7. Return 201 success with emailSent flag
+   - Auto-activate account (invitation proves email ownership)
+6. Coach redirected to login page
+7. Coach logs in with email/password
+8. Session created, coach accesses platform
 
 **Security Features**:
-- Password complexity validation (min 8 chars, uppercase, lowercase, number)
+- Password complexity validation (min 12 chars, uppercase, lowercase, number, special char)
 - bcrypt hashing with 10 rounds
-- Invitation tokens: crypto-secure 32-byte hex strings
-- Email verification tokens: crypto-secure 32-byte hex strings
+- Invitation tokens: crypto-secure 32-byte hex strings (never exposed in API responses)
+- Token sanitization: `sanitizeInvitation()` strips sensitive data from all API responses
 - Atomic invitation claiming (WHERE status='pending')
 - Race condition protection via status transitions
-- Account status tracking (pending → active upon email verification)
+- Admin-only endpoints: requireAdmin middleware enforces role-based access
+- HTTP-only secure cookies
+- Session secrets from environment variables
+
+**Email Configuration**:
+- **Provider**: Resend API
+- **Development Mode**: Uses `onboarding@resend.dev` sender (bypasses domain verification)
+- **Production**: Configure verified domain in Resend dashboard
+- **Template**: Professional HTML email with Hart SC branding
+- **Environment Variables**: `RESEND_API_KEY`, `APP_URL` (or falls back to `REPLIT_DEV_DOMAIN`)
+
+**Admin Role System**:
+- Users can be granted `role='admin'` via direct database update
+- Requires logout/login to take effect
+- Admin users access invitation management via sidebar navigation
+- All invitation endpoints protected by `requireAdmin` middleware
 
 **Error Handling & Recovery**:
 - Email mismatch → invitation not claimed (retriable)
@@ -205,89 +128,34 @@ Preferred communication style: Simple, everyday language.
 - Missing coach → invitation reverted to 'pending' (retriable)
 - Transaction failure → automatic rollback + invitation reverted (retriable)
 - Stuck 'processing' invitation → auto-recovery to 'pending' (retriable)
-- Email delivery failure → 201 success with warning (user can request new email)
+- Email delivery failure → 201 success with warning (admin can resend)
 - Already-used invitation → clear message to log in instead
+- Expired/revoked invitation → clear error message
 
-**Remaining Work** (Phase 2):
-- Login endpoint implementation
-- Session management
-- Frontend UI (loading screen, login/registration forms)
-- Email service activation (SendGrid or Resend)
-- Integration testing
-- Removal of Replit OAuth (after testing)
+**Testing & Validation** (November 14, 2025):
+- ✅ End-to-end flow tested: admin creates → email sent → coach registers → coach logs in
+- ✅ Invitation status properly transitions: pending → accepted
+- ✅ Email delivery via Resend confirmed
+- ✅ Security audit passed: no token leaks in API responses
+- ✅ Date handling verified: proper null checks for createdAt/expiresAt/acceptedAt
+- ✅ URL generation fixed: uses proper Replit dev domain (not localhost)
 
-**Legacy Replit OAuth** (To be removed in Phase 3):
-- Passport.js strategy for OIDC authentication
-- Server-side session management with PostgreSQL storage
-- User profile synchronization on login
-- Protected routes via `isAuthenticated` middleware
-- Currently active - will be replaced by email/password auth after testing
-
-**Security Measures** (Both Systems):
-- HTTP-only secure cookies
-- Session secrets from environment variables
-- CSRF protection via session tokens
-- Credentials included in fetch requests
+**Legacy Replit OAuth** (Deprecated):
+- Passport.js OIDC authentication still configured but not actively used
+- To be removed in future cleanup phase
+- Email/password authentication is now the primary and recommended system
 
 ## External Dependencies
 
 ### Third-Party Services
 
-**Authentication**: Replit OAuth (OpenID Connect provider)
-- User identity and profile management
-- Single sign-on for Replit users
-
-**Database Hosting**: Neon Serverless PostgreSQL
-- Managed PostgreSQL with WebSocket support
-- Connection pooling and serverless scaling
-- Configured via `DATABASE_URL` environment variable
-
-**Font Delivery**: Google Fonts CDN
-- Inter font family (weights: 400, 500, 600, 700)
+-   **Database Hosting**: Neon Serverless PostgreSQL
+-   **Font Delivery**: Google Fonts CDN (Inter font family)
+-   **AI Integration**: Replit AI (GPT-5 Mini)
+-   **Email Service**: Resend API
 
 ### Key NPM Packages
 
-**Frontend Core**:
-- `react` & `react-dom` - UI framework
-- `wouter` - Lightweight client-side routing
-- `@tanstack/react-query` - Server state management
-- `react-hook-form` - Form state management
-- `zod` & `@hookform/resolvers` - Schema validation
-
-**UI Components**:
-- `@radix-ui/*` - Accessible component primitives (20+ components)
-- `tailwindcss` - Utility-first CSS framework
-- `class-variance-authority` - Component variant management
-- `lucide-react` - Icon library
-
-**Backend Core**:
-- `express` - Web framework
-- `drizzle-orm` - Type-safe ORM
-- `@neondatabase/serverless` - PostgreSQL client
-- `passport` & `openid-client` - Authentication
-- `express-session` & `connect-pg-simple` - Session management
-
-**Development Tools**:
-- `vite` - Build tool and dev server
-- `typescript` - Type system
-- `tsx` - TypeScript execution
-- `drizzle-kit` - Database migration tool
-- `esbuild` - Production bundler for server code
-
-### Build & Deployment Configuration
-
-**Development**: `NODE_ENV=development tsx server/index.ts`
-- Vite dev server in middleware mode
-- HMR for frontend changes
-- TypeScript execution without compilation
-
-**Production Build**: 
-- Frontend: Vite builds to `dist/public`
-- Backend: esbuild bundles server to `dist/index.js`
-- Platform: Node.js with ESM modules
-
-**Environment Requirements**:
-- `DATABASE_URL` - PostgreSQL connection string (required)
-- `SESSION_SECRET` - Session encryption key (required)
-- `ISSUER_URL` - OIDC issuer URL (defaults to Replit)
-- `REPL_ID` - Replit environment identifier (for OAuth client ID)
+-   **Frontend**: `react`, `react-dom`, `wouter`, `@tanstack/react-query`, `react-hook-form`, `zod`, `@radix-ui/*`, `tailwindcss`, `class-variance-authority`, `lucide-react`.
+-   **Backend**: `express`, `drizzle-orm`, `@neondatabase/serverless`, `express-session`, `connect-pg-simple`, `bcrypt`, `jsonwebtoken`, `nodemailer`.
+-   **Development**: `vite`, `typescript`, `tsx`, `drizzle-kit`, `esbuild`.
