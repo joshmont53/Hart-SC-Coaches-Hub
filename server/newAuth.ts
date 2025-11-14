@@ -294,8 +294,28 @@ export function setupNewAuth(app: Express) {
         return res.status(403).json({ message: 'Your account is not active. Please contact administrator.' });
       }
       
-      // TODO: Create session (will be implemented with proper session management)
-      // For now, just return user data
+      // CRITICAL: Regenerate session ID to prevent session fixation attacks
+      // When elevating from anonymous to authenticated, always create a new session
+      await new Promise<void>((resolve, reject) => {
+        req.session.regenerate((err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+      
+      // Store user info in the new session
+      req.session.userId = user.id;
+      req.session.userEmail = user.email;
+      req.session.authMethod = 'email_password'; // Distinguish from Replit OAuth
+      
+      // Save session before responding
+      await new Promise<void>((resolve, reject) => {
+        req.session.save((err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+      
       res.json({
         message: 'Login successful',
         user: {
@@ -315,16 +335,97 @@ export function setupNewAuth(app: Express) {
   
   // Check authentication status
   app.get('/api/auth/status', async (req, res) => {
-    // TODO: Implement session checking in Phase 2
-    // For now, return unauthenticated
-    res.json({ authenticated: false });
+    try {
+      // Check if user has a session with userId
+      if (req.session?.userId) {
+        // Fetch current user data from database
+        const user = await storage.getUser(req.session.userId);
+        
+        if (!user) {
+          // Session exists but user deleted - clear session
+          req.session.destroy(() => {});
+          return res.json({ authenticated: false });
+        }
+        
+        // Check account is still active
+        if (user.accountStatus !== 'active' || !user.isEmailVerified) {
+          // Account no longer active - clear session
+          req.session.destroy(() => {});
+          return res.json({ authenticated: false });
+        }
+        
+        return res.json({
+          authenticated: true,
+          user: {
+            id: user.id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            role: user.role,
+          },
+        });
+      }
+      
+      // No session - unauthenticated
+      res.json({ authenticated: false });
+      
+    } catch (error: any) {
+      console.error('Status check error:', error);
+      res.status(500).json({ message: error.message || 'Failed to check authentication status' });
+    }
+  });
+  
+  // Logout endpoint
+  app.post('/api/auth/logout', async (req, res) => {
+    try {
+      if (req.session) {
+        req.session.destroy((err) => {
+          if (err) {
+            console.error('Logout error:', err);
+            return res.status(500).json({ message: 'Logout failed' });
+          }
+          res.json({ message: 'Logged out successfully' });
+        });
+      } else {
+        res.json({ message: 'No active session' });
+      }
+    } catch (error: any) {
+      console.error('Logout error:', error);
+      res.status(500).json({ message: error.message || 'Logout failed' });
+    }
   });
 }
 
 // Middleware to check if user is authenticated (for new auth system)
 // This is separate from the existing isAuthenticated middleware for Replit auth
 export const requireAuth: RequestHandler = async (req, res, next) => {
-  // TODO: Implement session checking in Phase 2
-  // For now, just pass through
-  next();
+  try {
+    // Check if user has a session with userId
+    if (!req.session?.userId) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+    
+    // Fetch current user data
+    const user = await storage.getUser(req.session.userId);
+    
+    if (!user) {
+      // Session exists but user deleted
+      req.session.destroy(() => {});
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+    
+    // Check account is still active
+    if (user.accountStatus !== 'active' || !user.isEmailVerified) {
+      req.session.destroy(() => {});
+      return res.status(403).json({ message: 'Account is not active' });
+    }
+    
+    // Attach user to request for downstream handlers
+    (req as any).user = user;
+    next();
+    
+  } catch (error: any) {
+    console.error('Auth middleware error:', error);
+    res.status(500).json({ message: 'Authentication check failed' });
+  }
 };
