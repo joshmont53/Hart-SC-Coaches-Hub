@@ -162,8 +162,22 @@ function CalendarApp() {
     return sessions;
   }, [showMySessionsOnly, sessions, currentCoachId]);
   
-  const handleLogout = () => {
-    window.location.href = '/api/auth/logout';
+  const handleLogout = async () => {
+    try {
+      // Call logout endpoint
+      await apiRequest('POST', '/api/auth/logout', {});
+      
+      // Invalidate auth cache to trigger re-fetch
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/status'] });
+      
+      // Redirect to login page
+      window.location.href = '/login';
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Even if the request fails, try to clear local state and redirect
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/status'] });
+      window.location.href = '/login';
+    }
   };
 
   const handleDayClick = (date: Date) => {
