@@ -140,10 +140,67 @@ Preferred communication style: Simple, everyday language.
 - ✅ Date handling verified: proper null checks for createdAt/expiresAt/acceptedAt
 - ✅ URL generation fixed: uses proper Replit dev domain (not localhost)
 
-**Legacy Replit OAuth** (Deprecated):
-- Passport.js OIDC authentication still configured but not actively used
-- To be removed in future cleanup phase
-- Email/password authentication is now the primary and recommended system
+**Legacy Replit OAuth** (Removed - November 14, 2025):
+- All Replit OAuth code removed (server/replitAuth.ts deleted)
+- Unused packages uninstalled: passport, openid-client, memoizee
+- Email/password authentication is now the sole authentication system
+
+**Production Deployment Runbook**:
+
+**Pre-Deployment Checklist:**
+1. ✅ Ensure `RESEND_API_KEY` is set in production environment
+2. ✅ Set `SESSION_SECRET` to a secure random value
+3. ✅ Verify `DATABASE_URL` points to production database
+4. ✅ (Optional) Configure verified sending domain in Resend dashboard
+
+**Initial Deployment - Creating First Admin:**
+1. Deploy application with clean/empty database
+2. Manually create first coach record in database:
+   ```sql
+   INSERT INTO coaches (first_name, last_name, email_address, qualifications)
+   VALUES ('John', 'Smith', 'headcoach@hartsc.com', 'Level 3');
+   ```
+3. Create invitation for first coach via database:
+   ```sql
+   INSERT INTO authorized_invitations (email, coach_id, invite_token, expires_at, status)
+   VALUES (
+     'headcoach@hartsc.com',
+     '<coach_id_from_step_2>',
+     encode(gen_random_bytes(32), 'hex'),
+     NOW() + INTERVAL '48 hours',
+     'pending'
+   );
+   ```
+4. Send invitation email manually OR have coach register with token from database
+5. After coach registers and logs in, promote to admin:
+   ```bash
+   tsx scripts/promote-admin.ts --email=headcoach@hartsc.com
+   ```
+6. Coach logs out and logs back in to activate admin role
+7. Admin can now invite other coaches via Invitations page
+
+**Ongoing Admin Management:**
+- Promote additional head coaches to admin: `tsx scripts/promote-admin.ts --email=<email>`
+- Demote admin back to coach: `tsx scripts/promote-admin.ts --email=<email> --role=coach`
+- Verify admin role: Check `/api/auth/status` endpoint or sidebar navigation visibility
+- **Important**: Users must log out/in after role changes
+
+**Admin Visibility:**
+- Only users with `role='admin'` can see "Coach Invitations" navigation item
+- All invitation endpoints (`/api/invitations/*`) protected by `requireAdmin` middleware
+- Non-admin users attempting to access invitation routes receive 403 Forbidden
+
+**Invitation Management Best Practices:**
+- Review and revoke unused invitations regularly
+- Set up monitoring for stuck 'processing' invitations
+- Consider invitation expiry (default: 48 hours) when planning onboarding
+- Use Resend dashboard to monitor email delivery rates
+
+**Database Cleanup Before Go-Live:**
+- Clear test invitations: `DELETE FROM authorized_invitations WHERE status != 'accepted';`
+- Clear test users: Verify only legitimate coach accounts exist
+- Verify coach records: Ensure all coaches have correct details
+- Test admin access: Confirm at least one admin can log in
 
 ## External Dependencies
 

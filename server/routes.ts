@@ -1,8 +1,6 @@
-// Referenced from javascript_log_in_with_replit blueprint
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
 import { setupNewAuth, requireAuth, requireAdmin } from "./newAuth";
 import {
   insertCoachSchema,
@@ -26,10 +24,7 @@ function sanitizeInvitation(invitation: any) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Legacy Replit OAuth auth middleware (will be removed in Phase 3)
-  await setupAuth(app);
-  
-  // New email/password authentication (Phase 2)
+  // Email/password authentication
   setupNewAuth(app);
 
   // Auth routes

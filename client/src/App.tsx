@@ -296,15 +296,17 @@ function CalendarApp() {
             <MapPin className="h-4 w-4 mr-2" />
             Manage Locations
           </Button>
-          <Button
-            variant="ghost"
-            className="w-full justify-start"
-            onClick={() => handleManagementClick('invitations')}
-            data-testid="button-manage-invitations"
-          >
-            <Mail className="h-4 w-4 mr-2" />
-            Coach Invitations
-          </Button>
+          {user?.role === 'admin' && (
+            <Button
+              variant="ghost"
+              className="w-full justify-start"
+              onClick={() => handleManagementClick('invitations')}
+              data-testid="button-manage-invitations"
+            >
+              <Mail className="h-4 w-4 mr-2" />
+              Coach Invitations
+            </Button>
+          )}
         </div>
       </nav>
 
