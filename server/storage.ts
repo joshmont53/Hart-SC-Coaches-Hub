@@ -7,6 +7,8 @@ import {
   locations,
   swimmingSessions,
   attendance,
+  authorizedInvitations,
+  emailVerificationTokens,
   type User,
   type UpsertUser,
   type Coach,
@@ -21,14 +23,20 @@ import {
   type InsertSwimmingSession,
   type Attendance,
   type InsertAttendance,
+  type AuthorizedInvitation,
+  type InsertAuthorizedInvitation,
+  type EmailVerificationToken,
+  type InsertEmailVerificationToken,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
 
 export interface IStorage {
-  // User operations (required for Replit Auth)
+  // User operations (required for Replit Auth + Email/Password Auth)
   getUser(id: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
+  createUser(user: UpsertUser): Promise<User>;
   
   // Coach operations
   getCoaches(): Promise<Coach[]>;
@@ -71,6 +79,18 @@ export interface IStorage {
   getAttendanceBySession(sessionId: string): Promise<Attendance[]>;
   createAttendance(attendance: InsertAttendance): Promise<Attendance>;
   deleteAttendanceBySession(sessionId: string): Promise<void>;
+  
+  // Invitation operations (for email/password auth)
+  createInvitation(invitation: InsertAuthorizedInvitation): Promise<AuthorizedInvitation>;
+  getInvitationByToken(token: string): Promise<AuthorizedInvitation | undefined>;
+  getInvitationByEmail(email: string): Promise<AuthorizedInvitation | undefined>;
+  updateInvitationStatus(id: string, status: string, acceptedAt?: Date): Promise<AuthorizedInvitation>;
+  getAllInvitations(): Promise<AuthorizedInvitation[]>;
+  
+  // Email verification operations
+  createVerificationToken(token: InsertEmailVerificationToken): Promise<EmailVerificationToken>;
+  getVerificationToken(token: string): Promise<EmailVerificationToken | undefined>;
+  deleteVerificationToken(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -341,6 +361,64 @@ export class DatabaseStorage implements IStorage {
       .update(attendance)
       .set({ recordStatus: 'inactive' })
       .where(eq(attendance.sessionId, sessionId));
+  }
+
+  // New Email/Password Auth operations
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
+  }
+
+  async createUser(userData: UpsertUser): Promise<User> {
+    const [user] = await db.insert(users).values(userData).returning();
+    return user;
+  }
+
+  // Invitation operations
+  async createInvitation(invitation: InsertAuthorizedInvitation): Promise<AuthorizedInvitation> {
+    const [newInvitation] = await db.insert(authorizedInvitations).values(invitation).returning();
+    return newInvitation;
+  }
+
+  async getInvitationByToken(token: string): Promise<AuthorizedInvitation | undefined> {
+    const [invitation] = await db.select().from(authorizedInvitations).where(eq(authorizedInvitations.inviteToken, token));
+    return invitation;
+  }
+
+  async getInvitationByEmail(email: string): Promise<AuthorizedInvitation | undefined> {
+    const [invitation] = await db.select().from(authorizedInvitations).where(eq(authorizedInvitations.email, email));
+    return invitation;
+  }
+
+  async updateInvitationStatus(id: string, status: string, acceptedAt?: Date): Promise<AuthorizedInvitation> {
+    const [updatedInvitation] = await db
+      .update(authorizedInvitations)
+      .set({ status, acceptedAt })
+      .where(eq(authorizedInvitations.id, id))
+      .returning();
+    if (!updatedInvitation) {
+      throw new Error("Invitation not found");
+    }
+    return updatedInvitation;
+  }
+
+  async getAllInvitations(): Promise<AuthorizedInvitation[]> {
+    return await db.select().from(authorizedInvitations);
+  }
+
+  // Email verification operations
+  async createVerificationToken(tokenData: InsertEmailVerificationToken): Promise<EmailVerificationToken> {
+    const [token] = await db.insert(emailVerificationTokens).values(tokenData).returning();
+    return token;
+  }
+
+  async getVerificationToken(token: string): Promise<EmailVerificationToken | undefined> {
+    const [verificationToken] = await db.select().from(emailVerificationTokens).where(eq(emailVerificationTokens.token, token));
+    return verificationToken;
+  }
+
+  async deleteVerificationToken(id: string): Promise<void> {
+    await db.delete(emailVerificationTokens).where(eq(emailVerificationTokens.id, id));
   }
 }
 
