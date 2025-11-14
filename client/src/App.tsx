@@ -19,6 +19,7 @@ import { ManageCoaches } from '@/pages/manage-coaches';
 import { ManageSquads } from '@/pages/manage-squads';
 import { ManageSwimmers } from '@/pages/manage-swimmers';
 import { ManageLocations } from '@/pages/manage-locations';
+import { ManageInvitations } from '@/pages/manage-invitations';
 import { Button } from './components/ui/button';
 import { Switch as ToggleSwitch } from './components/ui/switch';
 import { Label } from './components/ui/label';
@@ -32,6 +33,7 @@ import {
   Menu,
   CalendarDays,
   List,
+  Mail,
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from './components/ui/sheet';
 import { cn } from './lib/utils';
@@ -54,7 +56,7 @@ import type {
 
 type View = 'month' | 'day';
 type MobileView = 'calendar' | 'list';
-type ManagementView = 'calendar' | 'coaches' | 'squads' | 'swimmers' | 'locations' | 'addSession';
+type ManagementView = 'calendar' | 'coaches' | 'squads' | 'swimmers' | 'locations' | 'invitations' | 'addSession';
 
 // Landing page with loading screen logic - ONLY for "/" route
 function LandingPage() {
@@ -294,6 +296,15 @@ function CalendarApp() {
             <MapPin className="h-4 w-4 mr-2" />
             Manage Locations
           </Button>
+          <Button
+            variant="ghost"
+            className="w-full justify-start"
+            onClick={() => handleManagementClick('invitations')}
+            data-testid="button-manage-invitations"
+          >
+            <Mail className="h-4 w-4 mr-2" />
+            Coach Invitations
+          </Button>
         </div>
       </nav>
 
@@ -421,6 +432,8 @@ function CalendarApp() {
             <ManageSwimmers swimmers={swimmers} squads={squads} onBack={handleBackToCalendar} />
           ) : managementView === 'locations' ? (
             <ManageLocations locations={locations} onBack={handleBackToCalendar} />
+          ) : managementView === 'invitations' ? (
+            <ManageInvitations onBack={handleBackToCalendar} />
           ) : view === 'month' ? (
             <>
               <div className={mobileView === 'calendar' ? 'block' : 'hidden lg:block'}>
