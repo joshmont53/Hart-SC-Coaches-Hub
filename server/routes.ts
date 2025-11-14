@@ -3,7 +3,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { setupNewAuth } from "./newAuth";
+import { setupNewAuth, requireAuth } from "./newAuth";
 import {
   insertCoachSchema,
   insertSquadSchema,
@@ -24,7 +24,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   setupNewAuth(app);
 
   // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+  app.get('/api/auth/user', requireAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -36,7 +36,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Coach routes
-  app.get("/api/coaches", isAuthenticated, async (req, res) => {
+  app.get("/api/coaches", requireAuth, async (req, res) => {
     try {
       const coaches = await storage.getCoaches();
       res.json(coaches);
@@ -46,7 +46,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/coaches/me", isAuthenticated, async (req: any, res) => {
+  app.get("/api/coaches/me", requireAuth, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) {
@@ -63,7 +63,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/coaches/link/:coachId", isAuthenticated, async (req: any, res) => {
+  app.post("/api/coaches/link/:coachId", requireAuth, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) {
@@ -91,7 +91,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/coaches", isAuthenticated, async (req, res) => {
+  app.post("/api/coaches", requireAuth, async (req, res) => {
     try {
       const validatedData = insertCoachSchema.parse(req.body);
       const coach = await storage.createCoach(validatedData);
@@ -102,7 +102,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/coaches/:id", isAuthenticated, async (req, res) => {
+  app.patch("/api/coaches/:id", requireAuth, async (req, res) => {
     try {
       const validatedData = insertCoachSchema.partial().parse(req.body);
       const coach = await storage.updateCoach(req.params.id, validatedData);
@@ -116,7 +116,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/coaches/:id", isAuthenticated, async (req, res) => {
+  app.delete("/api/coaches/:id", requireAuth, async (req, res) => {
     try {
       await storage.deleteCoach(req.params.id);
       res.json({ message: "Coach deleted successfully" });
@@ -130,7 +130,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Squad routes
-  app.get("/api/squads", isAuthenticated, async (req, res) => {
+  app.get("/api/squads", requireAuth, async (req, res) => {
     try {
       const squads = await storage.getSquads();
       res.json(squads);
@@ -140,7 +140,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/squads", isAuthenticated, async (req, res) => {
+  app.post("/api/squads", requireAuth, async (req, res) => {
     try {
       const validatedData = insertSquadSchema.parse(req.body);
       
@@ -158,7 +158,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/squads/:id", isAuthenticated, async (req, res) => {
+  app.patch("/api/squads/:id", requireAuth, async (req, res) => {
     try {
       const validatedData = insertSquadSchema.partial().parse(req.body);
       const squad = await storage.updateSquad(req.params.id, validatedData);
@@ -172,7 +172,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/squads/:id", isAuthenticated, async (req, res) => {
+  app.delete("/api/squads/:id", requireAuth, async (req, res) => {
     try {
       await storage.deleteSquad(req.params.id);
       res.json({ message: "Squad deleted successfully" });
@@ -186,7 +186,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Swimmer routes
-  app.get("/api/swimmers", isAuthenticated, async (req, res) => {
+  app.get("/api/swimmers", requireAuth, async (req, res) => {
     try {
       const swimmers = await storage.getSwimmers();
       res.json(swimmers);
@@ -196,7 +196,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/swimmers", isAuthenticated, async (req, res) => {
+  app.post("/api/swimmers", requireAuth, async (req, res) => {
     try {
       const validatedData = insertSwimmerSchema.parse(req.body);
       const swimmer = await storage.createSwimmer(validatedData);
@@ -207,7 +207,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/swimmers/:id", isAuthenticated, async (req, res) => {
+  app.patch("/api/swimmers/:id", requireAuth, async (req, res) => {
     try {
       const validatedData = insertSwimmerSchema.partial().parse(req.body);
       const swimmer = await storage.updateSwimmer(req.params.id, validatedData);
@@ -221,7 +221,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/swimmers/:id", isAuthenticated, async (req, res) => {
+  app.delete("/api/swimmers/:id", requireAuth, async (req, res) => {
     try {
       await storage.deleteSwimmer(req.params.id);
       res.json({ message: "Swimmer deleted successfully" });
@@ -235,7 +235,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Location routes
-  app.get("/api/locations", isAuthenticated, async (req, res) => {
+  app.get("/api/locations", requireAuth, async (req, res) => {
     try {
       const locations = await storage.getLocations();
       res.json(locations);
@@ -245,7 +245,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/locations", isAuthenticated, async (req, res) => {
+  app.post("/api/locations", requireAuth, async (req, res) => {
     try {
       const validatedData = insertLocationSchema.parse(req.body);
       const location = await storage.createLocation(validatedData);
@@ -256,7 +256,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/locations/:id", isAuthenticated, async (req, res) => {
+  app.patch("/api/locations/:id", requireAuth, async (req, res) => {
     try {
       const validatedData = insertLocationSchema.partial().parse(req.body);
       const location = await storage.updateLocation(req.params.id, validatedData);
@@ -270,7 +270,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/locations/:id", isAuthenticated, async (req, res) => {
+  app.delete("/api/locations/:id", requireAuth, async (req, res) => {
     try {
       await storage.deleteLocation(req.params.id);
       res.json({ message: "Location deleted successfully" });
@@ -284,7 +284,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Session routes
-  app.get("/api/sessions", isAuthenticated, async (req, res) => {
+  app.get("/api/sessions", requireAuth, async (req, res) => {
     try {
       const sessions = await storage.getSessions();
       res.json(sessions);
@@ -294,7 +294,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/sessions/:id", isAuthenticated, async (req, res) => {
+  app.get("/api/sessions/:id", requireAuth, async (req, res) => {
     try {
       const result = await storage.getSessionWithAttendance(req.params.id);
       if (!result) {
@@ -308,7 +308,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/sessions", isAuthenticated, async (req, res) => {
+  app.post("/api/sessions", requireAuth, async (req, res) => {
     try {
       const validatedData = insertSwimmingSessionSchema.parse(req.body);
       const session = await storage.createSession(validatedData);
@@ -319,7 +319,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/sessions/:id", isAuthenticated, async (req, res) => {
+  app.put("/api/sessions/:id", requireAuth, async (req, res) => {
     try {
       const validatedData = insertSwimmingSessionSchema.partial().parse(req.body);
       const session = await storage.updateSession(req.params.id, validatedData);
@@ -333,7 +333,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/sessions/:id", isAuthenticated, async (req, res) => {
+  app.delete("/api/sessions/:id", requireAuth, async (req, res) => {
     try {
       await storage.deleteSession(req.params.id);
       res.json({ message: "Session deleted successfully" });
@@ -347,7 +347,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // AI Session Parsing endpoint
-  app.post("/api/sessions/parse-ai", isAuthenticated, async (req, res) => {
+  app.post("/api/sessions/parse-ai", requireAuth, async (req, res) => {
     try {
       const { sessionContent } = req.body;
 
@@ -410,7 +410,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Attendance routes
-  app.get("/api/attendance/:sessionId", isAuthenticated, async (req, res) => {
+  app.get("/api/attendance/:sessionId", requireAuth, async (req, res) => {
     try {
       const attendanceRecords = await storage.getAttendanceBySession(req.params.sessionId);
       res.json(attendanceRecords);
@@ -420,7 +420,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/attendance/:sessionId", isAuthenticated, async (req, res) => {
+  app.post("/api/attendance/:sessionId", requireAuth, async (req, res) => {
     try {
       const { attendance: attendanceData } = req.body;
       

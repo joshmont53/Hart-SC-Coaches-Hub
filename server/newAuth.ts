@@ -432,7 +432,15 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
     }
     
     // Attach user to request for downstream handlers
-    (req as any).user = user;
+    // Structure is backward-compatible with old Replit OAuth routes that expect req.user.claims.sub
+    (req as any).user = {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      claims: {
+        sub: user.id  // Backward compatibility for routes that use req.user.claims.sub
+      }
+    };
     next();
     
   } catch (error: any) {
