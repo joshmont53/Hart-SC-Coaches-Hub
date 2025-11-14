@@ -448,3 +448,25 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
     res.status(500).json({ message: 'Authentication check failed' });
   }
 };
+
+// Middleware to check if user is an admin (must be used after requireAuth)
+export const requireAdmin: RequestHandler = async (req: any, res, next) => {
+  try {
+    // Ensure user is authenticated first
+    if (!req.user) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+    
+    // Check if user has admin role
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ 
+        message: 'Forbidden: Admin access required' 
+      });
+    }
+    
+    next();
+  } catch (error: any) {
+    console.error('Admin auth middleware error:', error);
+    res.status(500).json({ message: 'Authorization check failed' });
+  }
+};

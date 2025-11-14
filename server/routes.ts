@@ -3,7 +3,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { setupNewAuth, requireAuth } from "./newAuth";
+import { setupNewAuth, requireAuth, requireAdmin } from "./newAuth";
 import {
   insertCoachSchema,
   insertSquadSchema,
@@ -11,10 +11,19 @@ import {
   insertLocationSchema,
   insertSwimmingSessionSchema,
   insertAttendanceSchema,
+  createInvitationSchema,
 } from "@shared/schema";
+import { sendInvitationEmail } from "./emailService";
+import { randomBytes } from "crypto";
 import { calculateSessionDistancesAI, validateDistances } from "./aiParser";
 import { parseSessionText } from "@shared/sessionParser";
 import { getNextAvailableColor } from "./squadColors";
+
+// Helper function to sanitize invitation data (remove sensitive fields)
+function sanitizeInvitation(invitation: any) {
+  const { inviteToken, ...sanitized } = invitation;
+  return sanitized;
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Legacy Replit OAuth auth middleware (will be removed in Phase 3)
@@ -32,6 +41,178 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // Invitation management routes (Phase 3 - Admin only)
+  // List all invitations
+  app.get("/api/invitations", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const invitations = await storage.getAllInvitations();
+      // Sanitize invitations to remove sensitive fields (inviteToken)
+      const sanitizedInvitations = invitations.map(sanitizeInvitation);
+      res.json(sanitizedInvitations);
+    } catch (error) {
+      console.error("Error fetching invitations:", error);
+      res.status(500).json({ message: "Failed to fetch invitations" });
+    }
+  });
+
+  // Create new invitation and send email
+  app.post("/api/invitations", requireAuth, requireAdmin, async (req: any, res) => {
+    try {
+      
+      // Validate request body (only email and coachId required)
+      const validationResult = createInvitationSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: "Invalid invitation data", 
+          errors: validationResult.error.errors 
+        });
+      }
+
+      const { email, coachId } = validationResult.data;
+
+      // Check if coach exists
+      const coach = await storage.getCoach(coachId);
+      if (!coach) {
+        return res.status(404).json({ message: "Coach not found" });
+      }
+
+      // Check if invitation already exists for this email
+      const existingInvitation = await storage.getInvitationByEmail(email);
+      if (existingInvitation && existingInvitation.status === 'pending') {
+        return res.status(400).json({ message: "Invitation already sent to this email" });
+      }
+
+      // Generate unique invitation token
+      const inviteToken = randomBytes(32).toString('hex');
+      
+      // Set expiration to 48 hours from now
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + 48);
+
+      // Get current user ID
+      const createdBy = req.user?.id || req.user?.claims?.sub;
+
+      // Create invitation
+      const invitation = await storage.createInvitation({
+        email,
+        coachId,
+        inviteToken,
+        status: 'pending',
+        expiresAt,
+        createdBy,
+      });
+
+      // Send invitation email
+      try {
+        await sendInvitationEmail(
+          email,
+          inviteToken,
+          `${coach.firstName} ${coach.lastName}`
+        );
+        console.log(`✅ Invitation email sent to ${email}`);
+      } catch (emailError) {
+        console.error('Email send error:', emailError);
+        // Non-fatal: invitation created but email failed
+        return res.status(201).json({
+          ...sanitizeInvitation(invitation),
+          emailSent: false,
+          emailError: 'Failed to send email. Invitation created but email delivery failed.'
+        });
+      }
+
+      // Return sanitized invitation (without inviteToken)
+      res.status(201).json({ ...sanitizeInvitation(invitation), emailSent: true });
+    } catch (error: any) {
+      console.error("Error creating invitation:", error);
+      res.status(500).json({ message: error.message || "Failed to create invitation" });
+    }
+  });
+
+  // Resend invitation email
+  app.post("/api/invitations/:id/resend", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      // Get invitation
+      const invitations = await storage.getAllInvitations();
+      const invitation = invitations.find(inv => inv.id === id);
+
+      if (!invitation) {
+        return res.status(404).json({ message: "Invitation not found" });
+      }
+
+      // Only resend if status is pending
+      if (invitation.status !== 'pending') {
+        return res.status(400).json({ 
+          message: `Cannot resend invitation with status: ${invitation.status}` 
+        });
+      }
+
+      // Check if expired
+      if (new Date() > new Date(invitation.expiresAt)) {
+        return res.status(400).json({ message: "Invitation has expired" });
+      }
+
+      // Get coach details
+      const coach = await storage.getCoach(invitation.coachId);
+      if (!coach) {
+        return res.status(404).json({ message: "Coach not found" });
+      }
+
+      // Resend email
+      try {
+        await sendInvitationEmail(
+          invitation.email,
+          invitation.inviteToken,
+          `${coach.firstName} ${coach.lastName}`
+        );
+        console.log(`✅ Invitation email resent to ${invitation.email}`);
+        res.json({ message: "Invitation email resent successfully", emailSent: true });
+      } catch (emailError) {
+        console.error('Email send error:', emailError);
+        res.status(500).json({ 
+          message: "Failed to send email", 
+          emailSent: false 
+        });
+      }
+    } catch (error: any) {
+      console.error("Error resending invitation:", error);
+      res.status(500).json({ message: error.message || "Failed to resend invitation" });
+    }
+  });
+
+  // Revoke invitation
+  app.patch("/api/invitations/:id/revoke", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      // Get invitation
+      const invitations = await storage.getAllInvitations();
+      const invitation = invitations.find(inv => inv.id === id);
+
+      if (!invitation) {
+        return res.status(404).json({ message: "Invitation not found" });
+      }
+
+      // Can only revoke pending invitations
+      if (invitation.status !== 'pending') {
+        return res.status(400).json({ 
+          message: `Cannot revoke invitation with status: ${invitation.status}` 
+        });
+      }
+
+      // Update status to revoked
+      const updatedInvitation = await storage.updateInvitationStatus(id, 'revoked');
+      
+      console.log(`✅ Invitation revoked: ${invitation.email}`);
+      // Return sanitized invitation (without inviteToken)
+      res.json(sanitizeInvitation(updatedInvitation));
+    } catch (error: any) {
+      console.error("Error revoking invitation:", error);
+      res.status(500).json({ message: error.message || "Failed to revoke invitation" });
     }
   });
 

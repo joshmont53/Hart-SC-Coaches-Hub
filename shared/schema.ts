@@ -307,6 +307,14 @@ export const insertAuthorizedInvitationSchema = createInsertSchema(authorizedInv
 });
 export type InsertAuthorizedInvitation = z.infer<typeof insertAuthorizedInvitationSchema>;
 
+// Schema for creating invitation via API (only requires email + coachId)
+// Server generates token, status, and expiration
+export const createInvitationSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  coachId: z.string().min(1, 'Coach ID required'),
+});
+export type CreateInvitation = z.infer<typeof createInvitationSchema>;
+
 // Email Verification Tokens table
 export const emailVerificationTokens = pgTable("email_verification_tokens", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
