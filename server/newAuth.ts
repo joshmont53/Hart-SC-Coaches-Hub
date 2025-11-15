@@ -1,6 +1,8 @@
 // New Email/Password Authentication endpoints
 // Separate from existing Replit OAuth (server/replitAuth.ts)
 import { Express, RequestHandler } from 'express';
+import session from 'express-session';
+import connectPgSimple from 'connect-pg-simple';
 import { storage } from './storage';
 import { db } from './db';
 import { users, coaches, authorizedInvitations, emailVerificationTokens } from '@shared/schema';
@@ -15,6 +17,26 @@ import crypto from 'crypto';
  * These are separate from the existing Replit OAuth routes
  */
 export function setupNewAuth(app: Express) {
+  // Initialize PostgreSQL session store
+  const PgSession = connectPgSimple(session);
+  
+  // Configure session middleware
+  app.use(
+    session({
+      store: new PgSession({
+        conString: process.env.DATABASE_URL,
+        createTableIfMissing: true,
+      }),
+      secret: process.env.SESSION_SECRET || 'dev-secret-change-in-production',
+      resave: false,
+      saveUninitialized: false,
+      cookie: {
+        secure: process.env.NODE_ENV === 'production',
+        httpOnly: true,
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      },
+    })
+  );
   
   // Register endpoint - validates invitation token and creates user account
   app.post('/api/auth/register', async (req, res) => {
