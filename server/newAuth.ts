@@ -24,15 +24,13 @@ export function setupNewAuth(app: Express) {
   const sessionStore = new PgSession({
     conString: process.env.DATABASE_URL,
     createTableIfMissing: true,
-  });
-  
-  // Suppress harmless "table already exists" errors during initialization
-  sessionStore.on('error', (err: any) => {
-    if (err.message && err.message.includes('already exists')) {
-      // Silently ignore - table/index already exists which is fine
-      return;
-    }
-    console.error('Session store error:', err);
+    // Suppress console errors during table creation (they're harmless)
+    errorLog: (error: string) => {
+      // Only log real errors, not "already exists" errors
+      if (!error.includes('already exists')) {
+        console.error('Session store error:', error);
+      }
+    },
   });
   
   app.use(
