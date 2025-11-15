@@ -21,12 +21,23 @@ export function setupNewAuth(app: Express) {
   const PgSession = connectPgSimple(session);
   
   // Configure session middleware
+  const sessionStore = new PgSession({
+    conString: process.env.DATABASE_URL,
+    createTableIfMissing: true,
+  });
+  
+  // Suppress harmless "table already exists" errors during initialization
+  sessionStore.on('error', (err: any) => {
+    if (err.message && err.message.includes('already exists')) {
+      // Silently ignore - table/index already exists which is fine
+      return;
+    }
+    console.error('Session store error:', err);
+  });
+  
   app.use(
     session({
-      store: new PgSession({
-        conString: process.env.DATABASE_URL,
-        createTableIfMissing: true,
-      }),
+      store: sessionStore,
       secret: process.env.SESSION_SECRET || 'dev-secret-change-in-production',
       resave: false,
       saveUninitialized: false,
