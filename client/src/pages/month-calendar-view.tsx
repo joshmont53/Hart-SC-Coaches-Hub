@@ -45,7 +45,8 @@ export function MonthCalendarView({
   };
 
   const days = [];
-  for (let i = 0; i < startingDayOfWeek; i++) {
+  const mondayBasedOffset = (startingDayOfWeek + 6) % 7;
+  for (let i = 0; i < mondayBasedOffset; i++) {
     days.push(null);
   }
   for (let i = 1; i <= daysInMonth; i++) {
@@ -94,7 +95,7 @@ export function MonthCalendarView({
       </div>
 
       <div className="grid grid-cols-7 gap-2 flex-1">
-        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => (
           <div key={day} className="p-2 text-center text-muted-foreground">
             {day}
           </div>
