@@ -48,6 +48,30 @@ export function DayListView({
     return competitionCoaching.filter(cc => cc.competitionId === competitionId).length;
   };
 
+  const getCompetitionTimeRange = (competitionId: string, date: Date) => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    const coachingForDay = competitionCoaching.filter(
+      cc => cc.competitionId === competitionId && cc.coachingDate === dateStr
+    );
+
+    if (coachingForDay.length === 0) {
+      return "05:30 - 10:00";
+    }
+
+    const times = coachingForDay.map(cc => ({
+      start: cc.startTime,
+      end: cc.endTime
+    }));
+
+    const startTimes = times.map(t => t.start).sort();
+    const endTimes = times.map(t => t.end).sort();
+
+    const earliestStart = startTimes[0];
+    const latestEnd = endTimes[endTimes.length - 1];
+
+    return `${earliestStart} - ${latestEnd}`;
+  };
+
   const today = new Date();
 
   return (
@@ -84,6 +108,7 @@ export function DayListView({
                 {dayCompetitions.map((comp) => {
                   const location = locations.find((l) => l.id === comp.locationId);
                   const coachCount = getCoachingCountForCompetition(comp.id);
+                  const timeRange = getCompetitionTimeRange(comp.id, day);
 
                   return (
                     <div
@@ -109,6 +134,7 @@ export function DayListView({
                             <Trophy className="h-5 w-5" />
                             <div>
                               <div className="font-bold">{comp.competitionName}</div>
+                              <div className="text-sm opacity-75">{timeRange}</div>
                               {location && (
                                 <div className="text-sm opacity-75">{location.name}</div>
                               )}
