@@ -1,21 +1,28 @@
 import type { Session, Squad } from '../lib/typeAdapters';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import type { Competition, CompetitionCoaching } from '@shared/schema';
+import { ChevronLeft, ChevronRight, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface MonthCalendarViewProps {
   sessions: Session[];
+  competitions: Competition[];
+  competitionCoaching: CompetitionCoaching[];
   squads: Squad[];
   currentDate: Date;
   onDateChange: (date: Date) => void;
   onDayClick: (date: Date) => void;
+  onCompetitionClick: (competition: Competition) => void;
 }
 
 export function MonthCalendarView({
   sessions,
+  competitions,
+  competitionCoaching,
   squads,
   currentDate,
   onDateChange,
   onDayClick,
+  onCompetitionClick,
 }: MonthCalendarViewProps) {
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -41,6 +48,16 @@ export function MonthCalendarView({
         sessionDate.getMonth() === date.getMonth() &&
         sessionDate.getFullYear() === date.getFullYear()
       );
+    });
+  };
+
+  const getCompetitionsForDate = (date: Date) => {
+    return competitions.filter((comp) => {
+      const startDate = new Date(comp.startDate);
+      const endDate = new Date(comp.endDate);
+      const compareDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      return compareDate >= new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()) &&
+             compareDate <= new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
     });
   };
 
@@ -104,6 +121,7 @@ export function MonthCalendarView({
         {days.map((day, index) => {
           const date = day ? new Date(year, month, day) : null;
           const daySessions = date ? getSessionsForDate(date) : [];
+          const dayCompetitions = date ? getCompetitionsForDate(date) : [];
 
           return (
             <div
@@ -120,6 +138,7 @@ export function MonthCalendarView({
                 <>
                   <div className="mb-1">{day}</div>
                   <div className="space-y-1">
+                    {/* Render sessions */}
                     {daySessions.map((session) => {
                       const squad = squads.find((s) => s.id === session.squadId);
                       if (!squad) return null;
@@ -135,6 +154,34 @@ export function MonthCalendarView({
                         </div>
                       );
                     })}
+                    {/* Render competitions with diagonal stripes */}
+                    {dayCompetitions.map((comp) => (
+                      <div
+                        key={comp.id}
+                        className="text-xs px-2 py-1 rounded truncate overflow-hidden relative cursor-pointer bg-white border"
+                        style={{
+                          backgroundImage: `repeating-linear-gradient(
+                            45deg,
+                            ${comp.color}40,
+                            ${comp.color}40 10px,
+                            transparent 10px,
+                            transparent 20px
+                          )`,
+                          borderColor: comp.color,
+                          color: comp.color
+                        }}
+                        title={comp.competitionName}
+                        data-testid={`competition-badge-${comp.id}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onCompetitionClick(comp);
+                        }}
+                      >
+                        <span className="font-medium flex items-center gap-1">
+                          <Trophy className="h-3 w-3" />
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 </>
               )}

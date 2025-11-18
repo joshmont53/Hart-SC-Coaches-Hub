@@ -1,23 +1,30 @@
 import type { Session, Squad, Location } from '../lib/typeAdapters';
+import type { Competition, CompetitionCoaching } from '@shared/schema';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, Trophy } from 'lucide-react';
 
 interface DayCalendarViewProps {
   sessions: Session[];
+  competitions: Competition[];
+  competitionCoaching: CompetitionCoaching[];
   squads: Squad[];
   locations: Location[];
   selectedDate: Date;
   onBack: () => void;
   onSessionClick: (session: Session) => void;
+  onCompetitionClick: (competition: Competition) => void;
 }
 
 export function DayCalendarView({
   sessions,
+  competitions,
+  competitionCoaching,
   squads,
   locations,
   selectedDate,
   onBack,
   onSessionClick,
+  onCompetitionClick,
 }: DayCalendarViewProps) {
   const dayName = selectedDate.toLocaleDateString('en-US', { weekday: 'long' });
   const dateStr = selectedDate.toLocaleDateString('en-US', {
@@ -33,6 +40,14 @@ export function DayCalendarView({
       sessionDate.getMonth() === selectedDate.getMonth() &&
       sessionDate.getFullYear() === selectedDate.getFullYear()
     );
+  });
+
+  const dayCompetitions = competitions.filter((comp) => {
+    const startDate = new Date(comp.startDate);
+    const endDate = new Date(comp.endDate);
+    const compareDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+    return compareDate >= new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()) &&
+           compareDate <= new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
   });
 
   const timeSlots = [
@@ -76,11 +91,56 @@ export function DayCalendarView({
         </div>
       </div>
 
-      {daySessions.length === 0 ? (
-        <div className="flex-1 flex items-center justify-center text-muted-foreground" data-testid="text-no-sessions">
-          No sessions scheduled for this day
+      {/* Competitions section */}
+      {dayCompetitions.length > 0 && (
+        <div className="mb-4 space-y-2">
+          {dayCompetitions.map((comp) => {
+            const location = locations.find(l => l.id === comp.locationId);
+            const coachCount = competitionCoaching.filter(cc => cc.competitionId === comp.id).length;
+            
+            return (
+              <div
+                key={comp.id}
+                className="p-4 rounded-lg cursor-pointer hover:opacity-90 transition-opacity overflow-hidden relative bg-white border-2"
+                style={{
+                  backgroundImage: `repeating-linear-gradient(
+                    45deg,
+                    ${comp.color}40,
+                    ${comp.color}40 10px,
+                    transparent 10px,
+                    transparent 20px
+                  )`,
+                  borderColor: comp.color,
+                  color: comp.color
+                }}
+                onClick={() => onCompetitionClick(comp)}
+                data-testid={`competition-day-view-${comp.id}`}
+              >
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <Trophy className="h-6 w-6" />
+                    <div>
+                      <div className="font-bold text-lg">{comp.competitionName}</div>
+                      {location && (
+                        <div className="text-sm opacity-75">{location.name}</div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-sm opacity-75">
+                    {coachCount} {coachCount === 1 ? 'coach' : 'coaches'}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
-      ) : (
+      )}
+
+      {daySessions.length === 0 && dayCompetitions.length === 0 ? (
+        <div className="flex-1 flex items-center justify-center text-muted-foreground" data-testid="text-no-sessions">
+          No sessions or competitions scheduled for this day
+        </div>
+      ) : daySessions.length > 0 && (
         <div className="flex-1 overflow-auto">
           <div className="flex gap-4">
             <div className="w-16 flex-shrink-0">

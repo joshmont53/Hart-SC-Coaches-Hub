@@ -741,6 +741,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get ALL coaching records across all competitions (all authenticated users)
+  app.get("/api/competitions/coaching/all", requireAuth, async (req, res) => {
+    try {
+      const allCoaching = await storage.getAllCompetitionCoaching();
+      res.json(allCoaching);
+    } catch (error) {
+      console.error("Error fetching all competition coaching:", error);
+      res.status(500).json({ message: "Failed to fetch all competition coaching" });
+    }
+  });
+
   // Get coaching records for a competition (all authenticated users)
   app.get("/api/competitions/:id/coaching", requireAuth, async (req, res) => {
     try {

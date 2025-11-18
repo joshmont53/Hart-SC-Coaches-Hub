@@ -21,6 +21,7 @@ import { ManageSwimmers } from '@/pages/manage-swimmers';
 import { ManageLocations } from '@/pages/manage-locations';
 import { ManageInvitations } from '@/pages/manage-invitations';
 import { ManageCompetitions } from '@/pages/manage-competitions';
+import { CompetitionDetailModal } from '@/components/CompetitionDetailModal';
 import { Button } from './components/ui/button';
 import { Switch as ToggleSwitch } from './components/ui/switch';
 import { Label } from './components/ui/label';
@@ -54,6 +55,8 @@ import type {
   Location as BackendLocation,
   Coach as BackendCoach,
   Swimmer as BackendSwimmer,
+  Competition,
+  CompetitionCoaching,
 } from '@shared/schema';
 
 type View = 'month' | 'day';
@@ -96,6 +99,7 @@ function CalendarApp() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+  const [selectedCompetitionId, setSelectedCompetitionId] = useState<string | null>(null);
   const [view, setView] = useState<View>('month');
   const [mobileView, setMobileView] = useState<MobileView>('calendar');
   const [managementView, setManagementView] = useState<ManagementView>('calendar');
@@ -121,6 +125,16 @@ function CalendarApp() {
   
   const { data: backendSwimmers = [] } = useQuery<BackendSwimmer[]>({ 
     queryKey: ['/api/swimmers'],
+  });
+
+  // Fetch competitions
+  const { data: competitions = [] } = useQuery<Competition[]>({ 
+    queryKey: ['/api/competitions'],
+  });
+
+  // Fetch all competition coaching assignments
+  const { data: competitionCoaching = [] } = useQuery<CompetitionCoaching[]>({ 
+    queryKey: ['/api/competitions/coaching/all'],
   });
 
   // Adapt backend data to frontend types
@@ -165,6 +179,20 @@ function CalendarApp() {
     }
     return sessions;
   }, [showMySessionsOnly, sessions, currentCoachId]);
+
+  // Filter competitions based on toggle
+  const filteredCompetitions = useMemo(() => {
+    if (showMySessionsOnly && currentCoachId) {
+      // Get all competition IDs where current coach has a coaching assignment
+      const myCompetitionIds = new Set(
+        competitionCoaching
+          .filter(cc => cc.coachId === currentCoachId)
+          .map(cc => cc.competitionId)
+      );
+      return competitions.filter(comp => myCompetitionIds.has(comp.id));
+    }
+    return competitions;
+  }, [showMySessionsOnly, competitions, competitionCoaching, currentCoachId]);
   
   const handleLogout = async () => {
     try {
@@ -210,6 +238,14 @@ function CalendarApp() {
 
   const handleBackFromSession = () => {
     setSelectedSessionId(null);
+  };
+
+  const handleCompetitionClick = (competition: Competition) => {
+    setSelectedCompetitionId(competition.id);
+  };
+
+  const handleCloseCompetitionModal = () => {
+    setSelectedCompetitionId(null);
   };
 
   const handleAddSession = () => {
@@ -456,21 +492,27 @@ function CalendarApp() {
               <div className={mobileView === 'calendar' ? 'block' : 'hidden lg:block'}>
                 <MonthCalendarView
                   sessions={filteredSessions}
+                  competitions={filteredCompetitions}
+                  competitionCoaching={competitionCoaching}
                   squads={squads}
                   currentDate={currentDate}
                   onDateChange={setCurrentDate}
                   onDayClick={handleDayClick}
+                  onCompetitionClick={handleCompetitionClick}
                 />
               </div>
               
               <div className={mobileView === 'list' ? 'block lg:hidden' : 'hidden'}>
                 <DayListView
                   sessions={filteredSessions}
+                  competitions={filteredCompetitions}
+                  competitionCoaching={competitionCoaching}
                   squads={squads}
                   locations={locations}
                   coaches={coaches}
                   currentDate={currentDate}
                   onSessionClick={handleSessionClick}
+                  onCompetitionClick={handleCompetitionClick}
                 />
               </div>
             </>
@@ -478,16 +520,29 @@ function CalendarApp() {
             selectedDate && (
               <DayCalendarView
                 sessions={filteredSessions}
+                competitions={filteredCompetitions}
+                competitionCoaching={competitionCoaching}
                 squads={squads}
                 locations={locations}
                 selectedDate={selectedDate}
                 onBack={handleBackToMonth}
                 onSessionClick={handleSessionClick}
+                onCompetitionClick={handleCompetitionClick}
               />
             )
           )}
         </main>
       </div>
+
+      {/* Competition Detail Modal */}
+      <CompetitionDetailModal
+        competition={competitions.find(c => c.id === selectedCompetitionId) || null}
+        competitionCoaching={competitionCoaching}
+        locations={backendLocations}
+        coaches={backendCoaches}
+        open={!!selectedCompetitionId}
+        onClose={handleCloseCompetitionModal}
+      />
     </div>
   );
 }

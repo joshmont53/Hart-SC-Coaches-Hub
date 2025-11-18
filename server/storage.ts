@@ -110,6 +110,7 @@ export interface IStorage {
   
   // Competition Coaching operations (NEW - No impact on existing functionality)
   getCompetitionCoachingByCompetition(competitionId: string): Promise<CompetitionCoaching[]>;
+  getAllCompetitionCoaching(): Promise<CompetitionCoaching[]>;
   createCompetitionCoaching(coaching: InsertCompetitionCoaching): Promise<CompetitionCoaching>;
   deleteCompetitionCoachingByCompetition(competitionId: string): Promise<void>;
   deleteCompetitionCoaching(id: string): Promise<void>;
@@ -538,6 +539,10 @@ export class DatabaseStorage implements IStorage {
 
   async getCompetitionCoachingByCompetition(competitionId: string): Promise<CompetitionCoaching[]> {
     return await db.select().from(competitionCoaching).where(and(eq(competitionCoaching.competitionId, competitionId), eq(competitionCoaching.recordStatus, 'active')));
+  }
+
+  async getAllCompetitionCoaching(): Promise<CompetitionCoaching[]> {
+    return await db.select().from(competitionCoaching).where(eq(competitionCoaching.recordStatus, 'active'));
   }
 
   async createCompetitionCoaching(coaching: InsertCompetitionCoaching): Promise<CompetitionCoaching> {

@@ -1,22 +1,30 @@
 import type { Session, Squad, Location, Coach } from '../lib/typeAdapters';
+import type { Competition, CompetitionCoaching } from '@shared/schema';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay } from 'date-fns';
+import { Trophy } from 'lucide-react';
 
 interface DayListViewProps {
   sessions: Session[];
+  competitions: Competition[];
+  competitionCoaching: CompetitionCoaching[];
   squads: Squad[];
   locations: Location[];
   coaches: Coach[];
   currentDate: Date;
   onSessionClick: (session: Session) => void;
+  onCompetitionClick: (competition: Competition) => void;
 }
 
 export function DayListView({
   sessions,
+  competitions,
+  competitionCoaching,
   squads,
   locations,
   coaches,
   currentDate,
   onSessionClick,
+  onCompetitionClick,
 }: DayListViewProps) {
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
@@ -26,13 +34,29 @@ export function DayListView({
     return sessions.filter((session) => isSameDay(new Date(session.date), date));
   };
 
+  const getCompetitionsForDate = (date: Date) => {
+    return competitions.filter((comp) => {
+      const startDate = new Date(comp.startDate);
+      const endDate = new Date(comp.endDate);
+      const compareDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      return compareDate >= new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()) &&
+             compareDate <= new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+    });
+  };
+
+  const getCoachingCountForCompetition = (competitionId: string) => {
+    return competitionCoaching.filter(cc => cc.competitionId === competitionId).length;
+  };
+
   const today = new Date();
 
   return (
     <div className="space-y-4" data-testid="view-day-list">
       {daysInMonth.map((day) => {
         const daySessions = getSessionsForDate(day);
+        const dayCompetitions = getCompetitionsForDate(day);
         const isToday = isSameDay(day, today);
+        const hasItems = daySessions.length > 0 || dayCompetitions.length > 0;
 
         return (
           <div
@@ -54,8 +78,51 @@ export function DayListView({
               </div>
             </div>
 
-            {daySessions.length > 0 ? (
+            {hasItems ? (
               <div className="p-3 space-y-2">
+                {/* Render competitions first */}
+                {dayCompetitions.map((comp) => {
+                  const location = locations.find((l) => l.id === comp.locationId);
+                  const coachCount = getCoachingCountForCompetition(comp.id);
+
+                  return (
+                    <div
+                      key={comp.id}
+                      className="p-3 rounded-lg cursor-pointer hover:opacity-90 transition-opacity overflow-hidden relative bg-white border-2"
+                      style={{
+                        backgroundImage: `repeating-linear-gradient(
+                          45deg,
+                          ${comp.color}40,
+                          ${comp.color}40 10px,
+                          transparent 10px,
+                          transparent 20px
+                        )`,
+                        borderColor: comp.color,
+                        color: comp.color
+                      }}
+                      onClick={() => onCompetitionClick(comp)}
+                      data-testid={`competition-item-${comp.id}`}
+                    >
+                      <div>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <Trophy className="h-5 w-5" />
+                            <div>
+                              <div className="font-bold">{comp.competitionName}</div>
+                              {location && (
+                                <div className="text-sm opacity-75">{location.name}</div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-sm opacity-75 text-right whitespace-nowrap">
+                            {coachCount} {coachCount === 1 ? 'coach' : 'coaches'}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                {/* Render sessions */}
                 {daySessions.map((session) => {
                   const squad = squads.find((s) => s.id === session.squadId);
                   const location = locations.find((l) => l.id === session.locationId);
@@ -94,7 +161,7 @@ export function DayListView({
               </div>
             ) : (
               <div className="p-3 text-center text-sm text-muted-foreground" data-testid="text-no-sessions">
-                No sessions
+                No sessions or competitions
               </div>
             )}
           </div>
