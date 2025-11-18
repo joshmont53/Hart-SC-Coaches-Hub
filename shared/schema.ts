@@ -69,6 +69,7 @@ export const coachesRelations = relations(coaches, ({ one, many }) => ({
   secondSessions: many(swimmingSessions, { relationName: "secondCoach" }),
   helperSessions: many(swimmingSessions, { relationName: "helper" }),
   writerSessions: many(swimmingSessions, { relationName: "setWriter" }),
+  competitionCoaching: many(competitionCoaching),
 }));
 
 export type Coach = typeof coaches.$inferSelect;
@@ -139,6 +140,7 @@ export const locations = pgTable("locations", {
 
 export const locationsRelations = relations(locations, ({ many }) => ({
   sessions: many(swimmingSessions),
+  competitions: many(competitions),
 }));
 
 export type Location = typeof locations.$inferSelect;
@@ -375,3 +377,67 @@ export const registrationSchema = z.object({
 });
 
 export type RegistrationInput = z.infer<typeof registrationSchema>;
+
+// ============================================================================
+// Competitions Feature - NEW TABLES (No impact on existing functionality)
+// ============================================================================
+
+// Competitions table
+export const competitions = pgTable("competitions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  competitionName: varchar("competition_name").notNull(),
+  locationId: varchar("location_id").references(() => locations.id).notNull(),
+  startDate: date("start_date").notNull(),
+  endDate: date("end_date").notNull(),
+  color: varchar("color").notNull().default("#3b82f6"), // For diagonal stripe pattern
+  recordStatus: varchar("record_status").notNull().default("active"), // "active" | "inactive"
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const competitionsRelations = relations(competitions, ({ one, many }) => ({
+  location: one(locations, {
+    fields: [competitions.locationId],
+    references: [locations.id],
+  }),
+  coachingAssignments: many(competitionCoaching),
+}));
+
+export type Competition = typeof competitions.$inferSelect;
+export const insertCompetitionSchema = createInsertSchema(competitions).omit({ 
+  id: true, 
+  createdAt: true, 
+  recordStatus: true 
+});
+export type InsertCompetition = z.infer<typeof insertCompetitionSchema>;
+
+// Competition Coaching table
+export const competitionCoaching = pgTable("competition_coaching", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  competitionId: varchar("competition_id").references(() => competitions.id, { onDelete: 'cascade' }).notNull(),
+  coachId: varchar("coach_id").references(() => coaches.id).notNull(),
+  coachingDate: date("coaching_date").notNull(), // For multi-day competitions
+  startTime: time("start_time").notNull(),
+  endTime: time("end_time").notNull(),
+  duration: decimal("duration", { precision: 4, scale: 2 }).notNull(), // Hours (calculated)
+  recordStatus: varchar("record_status").notNull().default("active"), // "active" | "inactive"
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const competitionCoachingRelations = relations(competitionCoaching, ({ one }) => ({
+  competition: one(competitions, {
+    fields: [competitionCoaching.competitionId],
+    references: [competitions.id],
+  }),
+  coach: one(coaches, {
+    fields: [competitionCoaching.coachId],
+    references: [coaches.id],
+  }),
+}));
+
+export type CompetitionCoaching = typeof competitionCoaching.$inferSelect;
+export const insertCompetitionCoachingSchema = createInsertSchema(competitionCoaching).omit({ 
+  id: true, 
+  createdAt: true, 
+  recordStatus: true 
+});
+export type InsertCompetitionCoaching = z.infer<typeof insertCompetitionCoachingSchema>;

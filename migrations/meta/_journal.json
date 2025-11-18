@@ -15,6 +15,13 @@
       "when": 1763136638075,
       "tag": "0001_secret_mockingbird",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1763466866878,
+      "tag": "0002_past_angel",
+      "breakpoints": true
     }
   ]
 }
