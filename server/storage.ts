@@ -112,6 +112,7 @@ export interface IStorage {
   getCompetitionCoachingByCompetition(competitionId: string): Promise<CompetitionCoaching[]>;
   createCompetitionCoaching(coaching: InsertCompetitionCoaching): Promise<CompetitionCoaching>;
   deleteCompetitionCoachingByCompetition(competitionId: string): Promise<void>;
+  deleteCompetitionCoaching(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -549,6 +550,13 @@ export class DatabaseStorage implements IStorage {
       .update(competitionCoaching)
       .set({ recordStatus: 'inactive' })
       .where(eq(competitionCoaching.competitionId, competitionId));
+  }
+
+  async deleteCompetitionCoaching(id: string): Promise<void> {
+    await db
+      .update(competitionCoaching)
+      .set({ recordStatus: 'inactive' })
+      .where(eq(competitionCoaching.id, id));
   }
 }
 

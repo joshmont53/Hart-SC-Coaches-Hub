@@ -752,6 +752,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Create coaching record for a competition (admin only)
+  app.post("/api/competitions/:id/coaching", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      // Verify competition exists
+      const competition = await storage.getCompetition(req.params.id);
+      if (!competition) {
+        return res.status(404).json({ message: "Competition not found" });
+      }
+
+      // Validate request body
+      const validationResult = insertCompetitionCoachingSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: "Invalid coaching data", 
+          errors: validationResult.error.errors 
+        });
+      }
+
+      const coachingData = validationResult.data;
+
+      // Verify coach exists
+      const coach = await storage.getCoach(coachingData.coachId);
+      if (!coach) {
+        return res.status(404).json({ message: "Coach not found" });
+      }
+
+      // Create coaching record
+      const coaching = await storage.createCompetitionCoaching(coachingData);
+      res.status(201).json(coaching);
+    } catch (error: any) {
+      console.error("Error creating coaching:", error);
+      res.status(500).json({ message: error.message || "Failed to create coaching" });
+    }
+  });
+
+  // Delete coaching record (admin only)
+  app.delete("/api/competitions/coaching/:id", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      await storage.deleteCompetitionCoaching(req.params.id);
+      res.status(204).send();
+    } catch (error: any) {
+      console.error("Error deleting coaching:", error);
+      res.status(500).json({ message: error.message || "Failed to delete coaching" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
