@@ -260,7 +260,7 @@ function CalendarApp() {
     mutationFn: async (session: Omit<Session, 'id'>) => {
       const backendSession = adaptSessionToBackend(session);
       const response = await apiRequest('POST', '/api/sessions', backendSession);
-      return response;
+      return response.json();
     },
     onSuccess: async (backendSession: BackendSession) => {
       // Refetch all data to ensure cache is up to date
