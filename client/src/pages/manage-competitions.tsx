@@ -24,7 +24,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ArrowLeft, Plus, Trash2, Edit, Trophy, Calendar, MapPin, Clock } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, parse } from 'date-fns';
 
 interface ManageCompetitionsProps {
   onBack: () => void;
@@ -362,12 +362,22 @@ export function ManageCompetitions({ onBack }: ManageCompetitionsProps) {
     new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
   );
 
-  // Group coaching records by coach
-  const groupedCoachingRecords = coachingRecords.reduce((acc, record) => {
-    if (!acc[record.coachId]) {
-      acc[record.coachId] = [];
+  // Sort coaching records chronologically by date and time
+  const sortedCoachingRecords = [...coachingRecords].sort((a, b) => {
+    // First sort by date (use string comparison for yyyy-MM-dd format)
+    const dateCompare = a.coachingDate.localeCompare(b.coachingDate);
+    if (dateCompare !== 0) return dateCompare;
+    
+    // Then by start time
+    return a.startTime.localeCompare(b.startTime);
+  });
+
+  // Group sorted coaching by date for display
+  const groupedCoachingRecords = sortedCoachingRecords.reduce((acc, record) => {
+    if (!acc[record.coachingDate]) {
+      acc[record.coachingDate] = [];
     }
-    acc[record.coachId].push(record);
+    acc[record.coachingDate].push(record);
     return acc;
   }, {} as Record<string, CompetitionCoaching[]>);
 
@@ -457,8 +467,8 @@ export function ManageCompetitions({ onBack }: ManageCompetitionsProps) {
                       <Calendar className="h-4 w-4 flex-shrink-0" />
                       <span className="truncate">
                         {competition.startDate === competition.endDate
-                          ? format(new Date(competition.startDate), 'EEE, d MMM yyyy')
-                          : `${format(new Date(competition.startDate), 'd MMM')} - ${format(new Date(competition.endDate), 'd MMM yyyy')}`
+                          ? format(parse(competition.startDate, 'yyyy-MM-dd', new Date()), 'EEE, d MMM yyyy')
+                          : `${format(parse(competition.startDate, 'yyyy-MM-dd', new Date()), 'd MMM')} - ${format(parse(competition.endDate, 'yyyy-MM-dd', new Date()), 'd MMM yyyy')}`
                         }
                       </span>
                     </div>
@@ -707,21 +717,21 @@ export function ManageCompetitions({ onBack }: ManageCompetitionsProps) {
               </CardContent>
             </Card>
 
-            {/* Coaching Records List - Grouped by Coach */}
+            {/* Coaching Records List - Grouped by Date */}
             <div className="space-y-2">
               <h3 className="font-semibold">Coaching Time Blocks</h3>
               {coachingRecords.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No coaching time blocks yet</p>
               ) : (
                 <div className="space-y-3">
-                  {Object.entries(groupedCoachingRecords).map(([coachId, records]) => (
-                    <Card key={coachId}>
+                  {Object.entries(groupedCoachingRecords).map(([date, records]) => (
+                    <Card key={date}>
                       <CardContent className="p-4 space-y-3">
-                        {/* Coach name header */}
-                        <p className="font-medium" data-testid={`text-coach-name-${coachId}`}>
-                          {getCoachName(coachId)}
+                        {/* Date header */}
+                        <p className="font-medium" data-testid={`text-date-${date}`}>
+                          {format(parse(date, 'yyyy-MM-dd', new Date()), 'EEEE, d MMMM yyyy')}
                         </p>
-                        {/* All time blocks for this coach */}
+                        {/* All time blocks for this date */}
                         <div className="space-y-2 pl-4">
                           {records.map((record) => (
                             <div 
@@ -730,7 +740,7 @@ export function ManageCompetitions({ onBack }: ManageCompetitionsProps) {
                               data-testid={`card-coaching-${record.id}`}
                             >
                               <div className="flex gap-4 text-sm text-muted-foreground">
-                                <span>{format(new Date(record.coachingDate), 'MMM d, yyyy')}</span>
+                                <span>{getCoachName(record.coachId)}</span>
                                 <span>{record.startTime} - {record.endTime}</span>
                                 <Badge variant="secondary">{record.duration}h</Badge>
                               </div>

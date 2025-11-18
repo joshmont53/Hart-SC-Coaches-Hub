@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import type { Competition, CompetitionCoaching, Location as BackendLocation, Coach as BackendCoach } from '@shared/schema';
 import { Trophy, MapPin, Clock } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, parse } from 'date-fns';
 import { useMemo } from 'react';
 
 interface CompetitionDetailModalProps {
@@ -21,20 +21,32 @@ export function CompetitionDetailModal({
   open,
   onClose,
 }: CompetitionDetailModalProps) {
-  // Group coaching records by coach
-  const groupedCoaching = useMemo(() => {
-    if (!competition) return {};
+  // Sort coaching records chronologically by date and time
+  const sortedCoaching = useMemo(() => {
+    if (!competition) return [];
     
     const coachingForComp = competitionCoaching.filter(cc => cc.competitionId === competition.id);
     
-    return coachingForComp.reduce((acc, record) => {
-      if (!acc[record.coachId]) {
-        acc[record.coachId] = [];
+    return coachingForComp.sort((a, b) => {
+      // First sort by date (use string comparison for yyyy-MM-dd format)
+      const dateCompare = a.coachingDate.localeCompare(b.coachingDate);
+      if (dateCompare !== 0) return dateCompare;
+      
+      // Then by start time
+      return a.startTime.localeCompare(b.startTime);
+    });
+  }, [competition, competitionCoaching]);
+
+  // Group sorted coaching by date for display
+  const groupedByDate = useMemo(() => {
+    return sortedCoaching.reduce((acc, record) => {
+      if (!acc[record.coachingDate]) {
+        acc[record.coachingDate] = [];
       }
-      acc[record.coachId].push(record);
+      acc[record.coachingDate].push(record);
       return acc;
     }, {} as Record<string, CompetitionCoaching[]>);
-  }, [competition, competitionCoaching]);
+  }, [sortedCoaching]);
 
   if (!competition) return null;
 
@@ -67,8 +79,8 @@ export function CompetitionDetailModal({
               </DialogTitle>
               <p className="text-muted-foreground mt-1">
                 {competition.startDate === competition.endDate
-                  ? format(new Date(competition.startDate), 'EEEE, d MMMM yyyy')
-                  : `${format(new Date(competition.startDate), 'd MMM')} - ${format(new Date(competition.endDate), 'd MMM yyyy')}`
+                  ? format(parse(competition.startDate, 'yyyy-MM-dd', new Date()), 'EEEE, d MMMM yyyy')
+                  : `${format(parse(competition.startDate, 'yyyy-MM-dd', new Date()), 'd MMM')} - ${format(parse(competition.endDate, 'yyyy-MM-dd', new Date()), 'd MMM yyyy')}`
                 }
               </p>
             </div>
@@ -94,31 +106,33 @@ export function CompetitionDetailModal({
               <span>Coach Assignments</span>
             </div>
             
-            {Object.keys(groupedCoaching).length === 0 ? (
+            {sortedCoaching.length === 0 ? (
               <p className="text-sm text-muted-foreground pl-6">No coaching assignments</p>
             ) : (
               <div className="space-y-4 pl-6">
-                {Object.entries(groupedCoaching).map(([coachId, records]) => {
-                  const coach = coaches.find(c => c.id === coachId);
-                  if (!coach) return null;
-
+                {Object.entries(groupedByDate).map(([date, records]) => {
                   const totalHours = records.reduce((sum, r) => sum + parseFloat(r.duration), 0);
 
                   return (
-                    <div key={coachId} className="border rounded-lg p-4 space-y-2" data-testid={`coach-assignment-${coachId}`}>
-                      <div className="font-medium">{coach.firstName} {coach.lastName}</div>
+                    <div key={date} className="border rounded-lg p-4 space-y-2" data-testid={`date-group-${date}`}>
+                      <div className="font-medium">{format(parse(date, 'yyyy-MM-dd', new Date()), 'EEEE, d MMMM yyyy')}</div>
                       <div className="text-sm text-muted-foreground">
                         Total: {totalHours.toFixed(1)} hours
                       </div>
                       <div className="space-y-2 mt-2">
-                        {records.map((record) => (
-                          <div key={record.id} className="flex items-center gap-2 text-sm" data-testid={`coaching-block-${record.id}`}>
-                            <Clock className="h-3 w-3 text-muted-foreground" />
-                            <span>
-                              {format(new Date(record.coachingDate), 'd MMM yyyy')} • {record.startTime} - {record.endTime}
-                            </span>
-                          </div>
-                        ))}
+                        {records.map((record) => {
+                          const coach = coaches.find(c => c.id === record.coachId);
+                          if (!coach) return null;
+
+                          return (
+                            <div key={record.id} className="flex items-center gap-2 text-sm" data-testid={`coaching-block-${record.id}`}>
+                              <Clock className="h-3 w-3 text-muted-foreground" />
+                              <span>
+                                {coach.firstName} {coach.lastName} • {record.startTime} - {record.endTime}
+                              </span>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   );

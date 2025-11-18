@@ -1,6 +1,6 @@
 import type { Session, Squad, Location, Coach } from '../lib/typeAdapters';
 import type { Competition, CompetitionCoaching } from '@shared/schema';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay } from 'date-fns';
+import { format, parse, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay } from 'date-fns';
 import { Trophy } from 'lucide-react';
 
 interface DayListViewProps {
@@ -13,6 +13,8 @@ interface DayListViewProps {
   currentDate: Date;
   onSessionClick: (session: Session) => void;
   onCompetitionClick: (competition: Competition) => void;
+  showMySessionsOnly?: boolean;
+  currentCoachId?: string | null;
 }
 
 export function DayListView({
@@ -25,6 +27,8 @@ export function DayListView({
   currentDate,
   onSessionClick,
   onCompetitionClick,
+  showMySessionsOnly = false,
+  currentCoachId = null,
 }: DayListViewProps) {
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
@@ -36,11 +40,22 @@ export function DayListView({
 
   const getCompetitionsForDate = (date: Date) => {
     return competitions.filter((comp) => {
-      const startDate = new Date(comp.startDate);
-      const endDate = new Date(comp.endDate);
+      const startDate = parse(comp.startDate, 'yyyy-MM-dd', new Date());
+      const endDate = parse(comp.endDate, 'yyyy-MM-dd', new Date());
       const compareDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-      return compareDate >= new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()) &&
-             compareDate <= new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+      const isInDateRange = compareDate >= new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()) &&
+                            compareDate <= new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+      
+      // If My Sessions filter is on, only show competition on days where current coach is coaching
+      if (showMySessionsOnly && currentCoachId && isInDateRange) {
+        const dateStr = format(date, 'yyyy-MM-dd');
+        const hasCoachingOnDate = competitionCoaching.some(
+          cc => cc.competitionId === comp.id && cc.coachId === currentCoachId && cc.coachingDate === dateStr
+        );
+        return hasCoachingOnDate;
+      }
+      
+      return isInDateRange;
     });
   };
 

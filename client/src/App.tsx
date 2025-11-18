@@ -499,6 +499,8 @@ function CalendarApp() {
                   onDateChange={setCurrentDate}
                   onDayClick={handleDayClick}
                   onCompetitionClick={handleCompetitionClick}
+                  showMySessionsOnly={showMySessionsOnly}
+                  currentCoachId={currentCoachId}
                 />
               </div>
               
@@ -513,6 +515,8 @@ function CalendarApp() {
                   currentDate={currentDate}
                   onSessionClick={handleSessionClick}
                   onCompetitionClick={handleCompetitionClick}
+                  showMySessionsOnly={showMySessionsOnly}
+                  currentCoachId={currentCoachId}
                 />
               </div>
             </>
@@ -528,6 +532,8 @@ function CalendarApp() {
                 onBack={handleBackToMonth}
                 onSessionClick={handleSessionClick}
                 onCompetitionClick={handleCompetitionClick}
+                showMySessionsOnly={showMySessionsOnly}
+                currentCoachId={currentCoachId}
               />
             )
           )}

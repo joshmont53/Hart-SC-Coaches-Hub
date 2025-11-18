@@ -2,6 +2,7 @@ import type { Session, Squad } from '../lib/typeAdapters';
 import type { Competition, CompetitionCoaching } from '@shared/schema';
 import { ChevronLeft, ChevronRight, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { parse } from 'date-fns';
 
 interface MonthCalendarViewProps {
   sessions: Session[];
@@ -12,6 +13,8 @@ interface MonthCalendarViewProps {
   onDateChange: (date: Date) => void;
   onDayClick: (date: Date) => void;
   onCompetitionClick: (competition: Competition) => void;
+  showMySessionsOnly?: boolean;
+  currentCoachId?: string | null;
 }
 
 export function MonthCalendarView({
@@ -23,6 +26,8 @@ export function MonthCalendarView({
   onDateChange,
   onDayClick,
   onCompetitionClick,
+  showMySessionsOnly = false,
+  currentCoachId = null,
 }: MonthCalendarViewProps) {
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -53,11 +58,22 @@ export function MonthCalendarView({
 
   const getCompetitionsForDate = (date: Date) => {
     return competitions.filter((comp) => {
-      const startDate = new Date(comp.startDate);
-      const endDate = new Date(comp.endDate);
+      const startDate = parse(comp.startDate, 'yyyy-MM-dd', new Date());
+      const endDate = parse(comp.endDate, 'yyyy-MM-dd', new Date());
       const compareDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-      return compareDate >= new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()) &&
-             compareDate <= new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+      const isInDateRange = compareDate >= new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()) &&
+                            compareDate <= new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+      
+      // If My Sessions filter is on, only show competition on days where current coach is coaching
+      if (showMySessionsOnly && currentCoachId && isInDateRange) {
+        const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        const hasCoachingOnDate = competitionCoaching.some(
+          cc => cc.competitionId === comp.id && cc.coachId === currentCoachId && cc.coachingDate === dateStr
+        );
+        return hasCoachingOnDate;
+      }
+      
+      return isInDateRange;
     });
   };
 

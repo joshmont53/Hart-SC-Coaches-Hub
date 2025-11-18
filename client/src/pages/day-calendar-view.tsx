@@ -2,6 +2,7 @@ import type { Session, Squad, Location } from '../lib/typeAdapters';
 import type { Competition, CompetitionCoaching } from '@shared/schema';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, Trophy } from 'lucide-react';
+import { format, parse } from 'date-fns';
 
 interface DayCalendarViewProps {
   sessions: Session[];
@@ -13,6 +14,8 @@ interface DayCalendarViewProps {
   onBack: () => void;
   onSessionClick: (session: Session) => void;
   onCompetitionClick: (competition: Competition) => void;
+  showMySessionsOnly?: boolean;
+  currentCoachId?: string | null;
 }
 
 export function DayCalendarView({
@@ -25,6 +28,8 @@ export function DayCalendarView({
   onBack,
   onSessionClick,
   onCompetitionClick,
+  showMySessionsOnly = false,
+  currentCoachId = null,
 }: DayCalendarViewProps) {
   const dayName = selectedDate.toLocaleDateString('en-US', { weekday: 'long' });
   const dateStr = selectedDate.toLocaleDateString('en-US', {
@@ -43,11 +48,22 @@ export function DayCalendarView({
   });
 
   const dayCompetitions = competitions.filter((comp) => {
-    const startDate = new Date(comp.startDate);
-    const endDate = new Date(comp.endDate);
+    const startDate = parse(comp.startDate, 'yyyy-MM-dd', new Date());
+    const endDate = parse(comp.endDate, 'yyyy-MM-dd', new Date());
     const compareDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
-    return compareDate >= new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()) &&
-           compareDate <= new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+    const isInDateRange = compareDate >= new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()) &&
+                          compareDate <= new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+    
+    // If My Sessions filter is on, only show competition on days where current coach is coaching
+    if (showMySessionsOnly && currentCoachId && isInDateRange) {
+      const dateStr = format(selectedDate, 'yyyy-MM-dd');
+      const hasCoachingOnDate = competitionCoaching.some(
+        cc => cc.competitionId === comp.id && cc.coachId === currentCoachId && cc.coachingDate === dateStr
+      );
+      return hasCoachingOnDate;
+    }
+    
+    return isInDateRange;
   });
 
   const timeSlots = [
@@ -80,7 +96,7 @@ export function DayCalendarView({
   };
 
   const getCompetitionTimeRange = (competitionId: string) => {
-    const dateStr = selectedDate.toISOString().split('T')[0];
+    const dateStr = format(selectedDate, 'yyyy-MM-dd');
     const coachingForDay = competitionCoaching.filter(
       cc => cc.competitionId === competitionId && cc.coachingDate === dateStr
     );
