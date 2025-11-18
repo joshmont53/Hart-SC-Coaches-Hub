@@ -89,17 +89,28 @@ export function DayCalendarView({
       return { startTime: "05:30", endTime: "10:00" };
     }
 
+    const timeToMinutes = (time: string): number => {
+      const [hour, min] = time.split(':').map(Number);
+      return hour * 60 + (min || 0);
+    };
+
+    const minutesToTime = (minutes: number): string => {
+      const hour = Math.floor(minutes / 60);
+      const min = minutes % 60;
+      return `${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+    };
+
     const times = coachingForDay.map(cc => ({
-      start: cc.startTime,
-      end: cc.endTime
+      startMinutes: timeToMinutes(cc.startTime),
+      endMinutes: timeToMinutes(cc.endTime)
     }));
 
-    const startTimes = times.map(t => t.start).sort();
-    const endTimes = times.map(t => t.end).sort();
+    const earliestStartMinutes = Math.min(...times.map(t => t.startMinutes));
+    const latestEndMinutes = Math.max(...times.map(t => t.endMinutes));
 
     return {
-      startTime: startTimes[0],
-      endTime: endTimes[endTimes.length - 1]
+      startTime: minutesToTime(earliestStartMinutes),
+      endTime: minutesToTime(latestEndMinutes)
     };
   };
 
@@ -110,10 +121,15 @@ export function DayCalendarView({
 
     const startMinutes = startHour * 60 + startMin;
     const endMinutes = endHour * 60 + endMin;
-    const dayStartMinutes = 5 * 60 + 30;
+    const dayStartMinutes = 5 * 60 + 30; // 05:30
+    const dayEndMinutes = 22 * 60; // 22:00
 
-    const top = ((startMinutes - dayStartMinutes) / 60) * 80;
-    const height = ((endMinutes - startMinutes) / 60) * 80;
+    // Clamp to timeline bounds
+    const clampedStartMinutes = Math.max(dayStartMinutes, Math.min(dayEndMinutes, startMinutes));
+    const clampedEndMinutes = Math.max(dayStartMinutes, Math.min(dayEndMinutes, endMinutes));
+
+    const top = ((clampedStartMinutes - dayStartMinutes) / 60) * 80;
+    const height = Math.max(20, ((clampedEndMinutes - clampedStartMinutes) / 60) * 80); // Minimum 20px height
 
     return { top, height, startTime, endTime };
   };

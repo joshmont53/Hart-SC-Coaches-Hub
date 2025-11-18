@@ -58,18 +58,26 @@ export function DayListView({
       return "05:30 - 10:00";
     }
 
+    const timeToMinutes = (time: string): number => {
+      const [hour, min] = time.split(':').map(Number);
+      return hour * 60 + (min || 0);
+    };
+
+    const minutesToTime = (minutes: number): string => {
+      const hour = Math.floor(minutes / 60);
+      const min = minutes % 60;
+      return `${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+    };
+
     const times = coachingForDay.map(cc => ({
-      start: cc.startTime,
-      end: cc.endTime
+      startMinutes: timeToMinutes(cc.startTime),
+      endMinutes: timeToMinutes(cc.endTime)
     }));
 
-    const startTimes = times.map(t => t.start).sort();
-    const endTimes = times.map(t => t.end).sort();
+    const earliestStartMinutes = Math.min(...times.map(t => t.startMinutes));
+    const latestEndMinutes = Math.max(...times.map(t => t.endMinutes));
 
-    const earliestStart = startTimes[0];
-    const latestEnd = endTimes[endTimes.length - 1];
-
-    return `${earliestStart} - ${latestEnd}`;
+    return `${minutesToTime(earliestStartMinutes)} - ${minutesToTime(latestEndMinutes)}`;
   };
 
   const today = new Date();
