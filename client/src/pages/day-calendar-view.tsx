@@ -79,6 +79,49 @@ export function DayCalendarView({
     return daySessions.filter((s) => s.locationId === locationId);
   };
 
+  const getCompetitionTimeRange = (competitionId: string) => {
+    const dateStr = selectedDate.toISOString().split('T')[0];
+    const coachingForDay = competitionCoaching.filter(
+      cc => cc.competitionId === competitionId && cc.coachingDate === dateStr
+    );
+
+    if (coachingForDay.length === 0) {
+      return { startTime: "05:30", endTime: "10:00" };
+    }
+
+    const times = coachingForDay.map(cc => ({
+      start: cc.startTime,
+      end: cc.endTime
+    }));
+
+    const startTimes = times.map(t => t.start).sort();
+    const endTimes = times.map(t => t.end).sort();
+
+    return {
+      startTime: startTimes[0],
+      endTime: endTimes[endTimes.length - 1]
+    };
+  };
+
+  const getCompetitionPosition = (competitionId: string) => {
+    const { startTime, endTime } = getCompetitionTimeRange(competitionId);
+    const [startHour, startMin] = startTime.split(':').map(Number);
+    const [endHour, endMin] = endTime.split(':').map(Number);
+
+    const startMinutes = startHour * 60 + startMin;
+    const endMinutes = endHour * 60 + endMin;
+    const dayStartMinutes = 5 * 60 + 30;
+
+    const top = ((startMinutes - dayStartMinutes) / 60) * 80;
+    const height = ((endMinutes - startMinutes) / 60) * 80;
+
+    return { top, height, startTime, endTime };
+  };
+
+  const getCompetitionsForLocation = (locationId: string) => {
+    return dayCompetitions.filter((c) => c.locationId === locationId);
+  };
+
   return (
     <div className="flex flex-col h-full" data-testid="view-day-calendar">
       <div className="flex items-center gap-4 mb-6 px-2">
@@ -91,56 +134,11 @@ export function DayCalendarView({
         </div>
       </div>
 
-      {/* Competitions section */}
-      {dayCompetitions.length > 0 && (
-        <div className="mb-4 space-y-2">
-          {dayCompetitions.map((comp) => {
-            const location = locations.find(l => l.id === comp.locationId);
-            const coachCount = competitionCoaching.filter(cc => cc.competitionId === comp.id).length;
-            
-            return (
-              <div
-                key={comp.id}
-                className="p-4 rounded-lg cursor-pointer hover:opacity-90 transition-opacity overflow-hidden relative bg-white border-2"
-                style={{
-                  backgroundImage: `repeating-linear-gradient(
-                    45deg,
-                    ${comp.color}40,
-                    ${comp.color}40 10px,
-                    transparent 10px,
-                    transparent 20px
-                  )`,
-                  borderColor: comp.color,
-                  color: comp.color
-                }}
-                onClick={() => onCompetitionClick(comp)}
-                data-testid={`competition-day-view-${comp.id}`}
-              >
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <Trophy className="h-6 w-6" />
-                    <div>
-                      <div className="font-bold text-lg">{comp.competitionName}</div>
-                      {location && (
-                        <div className="text-sm opacity-75">{location.name}</div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="text-sm opacity-75">
-                    {coachCount} {coachCount === 1 ? 'coach' : 'coaches'}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
       {daySessions.length === 0 && dayCompetitions.length === 0 ? (
         <div className="flex-1 flex items-center justify-center text-muted-foreground" data-testid="text-no-sessions">
           No sessions or competitions scheduled for this day
         </div>
-      ) : daySessions.length > 0 && (
+      ) : (daySessions.length > 0 || dayCompetitions.length > 0) && (
         <div className="flex-1 overflow-auto">
           <div className="flex gap-4">
             <div className="w-16 flex-shrink-0">
@@ -154,7 +152,8 @@ export function DayCalendarView({
             <div className="flex-1 flex gap-4">
               {locations.map((location) => {
                 const locationSessions = getSessionsForLocation(location.id);
-                if (locationSessions.length === 0) return null;
+                const locationCompetitions = getCompetitionsForLocation(location.id);
+                if (locationSessions.length === 0 && locationCompetitions.length === 0) return null;
 
                 return (
                   <div key={location.id} className="flex-1 min-w-48">
@@ -167,6 +166,47 @@ export function DayCalendarView({
                       ))}
 
                       <div className="absolute inset-0">
+                        {/* Render competitions */}
+                        {locationCompetitions.map((comp) => {
+                          const { top, height, startTime, endTime } = getCompetitionPosition(comp.id);
+
+                          return (
+                            <div
+                              key={comp.id}
+                              className="absolute p-2 rounded text-sm overflow-hidden cursor-pointer hover:opacity-90 transition-opacity border-2 bg-white"
+                              style={{
+                                backgroundImage: `repeating-linear-gradient(
+                                  45deg,
+                                  ${comp.color}40,
+                                  ${comp.color}40 10px,
+                                  transparent 10px,
+                                  transparent 20px
+                                )`,
+                                borderColor: comp.color,
+                                color: comp.color,
+                                top: `${top}px`,
+                                height: `${height}px`,
+                                left: '0',
+                                width: '100%',
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onCompetitionClick(comp);
+                              }}
+                              data-testid={`competition-block-${comp.id}`}
+                            >
+                              <div className="flex items-center gap-2">
+                                <Trophy className="h-4 w-4 flex-shrink-0" />
+                                <div className="font-bold truncate">{comp.competitionName}</div>
+                              </div>
+                              <div className="text-xs opacity-90">
+                                {startTime} - {endTime}
+                              </div>
+                            </div>
+                          );
+                        })}
+
+                        {/* Render sessions */}
                         {locationSessions.map((session) => {
                           const squad = squads.find((s) => s.id === session.squadId);
                           if (!squad) return null;
