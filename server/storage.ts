@@ -9,6 +9,8 @@ import {
   attendance,
   authorizedInvitations,
   emailVerificationTokens,
+  competitions,
+  competitionCoaching,
   type User,
   type UpsertUser,
   type Coach,
@@ -27,6 +29,10 @@ import {
   type InsertAuthorizedInvitation,
   type EmailVerificationToken,
   type InsertEmailVerificationToken,
+  type Competition,
+  type InsertCompetition,
+  type CompetitionCoaching,
+  type InsertCompetitionCoaching,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
@@ -94,6 +100,18 @@ export interface IStorage {
   createVerificationToken(token: InsertEmailVerificationToken): Promise<EmailVerificationToken>;
   getVerificationToken(token: string): Promise<EmailVerificationToken | undefined>;
   deleteVerificationToken(id: string): Promise<void>;
+  
+  // Competition operations (NEW - No impact on existing functionality)
+  getCompetitions(): Promise<Competition[]>;
+  getCompetition(id: string): Promise<Competition | undefined>;
+  createCompetition(competition: InsertCompetition): Promise<Competition>;
+  updateCompetition(id: string, competition: Partial<InsertCompetition>): Promise<Competition>;
+  deleteCompetition(id: string): Promise<void>;
+  
+  // Competition Coaching operations (NEW - No impact on existing functionality)
+  getCompetitionCoachingByCompetition(competitionId: string): Promise<CompetitionCoaching[]>;
+  createCompetitionCoaching(coaching: InsertCompetitionCoaching): Promise<CompetitionCoaching>;
+  deleteCompetitionCoachingByCompetition(competitionId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -462,6 +480,75 @@ export class DatabaseStorage implements IStorage {
 
   async deleteVerificationToken(id: string): Promise<void> {
     await db.delete(emailVerificationTokens).where(eq(emailVerificationTokens.id, id));
+  }
+
+  // ============================================================================
+  // Competition operations (NEW - No impact on existing functionality)
+  // ============================================================================
+
+  async getCompetitions(): Promise<Competition[]> {
+    return await db.select().from(competitions).where(eq(competitions.recordStatus, 'active'));
+  }
+
+  async getCompetition(id: string): Promise<Competition | undefined> {
+    const [competition] = await db.select().from(competitions).where(and(eq(competitions.id, id), eq(competitions.recordStatus, 'active')));
+    return competition;
+  }
+
+  async createCompetition(competition: InsertCompetition): Promise<Competition> {
+    const [newCompetition] = await db.insert(competitions).values(competition).returning();
+    return newCompetition;
+  }
+
+  async updateCompetition(id: string, competition: Partial<InsertCompetition>): Promise<Competition> {
+    const [updatedCompetition] = await db
+      .update(competitions)
+      .set(competition)
+      .where(eq(competitions.id, id))
+      .returning();
+    if (!updatedCompetition) {
+      throw new Error("Competition not found");
+    }
+    return updatedCompetition;
+  }
+
+  async deleteCompetition(id: string): Promise<void> {
+    // Soft delete the competition
+    const result = await db
+      .update(competitions)
+      .set({ recordStatus: 'inactive' })
+      .where(eq(competitions.id, id))
+      .returning();
+    if (result.length === 0) {
+      throw new Error("Competition not found");
+    }
+    
+    // Also soft delete all associated competition coaching records
+    // (Note: Database CASCADE DELETE on FK handles hard deletes, but we use soft deletes)
+    await db
+      .update(competitionCoaching)
+      .set({ recordStatus: 'inactive' })
+      .where(eq(competitionCoaching.competitionId, id));
+  }
+
+  // ============================================================================
+  // Competition Coaching operations (NEW - No impact on existing functionality)
+  // ============================================================================
+
+  async getCompetitionCoachingByCompetition(competitionId: string): Promise<CompetitionCoaching[]> {
+    return await db.select().from(competitionCoaching).where(and(eq(competitionCoaching.competitionId, competitionId), eq(competitionCoaching.recordStatus, 'active')));
+  }
+
+  async createCompetitionCoaching(coaching: InsertCompetitionCoaching): Promise<CompetitionCoaching> {
+    const [newCoaching] = await db.insert(competitionCoaching).values(coaching).returning();
+    return newCoaching;
+  }
+
+  async deleteCompetitionCoachingByCompetition(competitionId: string): Promise<void> {
+    await db
+      .update(competitionCoaching)
+      .set({ recordStatus: 'inactive' })
+      .where(eq(competitionCoaching.competitionId, competitionId));
   }
 }
 
