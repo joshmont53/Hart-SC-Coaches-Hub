@@ -2,7 +2,14 @@
 
 ## Overview
 
-SwimCoach is a professional swimming coaching session logging platform for poolside use on tablets and mobile devices. It enables coaches to record training sessions, track attendance, manage squads, and analyze performance data. The platform is designed with a mobile-first approach, prioritizing efficiency and usability in wet, poolside environments through generous touch targets and a clear visual hierarchy.
+SwimCoach is a professional swimming coaching session logging platform for poolside use on tablets and mobile devices. It enables coaches to record training sessions, manage competitions, track attendance, manage squads, and analyze performance data. The platform is designed with a mobile-first approach, prioritizing efficiency and usability in wet, poolside environments through generous touch targets and a clear visual hierarchy.
+
+**Recent Changes (November 2025):**
+- Added comprehensive competition management with admin-controlled creation/editing
+- Integrated competitions into main calendar and list views with distinctive diagonal stripe styling
+- Created competition detail modal showing coach assignments grouped by coach with time blocks
+- Extended "My Sessions" filter to include competitions where current user is coaching
+- All authenticated users can view competitions; only admins can manage them
 
 ## User Preferences
 
@@ -16,7 +23,10 @@ Preferred communication style: Simple, everyday language.
 **UI/UX**: shadcn/ui (New York style) built on Radix UI primitives, styled with Tailwind CSS and custom HSL-based CSS variables. Features Inter font, mobile-first responsive design, and productivity-focused aesthetics.
 **State Management**: TanStack Query for server state, React Hook Form with Zod for form state and validation, React context for authentication.
 **Core Features**:
+- **Session Calendar**: Month, day list, and day calendar views showing sessions and competitions. Competitions visually distinguished by diagonal stripe patterns (semi-transparent color on white) and trophy icons. Click to open detail modals.
 - **SessionDetail**: A three-tab interface for session metadata, rich-text session content with a sliding distance breakdown sidebar (showing stroke-by-stroke distances for 6 stroke types and 4 activity types), and an attendance register.
+- **Competition Management** (Admin only): Create, edit, and delete competitions with location, dates, and color. Manage coach assignments with time blocks. Non-admin users can view all competitions.
+- **Competition Display**: Competitions appear alongside sessions in calendar/list views with diagonal stripe styling and trophy icons. "My Sessions" filter includes competitions where current user is coaching.
 - **Attendance Register**: Manages swimmer attendance with status ('Present', '1st half only', '2nd half only', 'Absent') and notes ('-', 'Late', 'Very Late') dropdowns, initializing records for all squad swimmers and enforcing business rules (e.g., 'Absent' status forces notes to '-').
 
 ### Backend Architecture
@@ -32,9 +42,12 @@ Preferred communication style: Simple, everyday language.
 **Database**: PostgreSQL (Neon serverless).
 **ORM**: Drizzle ORM for type-safe interactions.
 **Schema**:
-- **Core Entities**: `users`, `coaches`, `squads`, `swimmers`, `locations`, `swimming_sessions`, `attendance`.
-- **Relationships**: Comprehensive relationships linking users to coaches, squads to coaches, swimmers to squads, sessions to various entities, and attendance to sessions/swimmers.
-- **Data Model**: Uses UUID primary keys, timestamp tracking, and detailed stroke/distance tracking.
+- **Core Entities**: `users`, `coaches`, `squads`, `swimmers`, `locations`, `swimming_sessions`, `attendance`, `competitions`, `competition_coaching`.
+- **Competition Tables**: 
+  - `competitions`: id, competitionName, startDate, endDate, locationId, color, record_status
+  - `competition_coaching`: id, competitionId, coachId, coachingDate, startTime, endTime, duration, record_status
+- **Relationships**: Comprehensive relationships linking users to coaches, squads to coaches, swimmers to squads, sessions to various entities, attendance to sessions/swimmers, and competitions to locations/coaches.
+- **Data Model**: Uses UUID primary keys, timestamp tracking, detailed stroke/distance tracking, and competition scheduling.
 - **Soft Deletes**: Implemented across all core entities using a `record_status` column. Delete operations set `record_status='inactive'`, preserving data while making it invisible in standard views.
 - **Validation**: Drizzle-Zod for schema validation.
 
