@@ -172,7 +172,10 @@ export function ManageCompetitions({ onBack }: ManageCompetitionsProps) {
       queryClient.invalidateQueries({ 
         queryKey: ['/api/competitions', managingCoachingFor?.id, 'coaching'] 
       });
-      setCoachingFormData({ coachId: '', coachingDate: '', startTime: '', endTime: '' });
+      // For single-day competitions, preserve the date after reset
+      const isSingleDay = managingCoachingFor && managingCoachingFor.startDate === managingCoachingFor.endDate;
+      const preservedDate = isSingleDay && managingCoachingFor ? managingCoachingFor.startDate : '';
+      setCoachingFormData({ coachId: '', coachingDate: preservedDate, startTime: '', endTime: '' });
       toast({
         title: 'Coaching Added',
         description: 'Coaching time block has been added',
@@ -287,7 +290,14 @@ export function ManageCompetitions({ onBack }: ManageCompetitionsProps) {
 
   const handleManageCoaching = (competition: Competition) => {
     setManagingCoachingFor(competition);
-    setCoachingFormData({ coachId: '', coachingDate: '', startTime: '', endTime: '' });
+    // Auto-set date for single-day competitions
+    const isSingleDay = competition.startDate === competition.endDate;
+    setCoachingFormData({ 
+      coachId: '', 
+      coachingDate: isSingleDay ? competition.startDate : '', 
+      startTime: '', 
+      endTime: '' 
+    });
   };
 
   const handleAddCoaching = () => {
@@ -344,10 +354,19 @@ export function ManageCompetitions({ onBack }: ManageCompetitionsProps) {
     new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
   );
 
+  // Group coaching records by coach
+  const groupedCoachingRecords = coachingRecords.reduce((acc, record) => {
+    if (!acc[record.coachId]) {
+      acc[record.coachId] = [];
+    }
+    acc[record.coachId].push(record);
+    return acc;
+  }, {} as Record<string, CompetitionCoaching[]>);
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-4">
+    <div className="flex flex-col h-full">
+      {/* Header - Fixed/Sticky */}
+      <div className="sticky top-0 z-10 bg-background border-b pb-4 mb-6 space-y-4">
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
@@ -357,16 +376,14 @@ export function ManageCompetitions({ onBack }: ManageCompetitionsProps) {
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div className="flex items-center gap-2">
-            <Trophy className="h-6 w-6 text-primary" />
-            <h1 className="text-2xl font-bold">Manage Competitions</h1>
-          </div>
+          <h1 className="text-2xl font-bold">Manage Competitions</h1>
         </div>
         <Button
           onClick={() => {
             resetForm();
             setIsCreateDialogOpen(true);
           }}
+          className="w-full"
           data-testid="button-create-competition"
         >
           <Plus className="h-4 w-4 mr-2" />
@@ -393,32 +410,58 @@ export function ManageCompetitions({ onBack }: ManageCompetitionsProps) {
         ) : (
           sortedCompetitions.map((competition) => (
             <Card key={competition.id} data-testid={`card-competition-${competition.id}`}>
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 space-y-1">
-                    <div className="flex items-center gap-2">
+              <CardContent className="pt-6">
+                <div className="space-y-3">
+                  {/* Top Section: Color indicator, title, and action buttons */}
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
                       <div
-                        className="h-4 w-4 rounded"
+                        className="h-4 w-4 rounded flex-shrink-0"
                         style={{ backgroundColor: competition.color }}
                       />
-                      <CardTitle className="text-xl" data-testid={`text-competition-name-${competition.id}`}>
+                      <h3 className="text-xl font-semibold truncate" data-testid={`text-competition-name-${competition.id}`}>
                         {competition.competitionName}
-                      </CardTitle>
+                      </h3>
                     </div>
-                    <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-4 w-4" />
-                        <span>
-                          {format(new Date(competition.startDate), 'MMM d, yyyy')} - {format(new Date(competition.endDate), 'MMM d, yyyy')}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <MapPin className="h-4 w-4" />
-                        <span>{getLocationName(competition.locationId)}</span>
-                      </div>
+                    <div className="flex gap-2 flex-shrink-0">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEdit(competition)}
+                        data-testid={`button-edit-${competition.id}`}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDelete(competition)}
+                        data-testid={`button-delete-${competition.id}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
-                  <div className="flex gap-2">
+
+                  {/* Middle Section: Date and Location info */}
+                  <div className="space-y-1 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                      <Calendar className="h-4 w-4 flex-shrink-0" />
+                      <span className="truncate">
+                        {competition.startDate === competition.endDate
+                          ? format(new Date(competition.startDate), 'EEE, d MMM yyyy')
+                          : `${format(new Date(competition.startDate), 'd MMM')} - ${format(new Date(competition.endDate), 'd MMM yyyy')}`
+                        }
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <MapPin className="h-4 w-4 flex-shrink-0" />
+                      <span className="truncate">{getLocationName(competition.locationId)}</span>
+                    </div>
+                  </div>
+
+                  {/* Bottom Section: Coaching button */}
+                  <div className="flex justify-end pt-2">
                     <Button
                       variant="outline"
                       size="sm"
@@ -428,25 +471,9 @@ export function ManageCompetitions({ onBack }: ManageCompetitionsProps) {
                       <Clock className="h-4 w-4 mr-2" />
                       Coaching
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEdit(competition)}
-                      data-testid={`button-edit-${competition.id}`}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDelete(competition)}
-                      data-testid={`button-delete-${competition.id}`}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
                   </div>
                 </div>
-              </CardHeader>
+              </CardContent>
             </Card>
           ))
         )}
@@ -626,15 +653,20 @@ export function ManageCompetitions({ onBack }: ManageCompetitionsProps) {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label>Date *</Label>
-                  <Input
-                    type="date"
-                    value={coachingFormData.coachingDate}
-                    onChange={(e) => setCoachingFormData({ ...coachingFormData, coachingDate: e.target.value })}
-                    data-testid="input-coaching-date"
-                  />
-                </div>
+                {/* Only show date field for multi-day competitions */}
+                {managingCoachingFor && managingCoachingFor.startDate !== managingCoachingFor.endDate && (
+                  <div className="space-y-2">
+                    <Label>Date *</Label>
+                    <Input
+                      type="date"
+                      value={coachingFormData.coachingDate}
+                      onChange={(e) => setCoachingFormData({ ...coachingFormData, coachingDate: e.target.value })}
+                      min={managingCoachingFor.startDate}
+                      max={managingCoachingFor.endDate}
+                      data-testid="input-coaching-date"
+                    />
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Start Time *</Label>
@@ -667,36 +699,44 @@ export function ManageCompetitions({ onBack }: ManageCompetitionsProps) {
               </CardContent>
             </Card>
 
-            {/* Coaching Records List */}
+            {/* Coaching Records List - Grouped by Coach */}
             <div className="space-y-2">
               <h3 className="font-semibold">Coaching Time Blocks</h3>
               {coachingRecords.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No coaching time blocks yet</p>
               ) : (
-                <div className="space-y-2">
-                  {coachingRecords.map((record) => (
-                    <Card key={record.id} data-testid={`card-coaching-${record.id}`}>
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="space-y-1">
-                            <p className="font-medium" data-testid={`text-coach-name-${record.id}`}>
-                              {getCoachName(record.coachId)}
-                            </p>
-                            <div className="flex gap-4 text-sm text-muted-foreground">
-                              <span>{format(new Date(record.coachingDate), 'MMM d, yyyy')}</span>
-                              <span>{record.startTime} - {record.endTime}</span>
-                              <Badge variant="secondary">{record.duration}h</Badge>
+                <div className="space-y-3">
+                  {Object.entries(groupedCoachingRecords).map(([coachId, records]) => (
+                    <Card key={coachId}>
+                      <CardContent className="p-4 space-y-3">
+                        {/* Coach name header */}
+                        <p className="font-medium" data-testid={`text-coach-name-${coachId}`}>
+                          {getCoachName(coachId)}
+                        </p>
+                        {/* All time blocks for this coach */}
+                        <div className="space-y-2 pl-4">
+                          {records.map((record) => (
+                            <div 
+                              key={record.id} 
+                              className="flex items-center justify-between py-2 border-l-2 pl-3"
+                              data-testid={`card-coaching-${record.id}`}
+                            >
+                              <div className="flex gap-4 text-sm text-muted-foreground">
+                                <span>{format(new Date(record.coachingDate), 'MMM d, yyyy')}</span>
+                                <span>{record.startTime} - {record.endTime}</span>
+                                <Badge variant="secondary">{record.duration}h</Badge>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => deleteCoachingMutation.mutate(record.id)}
+                                disabled={deleteCoachingMutation.isPending}
+                                data-testid={`button-delete-coaching-${record.id}`}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
                             </div>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => deleteCoachingMutation.mutate(record.id)}
-                            disabled={deleteCoachingMutation.isPending}
-                            data-testid={`button-delete-coaching-${record.id}`}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          ))}
                         </div>
                       </CardContent>
                     </Card>
