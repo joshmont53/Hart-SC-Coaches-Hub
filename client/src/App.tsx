@@ -21,7 +21,6 @@ import { ManageSwimmers } from '@/pages/manage-swimmers';
 import { ManageLocations } from '@/pages/manage-locations';
 import { ManageInvitations } from '@/pages/manage-invitations';
 import { ManageCompetitions } from '@/pages/manage-competitions';
-import { ViewCompetitions } from '@/pages/view-competitions';
 import { Button } from './components/ui/button';
 import { Switch as ToggleSwitch } from './components/ui/switch';
 import { Label } from './components/ui/label';
@@ -59,7 +58,7 @@ import type {
 
 type View = 'month' | 'day';
 type MobileView = 'calendar' | 'list';
-type ManagementView = 'calendar' | 'coaches' | 'squads' | 'swimmers' | 'locations' | 'invitations' | 'competitions' | 'view-competitions' | 'addSession';
+type ManagementView = 'calendar' | 'coaches' | 'squads' | 'swimmers' | 'locations' | 'invitations' | 'competitions' | 'addSession';
 
 // Landing page with loading screen logic - ONLY for "/" route
 function LandingPage() {
@@ -299,15 +298,6 @@ function CalendarApp() {
             <MapPin className="h-4 w-4 mr-2" />
             Manage Locations
           </Button>
-          <Button
-            variant="ghost"
-            className="w-full justify-start"
-            onClick={() => handleManagementClick('view-competitions')}
-            data-testid="button-view-competitions"
-          >
-            <Trophy className="h-4 w-4 mr-2" />
-            Competitions
-          </Button>
           {user?.role === 'admin' && (
             <>
               <Button
@@ -461,8 +451,6 @@ function CalendarApp() {
             <ManageInvitations onBack={handleBackToCalendar} />
           ) : managementView === 'competitions' ? (
             <ManageCompetitions onBack={handleBackToCalendar} />
-          ) : managementView === 'view-competitions' ? (
-            <ViewCompetitions />
           ) : view === 'month' ? (
             <>
               <div className={mobileView === 'calendar' ? 'block' : 'hidden lg:block'}>
