@@ -169,8 +169,12 @@ export function ManageCompetitions({ onBack }: ManageCompetitionsProps) {
       return await apiRequest('POST', `/api/competitions/${managingCoachingFor?.id}/coaching`, data);
     },
     onSuccess: () => {
+      // Invalidate both specific competition coaching and global coaching query
       queryClient.invalidateQueries({ 
         queryKey: ['/api/competitions', managingCoachingFor?.id, 'coaching'] 
+      });
+      queryClient.invalidateQueries({ 
+        queryKey: ['/api/competitions/coaching/all'] 
       });
       // For single-day competitions, preserve the date after reset
       const isSingleDay = managingCoachingFor && managingCoachingFor.startDate === managingCoachingFor.endDate;
@@ -195,8 +199,12 @@ export function ManageCompetitions({ onBack }: ManageCompetitionsProps) {
       return await apiRequest('DELETE', `/api/competitions/coaching/${id}`);
     },
     onSuccess: () => {
+      // Invalidate both specific competition coaching and global coaching query
       queryClient.invalidateQueries({ 
         queryKey: ['/api/competitions', managingCoachingFor?.id, 'coaching'] 
+      });
+      queryClient.invalidateQueries({ 
+        queryKey: ['/api/competitions/coaching/all'] 
       });
       toast({
         title: 'Coaching Removed',
@@ -621,14 +629,14 @@ export function ManageCompetitions({ onBack }: ManageCompetitionsProps) {
 
       {/* Manage Coaching Dialog */}
       <Dialog open={!!managingCoachingFor} onOpenChange={(open) => !open && setManagingCoachingFor(null)}>
-        <DialogContent className="max-w-2xl" data-testid="dialog-manage-coaching">
+        <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col" data-testid="dialog-manage-coaching">
           <DialogHeader>
             <DialogTitle>Manage Coaching - {managingCoachingFor?.competitionName}</DialogTitle>
             <DialogDescription>
               Add coaching time blocks for this competition
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-6 py-4">
+          <div className="space-y-6 py-4 overflow-y-auto flex-1">
             {/* Add Coaching Form */}
             <Card>
               <CardHeader>
