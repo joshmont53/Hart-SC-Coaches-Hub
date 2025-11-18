@@ -259,7 +259,7 @@ function CalendarApp() {
   const createSessionMutation = useMutation({
     mutationFn: async (session: Omit<Session, 'id'>) => {
       const backendSession = adaptSessionToBackend(session);
-      const response = await apiRequest('/api/sessions', 'POST', backendSession);
+      const response = await apiRequest('POST', '/api/sessions', backendSession);
       return response;
     },
     onSuccess: async (backendSession: BackendSession) => {
