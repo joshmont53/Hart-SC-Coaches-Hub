@@ -10,6 +10,8 @@ import {
   insertSwimmingSessionSchema,
   insertAttendanceSchema,
   createInvitationSchema,
+  insertCompetitionSchema,
+  insertCompetitionCoachingSchema,
 } from "@shared/schema";
 import { sendInvitationEmail } from "./emailService";
 import { randomBytes } from "crypto";
@@ -623,6 +625,130 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error saving attendance:", error);
       res.status(400).json({ message: error.message || "Failed to save attendance" });
+    }
+  });
+
+  // ============================================================================
+  // Competition routes (NEW - No impact on existing functionality)
+  // ============================================================================
+
+  // Get all competitions (all authenticated users)
+  app.get("/api/competitions", requireAuth, async (req, res) => {
+    try {
+      const competitions = await storage.getCompetitions();
+      res.json(competitions);
+    } catch (error) {
+      console.error("Error fetching competitions:", error);
+      res.status(500).json({ message: "Failed to fetch competitions" });
+    }
+  });
+
+  // Get single competition by ID (all authenticated users)
+  app.get("/api/competitions/:id", requireAuth, async (req, res) => {
+    try {
+      const competition = await storage.getCompetition(req.params.id);
+      if (!competition) {
+        return res.status(404).json({ message: "Competition not found" });
+      }
+      res.json(competition);
+    } catch (error) {
+      console.error("Error fetching competition:", error);
+      res.status(500).json({ message: "Failed to fetch competition" });
+    }
+  });
+
+  // Create new competition (admin only)
+  app.post("/api/competitions", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      // Validate request body
+      const validationResult = insertCompetitionSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: "Invalid competition data", 
+          errors: validationResult.error.errors 
+        });
+      }
+
+      const competitionData = validationResult.data;
+
+      // Verify location exists
+      const location = await storage.getLocation(competitionData.locationId);
+      if (!location) {
+        return res.status(404).json({ message: "Location not found" });
+      }
+
+      // Create competition
+      const competition = await storage.createCompetition(competitionData);
+      res.status(201).json(competition);
+    } catch (error: any) {
+      console.error("Error creating competition:", error);
+      res.status(500).json({ message: error.message || "Failed to create competition" });
+    }
+  });
+
+  // Update competition (admin only)
+  app.patch("/api/competitions/:id", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      // Verify competition exists
+      const existing = await storage.getCompetition(req.params.id);
+      if (!existing) {
+        return res.status(404).json({ message: "Competition not found" });
+      }
+
+      // Validate request body (partial update)
+      const validationResult = insertCompetitionSchema.partial().safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: "Invalid competition data", 
+          errors: validationResult.error.errors 
+        });
+      }
+
+      const updateData = validationResult.data;
+
+      // If locationId is being updated, verify it exists
+      if (updateData.locationId) {
+        const location = await storage.getLocation(updateData.locationId);
+        if (!location) {
+          return res.status(404).json({ message: "Location not found" });
+        }
+      }
+
+      // Update competition
+      const updated = await storage.updateCompetition(req.params.id, updateData);
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error updating competition:", error);
+      res.status(500).json({ message: error.message || "Failed to update competition" });
+    }
+  });
+
+  // Delete competition (admin only)
+  app.delete("/api/competitions/:id", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      // Verify competition exists
+      const existing = await storage.getCompetition(req.params.id);
+      if (!existing) {
+        return res.status(404).json({ message: "Competition not found" });
+      }
+
+      // Delete competition (soft delete, cascades to coaching records)
+      await storage.deleteCompetition(req.params.id);
+      res.status(204).send();
+    } catch (error: any) {
+      console.error("Error deleting competition:", error);
+      res.status(500).json({ message: error.message || "Failed to delete competition" });
+    }
+  });
+
+  // Get coaching records for a competition (all authenticated users)
+  app.get("/api/competitions/:id/coaching", requireAuth, async (req, res) => {
+    try {
+      const coachingRecords = await storage.getCompetitionCoachingByCompetition(req.params.id);
+      res.json(coachingRecords);
+    } catch (error) {
+      console.error("Error fetching competition coaching:", error);
+      res.status(500).json({ message: "Failed to fetch competition coaching" });
     }
   });
 
