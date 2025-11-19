@@ -892,7 +892,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get coaching rates based on qualification level
-      const rate = await storage.getCoachingRate(coach.qualificationLevel || 'No Qualification');
+      const rate = await storage.getCoachingRate(coach.level || 'No Qualification');
       if (!rate) {
         return res.status(500).json({ message: "Coaching rates not configured for this qualification level" });
       }
@@ -907,28 +907,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         s.sessionDate >= startDate && s.sessionDate <= endDate
       );
 
+      // Get all squads for name lookup
+      const allSquads = await storage.getSquads();
+      const squadMap = new Map(allSquads.map(squad => [squad.id, squad]));
+
       // Calculate coaching hours
       const coachingSessions = monthSessions.filter(s => 
         s.leadCoachId === coachId || s.secondCoachId === coachId || s.helperId === coachId
       );
 
-      const sessionDetails = coachingSessions.map(s => ({
-        sessionId: s.id,
-        sessionDate: s.sessionDate,
-        squadId: s.squadId,
-        duration: parseFloat(s.duration),
-        role: s.leadCoachId === coachId ? 'lead' : (s.secondCoachId === coachId ? 'second' : 'helper'),
-      }));
+      const sessionDetails = coachingSessions.map(s => {
+        const squad = squadMap.get(s.squadId);
+        return {
+          sessionId: s.id,
+          sessionDate: s.sessionDate,
+          squadId: s.squadId,
+          squadName: squad?.squadName || 'Unknown Squad',
+          startTime: s.startTime,
+          endTime: s.endTime,
+          duration: parseFloat(s.duration),
+          role: s.leadCoachId === coachId ? 'lead' : (s.secondCoachId === coachId ? 'second' : 'helper'),
+        };
+      });
 
       const totalCoachingHours = sessionDetails.reduce((sum, s) => sum + s.duration, 0);
 
       // Calculate sessions written
       const sessionsWritten = monthSessions.filter(s => s.setWriterId === coachId);
-      const sessionWritingDetails = sessionsWritten.map(s => ({
-        sessionId: s.id,
-        sessionDate: s.sessionDate,
-        squadId: s.squadId,
-      }));
+      const sessionWritingDetails = sessionsWritten.map(s => {
+        const squad = squadMap.get(s.squadId);
+        return {
+          sessionId: s.id,
+          sessionDate: s.sessionDate,
+          squadId: s.squadId,
+          squadName: squad?.squadName || 'Unknown Squad',
+        };
+      });
 
       // Get competition coaching
       const allCompetitionCoaching = await storage.getAllCompetitionCoaching();
@@ -936,12 +950,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         c.coachId === coachId && c.coachingDate >= startDate && c.coachingDate <= endDate
       );
 
-      const competitionDetails = competitionCoachingThisMonth.map(c => ({
-        coachingId: c.id,
-        competitionId: c.competitionId,
-        coachingDate: c.coachingDate,
-        duration: parseFloat(c.duration),
-      }));
+      // Get all competitions and locations for name lookup
+      const allCompetitions = await storage.getCompetitions();
+      const competitionMap = new Map(allCompetitions.map(comp => [comp.id, comp]));
+      const allLocations = await storage.getLocations();
+      const locationMap = new Map(allLocations.map(loc => [loc.id, loc]));
+
+      const competitionDetails = competitionCoachingThisMonth.map(c => {
+        const competition = competitionMap.get(c.competitionId);
+        const location = competition ? locationMap.get(competition.locationId) : undefined;
+        return {
+          coachingId: c.id,
+          competitionId: c.competitionId,
+          competitionName: competition?.competitionName || 'Unknown Competition',
+          locationName: location?.poolName || 'Unknown Location',
+          coachingDate: c.coachingDate,
+          duration: parseFloat(c.duration),
+        };
+      });
 
       const totalCompetitionHours = competitionDetails.reduce((sum, c) => sum + c.duration, 0);
 
@@ -960,7 +986,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const invoiceData = {
         coachId: coach.id,
         coachName: `${coach.firstName} ${coach.lastName}`,
-        qualificationLevel: coach.qualificationLevel || 'No Qualification',
+        qualificationLevel: coach.level || 'No Qualification',
         year: parseInt(year),
         month: parseInt(month),
         rates: {
