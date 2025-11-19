@@ -864,6 +864,138 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get invoice data for a coach for a specific month
+  app.get("/api/invoices/:coachId/:year/:month", requireAuth, async (req: any, res) => {
+    try {
+      const { coachId, year, month } = req.params;
+      
+      // Authorization: coaches can only view their own invoices, admins can view all
+      const userId = req.user?.id || req.user?.claims?.sub;
+      const requestingUser = await storage.getUser(userId);
+      const isAdmin = requestingUser?.role === 'admin';
+      
+      // If not admin, must have a coach profile and can only view own invoices
+      if (!isAdmin) {
+        const requestingCoach = await storage.getCoachByUserId(userId);
+        if (!requestingCoach) {
+          return res.status(403).json({ message: "No coach profile found" });
+        }
+        if (requestingCoach.id !== coachId) {
+          return res.status(403).json({ message: "You can only view your own invoices" });
+        }
+      }
+
+      // Validate coach exists
+      const coach = await storage.getCoach(coachId);
+      if (!coach) {
+        return res.status(404).json({ message: "Coach not found" });
+      }
+
+      // Get coaching rates based on qualification level
+      const rate = await storage.getCoachingRate(coach.qualificationLevel || 'No Qualification');
+      if (!rate) {
+        return res.status(500).json({ message: "Coaching rates not configured for this qualification level" });
+      }
+
+      // Calculate date range for the month
+      const startDate = `${year}-${month.toString().padStart(2, '0')}-01`;
+      const endDate = new Date(parseInt(year), parseInt(month), 0).toISOString().split('T')[0];
+
+      // Get all sessions for this month
+      const allSessions = await storage.getSessions();
+      const monthSessions = allSessions.filter(s => 
+        s.sessionDate >= startDate && s.sessionDate <= endDate
+      );
+
+      // Calculate coaching hours
+      const coachingSessions = monthSessions.filter(s => 
+        s.leadCoachId === coachId || s.secondCoachId === coachId || s.helperId === coachId
+      );
+
+      const sessionDetails = coachingSessions.map(s => ({
+        sessionId: s.id,
+        sessionDate: s.sessionDate,
+        squadId: s.squadId,
+        duration: parseFloat(s.duration),
+        role: s.leadCoachId === coachId ? 'lead' : (s.secondCoachId === coachId ? 'second' : 'helper'),
+      }));
+
+      const totalCoachingHours = sessionDetails.reduce((sum, s) => sum + s.duration, 0);
+
+      // Calculate sessions written
+      const sessionsWritten = monthSessions.filter(s => s.setWriterId === coachId);
+      const sessionWritingDetails = sessionsWritten.map(s => ({
+        sessionId: s.id,
+        sessionDate: s.sessionDate,
+        squadId: s.squadId,
+      }));
+
+      // Get competition coaching
+      const allCompetitionCoaching = await storage.getAllCompetitionCoaching();
+      const competitionCoachingThisMonth = allCompetitionCoaching.filter(c => 
+        c.coachId === coachId && c.coachingDate >= startDate && c.coachingDate <= endDate
+      );
+
+      const competitionDetails = competitionCoachingThisMonth.map(c => ({
+        coachingId: c.id,
+        competitionId: c.competitionId,
+        coachingDate: c.coachingDate,
+        duration: parseFloat(c.duration),
+      }));
+
+      const totalCompetitionHours = competitionDetails.reduce((sum, c) => sum + c.duration, 0);
+
+      // Calculate totals
+      const totalHours = totalCoachingHours + totalCompetitionHours;
+      const totalSessionsWritten = sessionsWritten.length;
+
+      const hourlyRate = parseFloat(rate.hourlyRate);
+      const sessionWritingRate = parseFloat(rate.sessionWritingRate);
+
+      const coachingEarnings = totalHours * hourlyRate;
+      const sessionWritingEarnings = totalSessionsWritten * sessionWritingRate;
+      const totalEarnings = coachingEarnings + sessionWritingEarnings;
+
+      // Build invoice data
+      const invoiceData = {
+        coachId: coach.id,
+        coachName: `${coach.firstName} ${coach.lastName}`,
+        qualificationLevel: coach.qualificationLevel || 'No Qualification',
+        year: parseInt(year),
+        month: parseInt(month),
+        rates: {
+          hourlyRate,
+          sessionWritingRate,
+        },
+        coaching: {
+          totalHours,
+          breakdown: {
+            sessionHours: totalCoachingHours,
+            competitionHours: totalCompetitionHours,
+          },
+          sessions: sessionDetails,
+          competitions: competitionDetails,
+          earnings: coachingEarnings,
+        },
+        sessionWriting: {
+          count: totalSessionsWritten,
+          sessions: sessionWritingDetails,
+          earnings: sessionWritingEarnings,
+        },
+        totals: {
+          totalEarnings,
+          totalHours,
+          totalSessionsWritten,
+        },
+      };
+
+      res.json(invoiceData);
+    } catch (error: any) {
+      console.error("Error generating invoice data:", error);
+      res.status(500).json({ message: error.message || "Failed to generate invoice data" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

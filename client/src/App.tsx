@@ -21,6 +21,8 @@ import { ManageSwimmers } from '@/pages/manage-swimmers';
 import { ManageLocations } from '@/pages/manage-locations';
 import { ManageInvitations } from '@/pages/manage-invitations';
 import { ManageCompetitions } from '@/pages/manage-competitions';
+import { InvoiceTracker } from '@/pages/invoice-tracker';
+import { ManageCoachingRates } from '@/pages/manage-coaching-rates';
 import { CompetitionDetailModal } from '@/components/CompetitionDetailModal';
 import { Button } from './components/ui/button';
 import { Switch as ToggleSwitch } from './components/ui/switch';
@@ -37,6 +39,8 @@ import {
   List,
   Mail,
   Trophy,
+  FileText,
+  DollarSign,
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from './components/ui/sheet';
 import { cn } from './lib/utils';
@@ -61,7 +65,7 @@ import type {
 
 type View = 'month' | 'day';
 type MobileView = 'calendar' | 'list';
-type ManagementView = 'calendar' | 'coaches' | 'squads' | 'swimmers' | 'locations' | 'invitations' | 'competitions' | 'addSession';
+type ManagementView = 'calendar' | 'coaches' | 'squads' | 'swimmers' | 'locations' | 'invitations' | 'competitions' | 'addSession' | 'invoices' | 'coachingRates';
 
 // Landing page with loading screen logic - ONLY for "/" route
 function LandingPage() {
@@ -334,6 +338,15 @@ function CalendarApp() {
             <MapPin className="h-4 w-4 mr-2" />
             Manage Locations
           </Button>
+          <Button
+            variant="ghost"
+            className="w-full justify-start"
+            onClick={() => handleManagementClick('invoices')}
+            data-testid="button-invoices"
+          >
+            <FileText className="h-4 w-4 mr-2" />
+            My Invoices
+          </Button>
           {user?.role === 'admin' && (
             <>
               <Button
@@ -353,6 +366,15 @@ function CalendarApp() {
               >
                 <Trophy className="h-4 w-4 mr-2" />
                 Manage Competitions
+              </Button>
+              <Button
+                variant="ghost"
+                className="w-full justify-start"
+                onClick={() => handleManagementClick('coachingRates')}
+                data-testid="button-coaching-rates"
+              >
+                <DollarSign className="h-4 w-4 mr-2" />
+                Coaching Rates
               </Button>
             </>
           )}
@@ -487,6 +509,10 @@ function CalendarApp() {
             <ManageInvitations onBack={handleBackToCalendar} />
           ) : managementView === 'competitions' ? (
             <ManageCompetitions onBack={handleBackToCalendar} />
+          ) : managementView === 'invoices' ? (
+            <InvoiceTracker onBack={handleBackToCalendar} />
+          ) : managementView === 'coachingRates' ? (
+            <ManageCoachingRates onBack={handleBackToCalendar} />
           ) : view === 'month' ? (
             <>
               <div className={mobileView === 'calendar' ? 'block' : 'hidden lg:block'}>
