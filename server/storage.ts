@@ -11,6 +11,7 @@ import {
   emailVerificationTokens,
   competitions,
   competitionCoaching,
+  coachingRates,
   type User,
   type UpsertUser,
   type Coach,
@@ -33,6 +34,8 @@ import {
   type InsertCompetition,
   type CompetitionCoaching,
   type InsertCompetitionCoaching,
+  type CoachingRate,
+  type InsertCoachingRate,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
@@ -114,6 +117,11 @@ export interface IStorage {
   createCompetitionCoaching(coaching: InsertCompetitionCoaching): Promise<CompetitionCoaching>;
   deleteCompetitionCoachingByCompetition(competitionId: string): Promise<void>;
   deleteCompetitionCoaching(id: string): Promise<void>;
+  
+  // Coaching Rates operations (NEW - No impact on existing functionality)
+  getAllCoachingRates(): Promise<CoachingRate[]>;
+  getCoachingRate(qualificationLevel: string): Promise<CoachingRate | undefined>;
+  updateCoachingRate(qualificationLevel: string, rate: Partial<InsertCoachingRate>): Promise<CoachingRate>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -562,6 +570,34 @@ export class DatabaseStorage implements IStorage {
       .update(competitionCoaching)
       .set({ recordStatus: 'inactive' })
       .where(eq(competitionCoaching.id, id));
+  }
+
+  // ============================================================================
+  // Coaching Rates operations (NEW - No impact on existing functionality)
+  // ============================================================================
+
+  async getAllCoachingRates(): Promise<CoachingRate[]> {
+    return await db.select().from(coachingRates);
+  }
+
+  async getCoachingRate(qualificationLevel: string): Promise<CoachingRate | undefined> {
+    const [rate] = await db.select().from(coachingRates).where(eq(coachingRates.qualificationLevel, qualificationLevel));
+    return rate;
+  }
+
+  async updateCoachingRate(qualificationLevel: string, rate: Partial<InsertCoachingRate>): Promise<CoachingRate> {
+    const [updatedRate] = await db
+      .update(coachingRates)
+      .set({
+        ...rate,
+        updatedAt: new Date(),
+      })
+      .where(eq(coachingRates.qualificationLevel, qualificationLevel))
+      .returning();
+    if (!updatedRate) {
+      throw new Error("Coaching rate not found");
+    }
+    return updatedRate;
   }
 }
 

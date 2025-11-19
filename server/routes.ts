@@ -12,6 +12,7 @@ import {
   createInvitationSchema,
   insertCompetitionSchema,
   insertCompetitionCoachingSchema,
+  updateCoachingRateSchema,
 } from "@shared/schema";
 import { sendInvitationEmail } from "./emailService";
 import { randomBytes } from "crypto";
@@ -806,6 +807,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error deleting coaching:", error);
       res.status(500).json({ message: error.message || "Failed to delete coaching" });
+    }
+  });
+
+  // ============================================================================
+  // Coaching Rates API (NEW - No impact on existing functionality)
+  // ============================================================================
+
+  // Get all coaching rates (all authenticated users can view)
+  app.get("/api/coaching-rates", requireAuth, async (req, res) => {
+    try {
+      const rates = await storage.getAllCoachingRates();
+      res.json(rates);
+    } catch (error: any) {
+      console.error("Error fetching coaching rates:", error);
+      res.status(500).json({ message: error.message || "Failed to fetch coaching rates" });
+    }
+  });
+
+  // Update coaching rates (admin only)
+  app.put("/api/coaching-rates", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      // Validate request body - expect array of rate updates
+      if (!Array.isArray(req.body)) {
+        return res.status(400).json({ message: "Request body must be an array of rate updates" });
+      }
+
+      // Validate each rate update
+      const validatedRates = [];
+      for (const rate of req.body) {
+        const validationResult = updateCoachingRateSchema.safeParse(rate);
+        if (!validationResult.success) {
+          return res.status(400).json({ 
+            message: "Invalid rate data", 
+            errors: validationResult.error.errors,
+            invalidRate: rate
+          });
+        }
+        validatedRates.push(validationResult.data);
+      }
+
+      // Update each rate
+      const updatedRates = [];
+      for (const rate of validatedRates) {
+        const updated = await storage.updateCoachingRate(rate.qualificationLevel, {
+          hourlyRate: rate.hourlyRate.toString(),
+          sessionWritingRate: rate.sessionWritingRate.toString(),
+        });
+        updatedRates.push(updated);
+      }
+
+      res.json(updatedRates);
+    } catch (error: any) {
+      console.error("Error updating coaching rates:", error);
+      res.status(500).json({ message: error.message || "Failed to update coaching rates" });
     }
   });
 
