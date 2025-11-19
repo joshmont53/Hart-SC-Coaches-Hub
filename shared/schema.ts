@@ -441,3 +441,31 @@ export const insertCompetitionCoachingSchema = createInsertSchema(competitionCoa
   recordStatus: true 
 });
 export type InsertCompetitionCoaching = z.infer<typeof insertCompetitionCoachingSchema>;
+
+// ============================================================================
+// Coaching Rates - NEW TABLE (No impact on existing functionality)
+// ============================================================================
+
+// Coaching Rates table - Stores hourly rates and session writing rates for each qualification level
+export const coachingRates = pgTable("coaching_rates", {
+  qualificationLevel: varchar("qualification_level").primaryKey(), // "No Qualification" | "Level 1" | "Level 2" | "Level 3"
+  hourlyRate: decimal("hourly_rate", { precision: 6, scale: 2 }).notNull(), // Hourly rate for coaching sessions and competitions
+  sessionWritingRate: decimal("session_writing_rate", { precision: 6, scale: 2 }).notNull(), // Rate per session written
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type CoachingRate = typeof coachingRates.$inferSelect;
+export const insertCoachingRateSchema = createInsertSchema(coachingRates).omit({ 
+  createdAt: true, 
+  updatedAt: true 
+});
+export type InsertCoachingRate = z.infer<typeof insertCoachingRateSchema>;
+
+// Schema for updating rates (admin only)
+export const updateCoachingRateSchema = z.object({
+  qualificationLevel: z.enum(["No Qualification", "Level 1", "Level 2", "Level 3"]),
+  hourlyRate: z.number().min(0, "Hourly rate must be non-negative"),
+  sessionWritingRate: z.number().min(0, "Session writing rate must be non-negative"),
+});
+export type UpdateCoachingRate = z.infer<typeof updateCoachingRateSchema>;

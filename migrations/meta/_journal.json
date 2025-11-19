@@ -22,6 +22,13 @@
       "when": 1763466866878,
       "tag": "0002_past_angel",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1763593584028,
+      "tag": "0003_fat_wild_pack",
+      "breakpoints": true
     }
   ]
 }
