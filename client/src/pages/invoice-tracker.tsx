@@ -112,7 +112,7 @@ export function InvoiceTracker({ onBack }: InvoiceTrackerProps) {
   const { user } = useAuth();
   
   const [selectedMonth, setSelectedMonth] = useState<string>('');
-  const [coachingExpanded, setCoachingExpanded] = useState(true);
+  const [coachingExpanded, setCoachingExpanded] = useState(false);
   const [writingExpanded, setWritingExpanded] = useState(false);
   const [competitionExpanded, setCompetitionExpanded] = useState(false);
 
@@ -224,7 +224,7 @@ export function InvoiceTracker({ onBack }: InvoiceTrackerProps) {
     invoiceData.coaching.sessions.forEach(session => {
       const sessionDate = new Date(session.sessionDate);
       csvRows.push([
-        format(sessionDate, 'EEE, dd MMM'),
+        format(sessionDate, 'EEE dd MMM'),
         session.squadName,
         `${session.startTime} - ${session.endTime}`,
         session.duration.toFixed(1),
@@ -247,7 +247,7 @@ export function InvoiceTracker({ onBack }: InvoiceTrackerProps) {
     invoiceData.sessionWriting.sessions.forEach(session => {
       const sessionDate = new Date(session.sessionDate);
       csvRows.push([
-        format(sessionDate, 'EEE, dd MMM'),
+        format(sessionDate, 'EEE dd MMM'),
         session.squadName,
         `£${invoiceData.rates.sessionWritingRate.toFixed(2)}`,
       ]);
@@ -266,7 +266,7 @@ export function InvoiceTracker({ onBack }: InvoiceTrackerProps) {
     invoiceData.coaching.competitions.forEach(comp => {
       const compDate = new Date(comp.coachingDate);
       csvRows.push([
-        format(compDate, 'EEE, dd MMM'),
+        format(compDate, 'EEE dd MMM'),
         comp.competitionName,
         comp.locationName,
         comp.duration.toFixed(1),
