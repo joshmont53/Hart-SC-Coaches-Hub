@@ -386,6 +386,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/swimmers/bulk-update-squad", requireAuth, async (req, res) => {
+    try {
+      const schema = z.object({
+        swimmerIds: z.array(z.string()).min(1, 'At least one swimmer required'),
+        newSquadId: z.string().min(1, 'Squad ID required'),
+      });
+      
+      const { swimmerIds, newSquadId } = schema.parse(req.body);
+      const updatedSwimmers = await storage.bulkUpdateSwimmerSquad(swimmerIds, newSquadId);
+      res.json(updatedSwimmers);
+    } catch (error: any) {
+      console.error("Error bulk updating swimmers:", error);
+      res.status(400).json({ message: error.message || "Failed to bulk update swimmers" });
+    }
+  });
+
   app.patch("/api/swimmers/:id", requireAuth, async (req, res) => {
     try {
       const validatedData = insertSwimmerSchema.partial().parse(req.body);
@@ -410,22 +426,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: error.message });
       }
       res.status(500).json({ message: "Failed to delete swimmer" });
-    }
-  });
-
-  app.patch("/api/swimmers/bulk-update-squad", requireAuth, async (req, res) => {
-    try {
-      const schema = z.object({
-        swimmerIds: z.array(z.string()).min(1, 'At least one swimmer required'),
-        newSquadId: z.string().min(1, 'Squad ID required'),
-      });
-      
-      const { swimmerIds, newSquadId } = schema.parse(req.body);
-      const updatedSwimmers = await storage.bulkUpdateSwimmerSquad(swimmerIds, newSquadId);
-      res.json(updatedSwimmers);
-    } catch (error: any) {
-      console.error("Error bulk updating swimmers:", error);
-      res.status(400).json({ message: error.message || "Failed to bulk update swimmers" });
     }
   });
 
