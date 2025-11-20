@@ -286,20 +286,10 @@ export function ManageSwimmers({ swimmers, squads, onBack }: ManageSwimmersProps
                 <h1 className="text-xl font-semibold">Swimmers</h1>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={handleSelectAll}
-                data-testid="button-select-all"
-              >
-                {selectedSwimmers.size === filteredSwimmers.length && filteredSwimmers.length > 0 ? 'Deselect All' : 'Select All'}
-              </Button>
-              <Button onClick={() => setIsAddDialogOpen(true)} data-testid="button-add-swimmer">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Swimmer
-              </Button>
-            </div>
+            <Button onClick={() => setIsAddDialogOpen(true)} data-testid="button-add-swimmer">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Swimmer
+            </Button>
           </div>
 
           {/* Search and Filter */}
@@ -337,6 +327,24 @@ export function ManageSwimmers({ swimmers, squads, onBack }: ManageSwimmersProps
 
       <div className="flex-1 overflow-auto">
         <div className="max-w-2xl mx-auto px-4 py-6">
+          {/* Select all control - only show if there are swimmers to select */}
+          {filteredSwimmers.length > 0 && (
+            <div className="mb-4 flex items-center gap-2">
+              <Checkbox
+                id="select-all"
+                checked={selectedSwimmers.size === filteredSwimmers.length}
+                onCheckedChange={handleSelectAll}
+                data-testid="checkbox-select-all"
+              />
+              <label 
+                htmlFor="select-all" 
+                className="text-sm text-muted-foreground cursor-pointer select-none"
+              >
+                Select all {filteredSwimmers.length} swimmer{filteredSwimmers.length > 1 ? 's' : ''}
+              </label>
+            </div>
+          )}
+          
           <div className="space-y-3">
             {filteredSwimmers.length === 0 ? (
               <Card className="p-8 text-center">
