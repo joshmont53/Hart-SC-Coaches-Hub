@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { z } from "zod";
 import { storage } from "./storage";
 import { setupNewAuth, requireAuth, requireAdmin } from "./newAuth";
 import {
