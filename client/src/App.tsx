@@ -40,7 +40,7 @@ import {
   Mail,
   Trophy,
   FileText,
-  DollarSign,
+  PoundSterling,
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from './components/ui/sheet';
 import { cn } from './lib/utils';
@@ -373,7 +373,7 @@ function CalendarApp() {
                 onClick={() => handleManagementClick('coachingRates')}
                 data-testid="button-coaching-rates"
               >
-                <DollarSign className="h-4 w-4 mr-2" />
+                <PoundSterling className="h-4 w-4 mr-2" />
                 Coaching Rates
               </Button>
             </>

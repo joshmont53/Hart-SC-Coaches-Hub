@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Save, DollarSign, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Save, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface CoachingRate {
@@ -201,8 +201,7 @@ export function ManageCoachingRates({ onBack }: ManageCoachingRatesProps) {
             <Card key={rate.qualificationLevel} data-testid={`card-rate-${rate.qualificationLevel.toLowerCase().replace(/\s+/g, '-')}`}>
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2">
-                    <DollarSign className="h-5 w-5" />
+                  <CardTitle>
                     {rate.qualificationLevel}
                   </CardTitle>
                   <Badge variant={getLevelColor(rate.qualificationLevel)}>
