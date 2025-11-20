@@ -413,6 +413,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/swimmers/bulk-update-squad", requireAuth, async (req, res) => {
+    try {
+      const schema = z.object({
+        swimmerIds: z.array(z.string()).min(1, 'At least one swimmer required'),
+        newSquadId: z.string().min(1, 'Squad ID required'),
+      });
+      
+      const { swimmerIds, newSquadId } = schema.parse(req.body);
+      const updatedSwimmers = await storage.bulkUpdateSwimmerSquad(swimmerIds, newSquadId);
+      res.json(updatedSwimmers);
+    } catch (error: any) {
+      console.error("Error bulk updating swimmers:", error);
+      res.status(400).json({ message: error.message || "Failed to bulk update swimmers" });
+    }
+  });
+
   // Location routes
   app.get("/api/locations", requireAuth, async (req, res) => {
     try {

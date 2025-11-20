@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -7,6 +7,7 @@ import type { InsertSwimmer } from '@shared/schema';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -24,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ArrowLeft, Plus, Pencil, Trash2, Menu } from 'lucide-react';
+import { ArrowLeft, Plus, Pencil, Trash2, Menu, Search, Filter, Users } from 'lucide-react';
 
 interface ManageSwimmersProps {
   swimmers: Swimmer[];
@@ -37,6 +38,11 @@ export function ManageSwimmers({ swimmers, squads, onBack }: ManageSwimmersProps
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingSwimmer, setEditingSwimmer] = useState<Swimmer | null>(null);
   const [deletingSwimmer, setDeletingSwimmer] = useState<Swimmer | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterSquadId, setFilterSquadId] = useState<string>('all');
+  const [selectedSwimmers, setSelectedSwimmers] = useState<Set<string>>(new Set());
+  const [isBulkSquadDialogOpen, setIsBulkSquadDialogOpen] = useState(false);
+  const [bulkSquadId, setBulkSquadId] = useState('');
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -68,10 +74,16 @@ export function ManageSwimmers({ swimmers, squads, onBack }: ManageSwimmersProps
     mutationFn: async ({ id, data }: { id: string; data: InsertSwimmer }) => {
       return await apiRequest('PATCH', `/api/swimmers/${id}`, data);
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['/api/swimmers'] });
       setEditingSwimmer(null);
       setFormData({ firstName: '', lastName: '', dateOfBirth: '', squadId: '', asaNumber: 0 });
+      // Remove edited swimmer from selection if it was selected
+      if (selectedSwimmers.has(variables.id)) {
+        const newSelected = new Set(selectedSwimmers);
+        newSelected.delete(variables.id);
+        setSelectedSwimmers(newSelected);
+      }
     },
     onError: (error: Error) => {
       toast({
@@ -86,15 +98,47 @@ export function ManageSwimmers({ swimmers, squads, onBack }: ManageSwimmersProps
     mutationFn: async (id: string) => {
       return await apiRequest('DELETE', `/api/swimmers/${id}`);
     },
-    onSuccess: () => {
+    onSuccess: (_, deletedId) => {
       queryClient.invalidateQueries({ queryKey: ['/api/swimmers'] });
       setDeletingSwimmer(null);
+      // Remove deleted swimmer from selection if it was selected
+      if (selectedSwimmers.has(deletedId)) {
+        const newSelected = new Set(selectedSwimmers);
+        newSelected.delete(deletedId);
+        setSelectedSwimmers(newSelected);
+      }
     },
     onError: (error: Error) => {
       toast({
         title: 'Error',
         description: error.message || 'Failed to delete swimmer',
         variant: 'destructive',
+      });
+    },
+  });
+
+  const bulkUpdateSquadMutation = useMutation({
+    mutationFn: async ({ swimmerIds, newSquadId }: { swimmerIds: string[]; newSquadId: string }) => {
+      return await apiRequest('PATCH', '/api/swimmers/bulk-update-squad', { 
+        swimmerIds, 
+        newSquadId 
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/swimmers'] });
+      setIsBulkSquadDialogOpen(false);
+      setSelectedSwimmers(new Set());
+      setBulkSquadId('');
+      toast({ 
+        title: 'Success', 
+        description: 'Swimmers moved successfully' 
+      });
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: 'Error', 
+        description: error.message || 'Failed to move swimmers',
+        variant: 'destructive' 
       });
     },
   });
@@ -163,6 +207,67 @@ export function ManageSwimmers({ swimmers, squads, onBack }: ManageSwimmersProps
     deleteMutation.mutate(deletingSwimmer.id);
   };
 
+  const handleBulkSquadChange = (swimmerId: string) => {
+    const newSelectedSwimmers = new Set(selectedSwimmers);
+    if (newSelectedSwimmers.has(swimmerId)) {
+      newSelectedSwimmers.delete(swimmerId);
+    } else {
+      newSelectedSwimmers.add(swimmerId);
+    }
+    setSelectedSwimmers(newSelectedSwimmers);
+  };
+
+  const handleSelectAll = () => {
+    if (selectedSwimmers.size === filteredSwimmers.length && filteredSwimmers.length > 0) {
+      setSelectedSwimmers(new Set());
+    } else {
+      setSelectedSwimmers(new Set(filteredSwimmers.map(s => s.id)));
+    }
+  };
+
+  const handleBulkSquadSubmit = () => {
+    if (!bulkSquadId) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please select a squad',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const selectedSwimmersArray = Array.from(selectedSwimmers);
+    if (selectedSwimmersArray.length === 0) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please select at least one swimmer',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    bulkUpdateSquadMutation.mutate({ 
+      swimmerIds: selectedSwimmersArray, 
+      newSquadId: bulkSquadId 
+    });
+  };
+
+  // Filter swimmers based on search query and squad filter
+  const filteredSwimmers = useMemo(() => {
+    return swimmers.filter(swimmer => {
+      // Search by name or ASA number
+      const searchLower = searchQuery.toLowerCase();
+      const matchesSearch = searchQuery === '' ||
+                           swimmer.firstName.toLowerCase().includes(searchLower) ||
+                           swimmer.lastName.toLowerCase().includes(searchLower) ||
+                           swimmer.asaNumber.toString().includes(searchQuery);
+      
+      // Filter by squad
+      const matchesSquad = filterSquadId === 'all' || swimmer.squadId === filterSquadId;
+      
+      return matchesSearch && matchesSquad;
+    });
+  }, [swimmers, searchQuery, filterSquadId]);
+
   return (
     <div className="flex flex-col h-screen bg-background" data-testid="view-manage-swimmers">
       <div className="sticky top-0 z-10 bg-background">
@@ -179,13 +284,53 @@ export function ManageSwimmers({ swimmers, squads, onBack }: ManageSwimmersProps
               </Button>
               <div>
                 <h1 className="text-xl font-semibold">Swimmers</h1>
-                <p className="text-sm text-muted-foreground">Manage swimmers across all squads</p>
               </div>
             </div>
-            <Button onClick={() => setIsAddDialogOpen(true)} data-testid="button-add-swimmer">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Swimmer
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={handleSelectAll}
+                data-testid="button-select-all"
+              >
+                {selectedSwimmers.size === filteredSwimmers.length && filteredSwimmers.length > 0 ? 'Deselect All' : 'Select All'}
+              </Button>
+              <Button onClick={() => setIsAddDialogOpen(true)} data-testid="button-add-swimmer">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Swimmer
+              </Button>
+            </div>
+          </div>
+
+          {/* Search and Filter */}
+          <div className="mt-4 space-y-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by name or ASA number..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+                data-testid="input-search-swimmers"
+              />
+            </div>
+            <Select
+              value={filterSquadId}
+              onValueChange={setFilterSquadId}
+            >
+              <SelectTrigger data-testid="select-filter-squad">
+                <Filter className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="All Squads" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Squads</SelectItem>
+                {squads.map((squad) => (
+                  <SelectItem key={squad.id} value={squad.id}>
+                    {squad.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </div>
@@ -193,52 +338,72 @@ export function ManageSwimmers({ swimmers, squads, onBack }: ManageSwimmersProps
       <div className="flex-1 overflow-auto">
         <div className="max-w-2xl mx-auto px-4 py-6">
           <div className="space-y-3">
-            {swimmers.length === 0 ? (
+            {filteredSwimmers.length === 0 ? (
               <Card className="p-8 text-center">
-                <p className="text-muted-foreground">No swimmers found. Add your first swimmer to get started.</p>
+                <p className="text-muted-foreground">
+                  {swimmers.length === 0 
+                    ? 'No swimmers found. Add your first swimmer to get started.'
+                    : 'No swimmers match your search criteria.'}
+                </p>
               </Card>
             ) : (
-              swimmers.map((swimmer) => (
-                <Card
-                  key={swimmer.id}
-                  className="p-4"
-                  data-testid={`swimmer-card-${swimmer.id}`}
-                >
-                  <div className="flex items-start gap-4">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-medium mb-2">{swimmer.name}</h3>
-                      <div className="flex items-center gap-3">
-                        <Badge variant="secondary" className="flex-shrink-0">
-                          {squads.find((s) => s.id === swimmer.squadId)?.name || 'No Squad'}
-                        </Badge>
-                        <p className="text-sm text-muted-foreground whitespace-nowrap">
-                          ASA: {swimmer.asaNumber}
-                        </p>
+              filteredSwimmers.map((swimmer) => {
+                const isSelected = selectedSwimmers.has(swimmer.id);
+                return (
+                  <Card
+                    key={swimmer.id}
+                    className={`p-4 transition-all ${
+                      isSelected 
+                        ? 'bg-green-50 dark:bg-green-950/30 border-green-500 dark:border-green-700 shadow-sm' 
+                        : ''
+                    }`}
+                    data-testid={`swimmer-card-${swimmer.id}`}
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <Checkbox
+                          id={`swimmer-${swimmer.id}`}
+                          checked={isSelected}
+                          onCheckedChange={() => handleBulkSquadChange(swimmer.id)}
+                          className="mt-1"
+                          data-testid={`checkbox-swimmer-${swimmer.id}`}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-medium mb-2">{swimmer.name}</h3>
+                          <div className="flex items-center gap-3">
+                            <Badge variant="secondary" className="flex-shrink-0">
+                              {squads.find((s) => s.id === swimmer.squadId)?.name || 'No Squad'}
+                            </Badge>
+                            <p className="text-sm text-muted-foreground whitespace-nowrap">
+                              ASA: {swimmer.asaNumber}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEdit(swimmer)}
+                          data-testid={`button-edit-swimmer-${swimmer.id}`}
+                        >
+                          <Pencil className="h-4 w-4 mr-1" />
+                          Edit
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(swimmer)}
+                          data-testid={`button-delete-swimmer-${swimmer.id}`}
+                        >
+                          <Trash2 className="h-4 w-4 mr-1" />
+                          Delete
+                        </Button>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEdit(swimmer)}
-                        data-testid={`button-edit-swimmer-${swimmer.id}`}
-                      >
-                        <Pencil className="h-4 w-4 mr-1" />
-                        Edit
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(swimmer)}
-                        data-testid={`button-delete-swimmer-${swimmer.id}`}
-                      >
-                        <Trash2 className="h-4 w-4 mr-1" />
-                        Delete
-                      </Button>
-                    </div>
-                  </div>
-                </Card>
-              ))
+                  </Card>
+                );
+              })
             )}
           </div>
         </div>
@@ -319,7 +484,15 @@ export function ManageSwimmers({ swimmers, squads, onBack }: ManageSwimmersProps
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!editingSwimmer} onOpenChange={(open) => !open && setEditingSwimmer(null)}>
+      <Dialog 
+        open={!!editingSwimmer} 
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditingSwimmer(null);
+            setFormData({ firstName: '', lastName: '', dateOfBirth: '', squadId: '', asaNumber: 0 });
+          }
+        }}
+      >
         <DialogContent data-testid="dialog-edit-swimmer">
           <DialogHeader>
             <DialogTitle>Edit Swimmer</DialogTitle>
@@ -412,6 +585,102 @@ export function ManageSwimmers({ swimmers, squads, onBack }: ManageSwimmersProps
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Bulk Squad Change Dialog */}
+      <Dialog open={isBulkSquadDialogOpen} onOpenChange={setIsBulkSquadDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]" data-testid="dialog-bulk-squad-change">
+          <DialogHeader>
+            <DialogTitle>Move {selectedSwimmers.size} Swimmer{selectedSwimmers.size > 1 ? 's' : ''} to Squad</DialogTitle>
+            <DialogDescription>
+              Select a squad to move the selected swimmers to
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {/* Moving swimmers list */}
+            <div className="bg-muted/50 rounded-lg p-4">
+              <h4 className="text-sm font-medium mb-3">Moving swimmers:</h4>
+              <div className="space-y-2">
+                {Array.from(selectedSwimmers).map(swimmerId => {
+                  const swimmer = swimmers.find(s => s.id === swimmerId);
+                  if (!swimmer) return null;
+                  const squadName = squads.find(s => s.id === swimmer.squadId)?.name || 'Unknown';
+                  return (
+                    <div key={swimmer.id} className="flex items-center justify-between text-sm">
+                      <span className="font-medium">{swimmer.name}</span>
+                      <Badge variant="secondary">{squadName}</Badge>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* New Squad Selector */}
+            <div className="space-y-2">
+              <Label htmlFor="bulk-squad">New Squad</Label>
+              <Select
+                value={bulkSquadId}
+                onValueChange={setBulkSquadId}
+              >
+                <SelectTrigger id="bulk-squad" data-testid="select-bulk-squad">
+                  <SelectValue placeholder="Select squad" />
+                </SelectTrigger>
+                <SelectContent>
+                  {squads.map((squad) => (
+                    <SelectItem key={squad.id} value={squad.id}>
+                      {squad.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setIsBulkSquadDialogOpen(false);
+                setBulkSquadId('');
+              }}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleBulkSquadSubmit}
+              disabled={bulkUpdateSquadMutation.isPending}
+              data-testid="button-move-swimmers"
+            >
+              {bulkUpdateSquadMutation.isPending ? 'Moving...' : 'Move Swimmers'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Action Toolbar - Fixed at bottom */}
+      {selectedSwimmers.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 w-full max-w-2xl">
+          <div className="bg-green-600 dark:bg-green-700 text-white rounded-full shadow-lg px-6 py-3 flex items-center gap-4 justify-center">
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              <span className="text-sm font-medium">{selectedSwimmers.size} selected</span>
+            </div>
+            <div className="h-4 w-px bg-white/30" />
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-white hover:bg-white/20 hover:text-white"
+              onClick={() => {
+                setBulkSquadId('');
+                setIsBulkSquadDialogOpen(true);
+              }}
+              data-testid="button-change-squad"
+            >
+              Change Squad
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

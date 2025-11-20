@@ -38,7 +38,7 @@ import {
   type InsertCoachingRate,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (required for Replit Auth + Email/Password Auth)
@@ -69,6 +69,7 @@ export interface IStorage {
   createSwimmer(swimmer: InsertSwimmer): Promise<Swimmer>;
   updateSwimmer(id: string, swimmer: Partial<InsertSwimmer>): Promise<Swimmer>;
   deleteSwimmer(id: string): Promise<void>;
+  bulkUpdateSwimmerSquad(swimmerIds: string[], newSquadId: string): Promise<Swimmer[]>;
   
   // Location operations
   getLocations(): Promise<Location[]>;
@@ -294,6 +295,18 @@ export class DatabaseStorage implements IStorage {
     if (result.length === 0) {
       throw new Error("Swimmer not found");
     }
+  }
+
+  async bulkUpdateSwimmerSquad(swimmerIds: string[], newSquadId: string): Promise<Swimmer[]> {
+    if (swimmerIds.length === 0) {
+      return [];
+    }
+    const updatedSwimmers = await db
+      .update(swimmers)
+      .set({ squadId: newSquadId })
+      .where(inArray(swimmers.id, swimmerIds))
+      .returning();
+    return updatedSwimmers;
   }
 
   // Location operations
