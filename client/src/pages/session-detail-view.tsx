@@ -4,7 +4,7 @@ import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import type { Session, Squad, Location, Coach, Swimmer, AttendanceRecord, SessionFocus } from '../lib/typeAdapters';
 import { adaptSession, adaptSquad } from '../lib/typeAdapters';
-import type { SwimmingSession as BackendSession, Squad as BackendSquad } from '@shared/schema';
+import type { SwimmingSession as BackendSession, Squad as BackendSquad, SessionTemplate } from '@shared/schema';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, Pencil, Trash2, Calendar as CalendarIcon, Clock, MapPin, ChevronRight, Target, Save, Loader2 } from 'lucide-react';
+import { ArrowLeft, Pencil, Trash2, Calendar as CalendarIcon, Clock, MapPin, ChevronRight, Target, Save, Loader2, FileText } from 'lucide-react';
 import { format, isValid } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { RichTextEditor } from '@/components/RichTextEditor';
@@ -84,6 +84,11 @@ export function SessionDetail({
     queryKey: ['/api/squads'],
   });
 
+  // Fetch templates for paste from template feature
+  const { data: templates = [] } = useQuery<SessionTemplate[]>({
+    queryKey: ['/api/session-templates'],
+  });
+
   // Adapt backend data to frontend types
   const session = useMemo(
     () => backendSession ? adaptSession(backendSession) : null,
@@ -104,6 +109,8 @@ export function SessionDetail({
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false);
+  const [templateSearch, setTemplateSearch] = useState('');
   
   const formatSessionDate = (date: Date | string): string => {
     if (!date) return '';
@@ -389,6 +396,23 @@ export function SessionDetail({
     updateContentMutation.mutate(sessionContent);
   };
 
+  const handleOpenTemplateDialog = () => {
+    setIsTemplateDialogOpen(true);
+    setTemplateSearch('');
+  };
+
+  const handlePasteTemplate = (template: SessionTemplate) => {
+    // Paste template content BELOW existing content
+    const separator = sessionContent.trim() ? '\n\n' : '';
+    const newContent = sessionContent + separator + (template.sessionContentHtml || template.sessionContent);
+    setSessionContent(newContent);
+    setIsTemplateDialogOpen(false);
+    toast({
+      title: 'Template pasted',
+      description: 'Template content added below existing session content',
+    });
+  };
+
   const handleEditClick = () => {
     setEditFormData({
       date: formatSessionDate(session.date),
@@ -620,14 +644,25 @@ export function SessionDetail({
             <div className="flex items-center justify-between mb-4">
               <h2>Session Content</h2>
               {isEditingSession ? (
-                <Button 
-                  size="sm" 
-                  onClick={handleSaveSession}
-                  data-testid="button-save-session"
-                >
-                  <Save className="h-4 w-4 mr-2" />
-                  Save
-                </Button>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline"
+                    size="sm" 
+                    onClick={handleOpenTemplateDialog}
+                    data-testid="button-paste-template"
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    Paste from Template
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    onClick={handleSaveSession}
+                    data-testid="button-save-session"
+                  >
+                    <Save className="h-4 w-4 mr-2" />
+                    Save
+                  </Button>
+                </div>
               ) : (
                 <Button 
                   variant="outline" 
@@ -1125,6 +1160,86 @@ export function SessionDetail({
             </Button>
             <Button onClick={handleSaveEdit} data-testid="button-save-edit">
               Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isTemplateDialogOpen} onOpenChange={setIsTemplateDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh]" data-testid="dialog-template-selection">
+          <DialogHeader>
+            <DialogTitle>Select Template to Paste</DialogTitle>
+            <DialogDescription>
+              Choose a template to paste below your existing session content
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <Input
+              placeholder="Search templates..."
+              value={templateSearch}
+              onChange={(e) => setTemplateSearch(e.target.value)}
+              data-testid="input-search-templates-dialog"
+            />
+
+            <div className="max-h-[400px] overflow-y-auto space-y-2">
+              {templates
+                .filter(t => 
+                  templateSearch === '' || 
+                  t.templateName.toLowerCase().includes(templateSearch.toLowerCase()) ||
+                  (t.templateDescription && t.templateDescription.toLowerCase().includes(templateSearch.toLowerCase()))
+                )
+                .map((template) => (
+                  <Card 
+                    key={template.id}
+                    className="p-4 hover-elevate cursor-pointer"
+                    onClick={() => handlePasteTemplate(template)}
+                    data-testid={`card-template-select-${template.id}`}
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold truncate mb-1">
+                          {template.templateName}
+                        </h3>
+                        {template.templateDescription && (
+                          <p className="text-sm text-muted-foreground line-clamp-2">
+                            {template.templateDescription}
+                          </p>
+                        )}
+                      </div>
+                      <FileText className="h-5 w-5 text-primary flex-shrink-0" />
+                    </div>
+                  </Card>
+                ))}
+
+              {templates.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No templates available</p>
+                  <p className="text-sm mt-1">Visit Session Library to create templates</p>
+                </div>
+              )}
+
+              {templates.length > 0 && templates.filter(t => 
+                templateSearch === '' || 
+                t.templateName.toLowerCase().includes(templateSearch.toLowerCase()) ||
+                (t.templateDescription && t.templateDescription.toLowerCase().includes(templateSearch.toLowerCase()))
+              ).length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No templates match your search</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsTemplateDialogOpen(false)}
+              data-testid="button-cancel-template-selection"
+            >
+              Cancel
             </Button>
           </DialogFooter>
         </DialogContent>
