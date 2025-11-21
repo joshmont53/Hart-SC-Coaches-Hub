@@ -273,7 +273,7 @@ export function SessionLibrary() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setLocation('/')}
+            onClick={() => setLocation('/app')}
             data-testid="button-back"
           >
             <ArrowLeft className="h-5 w-5" />
