@@ -3,7 +3,6 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useLocation } from 'wouter';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -55,10 +54,13 @@ const templateFormSchema = insertSessionTemplateSchema
 
 type TemplateFormValues = z.infer<typeof templateFormSchema>;
 
-export function SessionLibrary() {
+interface SessionLibraryProps {
+  onBack: () => void;
+}
+
+export function SessionLibrary({ onBack }: SessionLibraryProps) {
   const { toast } = useToast();
   const { user } = useAuth();
-  const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterMode, setFilterMode] = useState<'all' | 'mine'>('all');
   const [selectedTemplate, setSelectedTemplate] = useState<BackendTemplate | null>(null);
@@ -273,7 +275,7 @@ export function SessionLibrary() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setLocation('/app')}
+            onClick={onBack}
             data-testid="button-back"
           >
             <ArrowLeft className="h-5 w-5" />

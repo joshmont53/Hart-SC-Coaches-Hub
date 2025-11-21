@@ -524,7 +524,7 @@ function CalendarApp() {
           ) : managementView === 'coachingRates' ? (
             <ManageCoachingRates onBack={handleBackToCalendar} />
           ) : managementView === 'sessionLibrary' ? (
-            <SessionLibrary />
+            <SessionLibrary onBack={handleBackToCalendar} />
           ) : view === 'month' ? (
             <>
               <div className={mobileView === 'calendar' ? 'block' : 'hidden lg:block'}>
