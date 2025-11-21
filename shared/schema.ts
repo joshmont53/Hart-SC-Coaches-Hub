@@ -469,3 +469,34 @@ export const updateCoachingRateSchema = z.object({
   sessionWritingRate: z.number().min(0, "Session writing rate must be non-negative"),
 });
 export type UpdateCoachingRate = z.infer<typeof updateCoachingRateSchema>;
+
+// ============================================================================
+// Session Templates - NEW TABLE (Session Library Feature)
+// ============================================================================
+
+// Session Templates table - Stores reusable session templates for coaches
+export const sessionTemplates = pgTable("session_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  coachId: varchar("coach_id").references(() => coaches.id).notNull(), // Creator of the template
+  templateName: varchar("template_name").notNull(),
+  templateDescription: text("template_description"),
+  sessionContent: text("session_content").notNull(), // Raw text content
+  sessionContentHtml: text("session_content_html"), // HTML content from RichTextEditor
+  recordStatus: varchar("record_status").notNull().default("active"), // "active" | "inactive"
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const sessionTemplatesRelations = relations(sessionTemplates, ({ one }) => ({
+  coach: one(coaches, {
+    fields: [sessionTemplates.coachId],
+    references: [coaches.id],
+  }),
+}));
+
+export type SessionTemplate = typeof sessionTemplates.$inferSelect;
+export const insertSessionTemplateSchema = createInsertSchema(sessionTemplates).omit({ 
+  id: true, 
+  createdAt: true, 
+  recordStatus: true 
+});
+export type InsertSessionTemplate = z.infer<typeof insertSessionTemplateSchema>;

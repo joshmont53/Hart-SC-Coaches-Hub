@@ -14,6 +14,7 @@ import {
   insertCompetitionSchema,
   insertCompetitionCoachingSchema,
   updateCoachingRateSchema,
+  insertSessionTemplateSchema,
 } from "@shared/schema";
 import { sendInvitationEmail } from "./emailService";
 import { randomBytes } from "crypto";
@@ -880,6 +881,143 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: error.message || "Failed to update coaching rates" });
     }
   });
+
+  // ============================================================================
+  // Session Template routes (Session Library Feature - No impact on existing functionality)
+  // ============================================================================
+
+  // Get all session templates
+  app.get("/api/session-templates", requireAuth, async (req, res) => {
+    try {
+      const templates = await storage.getSessionTemplates();
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching session templates:", error);
+      res.status(500).json({ message: "Failed to fetch session templates" });
+    }
+  });
+
+  // Get single session template
+  app.get("/api/session-templates/:id", requireAuth, async (req, res) => {
+    try {
+      const template = await storage.getSessionTemplate(req.params.id);
+      if (!template) {
+        return res.status(404).json({ message: "Session template not found" });
+      }
+      res.json(template);
+    } catch (error) {
+      console.error("Error fetching session template:", error);
+      res.status(500).json({ message: "Failed to fetch session template" });
+    }
+  });
+
+  // Create new session template
+  app.post("/api/session-templates", requireAuth, async (req: any, res) => {
+    try {
+      // Get current user's coach profile
+      const userId = req.user?.id || req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const coach = await storage.getCoachByUserId(userId);
+      
+      // Verify coach profile exists before proceeding
+      if (!coach) {
+        return res.status(403).json({ message: "No coach profile found. Only coaches can create templates." });
+      }
+
+      // Now safe to validate and create - coach.id is guaranteed to be defined
+      const validatedData = insertSessionTemplateSchema.parse({
+        ...req.body,
+        coachId: coach.id, // Ensure coachId is set to current user's coach
+      });
+
+      const template = await storage.createSessionTemplate(validatedData);
+      res.status(201).json(template);
+    } catch (error: any) {
+      console.error("Error creating session template:", error);
+      // Distinguish between validation errors and server errors
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid template data", errors: error.errors });
+      }
+      res.status(500).json({ message: error.message || "Failed to create session template" });
+    }
+  });
+
+  // Update session template
+  app.patch("/api/session-templates/:id", requireAuth, async (req: any, res) => {
+    try {
+      // Get current user's coach profile
+      const userId = req.user?.id || req.user?.claims?.sub;
+      const coach = await storage.getCoachByUserId(userId);
+      
+      if (!coach) {
+        return res.status(403).json({ message: "No coach profile found" });
+      }
+
+      // Get existing template to check ownership
+      const existingTemplate = await storage.getSessionTemplate(req.params.id);
+      if (!existingTemplate) {
+        return res.status(404).json({ message: "Session template not found" });
+      }
+
+      // Only the owner can update their template
+      if (existingTemplate.coachId !== coach.id) {
+        return res.status(403).json({ message: "You can only edit your own templates" });
+      }
+
+      // Validate and update (don't allow changing coachId)
+      const { coachId, ...updateData } = req.body;
+      const validatedData = insertSessionTemplateSchema.partial().parse(updateData);
+
+      const updatedTemplate = await storage.updateSessionTemplate(req.params.id, validatedData);
+      res.json(updatedTemplate);
+    } catch (error: any) {
+      console.error("Error updating session template:", error);
+      if (error.message === "Session template not found") {
+        return res.status(404).json({ message: error.message });
+      }
+      res.status(400).json({ message: error.message || "Failed to update session template" });
+    }
+  });
+
+  // Delete session template
+  app.delete("/api/session-templates/:id", requireAuth, async (req: any, res) => {
+    try {
+      // Get current user's coach profile
+      const userId = req.user?.id || req.user?.claims?.sub;
+      const coach = await storage.getCoachByUserId(userId);
+      
+      if (!coach) {
+        return res.status(403).json({ message: "No coach profile found" });
+      }
+
+      // Get existing template to check ownership
+      const existingTemplate = await storage.getSessionTemplate(req.params.id);
+      if (!existingTemplate) {
+        return res.status(404).json({ message: "Session template not found" });
+      }
+
+      // Only the owner can delete their template
+      if (existingTemplate.coachId !== coach.id) {
+        return res.status(403).json({ message: "You can only delete your own templates" });
+      }
+
+      await storage.deleteSessionTemplate(req.params.id);
+      res.json({ message: "Session template deleted successfully" });
+    } catch (error: any) {
+      console.error("Error deleting session template:", error);
+      if (error.message === "Session template not found") {
+        return res.status(404).json({ message: error.message });
+      }
+      res.status(500).json({ message: "Failed to delete session template" });
+    }
+  });
+
+  // ============================================================================
+  // Invoice routes
+  // ============================================================================
 
   // Get invoice data for a coach for a specific month
   app.get("/api/invoices/:coachId/:year/:month", requireAuth, async (req: any, res) => {

@@ -12,6 +12,7 @@ import {
   competitions,
   competitionCoaching,
   coachingRates,
+  sessionTemplates,
   type User,
   type UpsertUser,
   type Coach,
@@ -36,6 +37,8 @@ import {
   type InsertCompetitionCoaching,
   type CoachingRate,
   type InsertCoachingRate,
+  type SessionTemplate,
+  type InsertSessionTemplate,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, inArray } from "drizzle-orm";
@@ -123,6 +126,13 @@ export interface IStorage {
   getAllCoachingRates(): Promise<CoachingRate[]>;
   getCoachingRate(qualificationLevel: string): Promise<CoachingRate | undefined>;
   updateCoachingRate(qualificationLevel: string, rate: Partial<InsertCoachingRate>): Promise<CoachingRate>;
+  
+  // Session Template operations (Session Library Feature - No impact on existing functionality)
+  getSessionTemplates(): Promise<SessionTemplate[]>;
+  getSessionTemplate(id: string): Promise<SessionTemplate | undefined>;
+  createSessionTemplate(template: InsertSessionTemplate): Promise<SessionTemplate>;
+  updateSessionTemplate(id: string, template: Partial<InsertSessionTemplate>): Promise<SessionTemplate>;
+  deleteSessionTemplate(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -611,6 +621,47 @@ export class DatabaseStorage implements IStorage {
       throw new Error("Coaching rate not found");
     }
     return updatedRate;
+  }
+
+  // ============================================================================
+  // Session Template operations (Session Library Feature - No impact on existing functionality)
+  // ============================================================================
+
+  async getSessionTemplates(): Promise<SessionTemplate[]> {
+    return await db.select().from(sessionTemplates).where(eq(sessionTemplates.recordStatus, 'active'));
+  }
+
+  async getSessionTemplate(id: string): Promise<SessionTemplate | undefined> {
+    const [template] = await db.select().from(sessionTemplates).where(and(eq(sessionTemplates.id, id), eq(sessionTemplates.recordStatus, 'active')));
+    return template;
+  }
+
+  async createSessionTemplate(template: InsertSessionTemplate): Promise<SessionTemplate> {
+    const [newTemplate] = await db.insert(sessionTemplates).values(template).returning();
+    return newTemplate;
+  }
+
+  async updateSessionTemplate(id: string, template: Partial<InsertSessionTemplate>): Promise<SessionTemplate> {
+    const [updatedTemplate] = await db
+      .update(sessionTemplates)
+      .set(template)
+      .where(eq(sessionTemplates.id, id))
+      .returning();
+    if (!updatedTemplate) {
+      throw new Error("Session template not found");
+    }
+    return updatedTemplate;
+  }
+
+  async deleteSessionTemplate(id: string): Promise<void> {
+    const result = await db
+      .update(sessionTemplates)
+      .set({ recordStatus: 'inactive' })
+      .where(eq(sessionTemplates.id, id))
+      .returning();
+    if (result.length === 0) {
+      throw new Error("Session template not found");
+    }
   }
 }
 
