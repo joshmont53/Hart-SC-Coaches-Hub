@@ -24,6 +24,7 @@ import { ManageCompetitions } from '@/pages/manage-competitions';
 import { InvoiceTracker } from '@/pages/invoice-tracker';
 import { ManageCoachingRates } from '@/pages/manage-coaching-rates';
 import { SessionLibrary } from '@/pages/session-library';
+import { DrillsLibrary } from '@/pages/drills-library';
 import { CompetitionDetailModal } from '@/components/CompetitionDetailModal';
 import { Button } from './components/ui/button';
 import { Switch as ToggleSwitch } from './components/ui/switch';
@@ -42,6 +43,7 @@ import {
   Trophy,
   FileText,
   PoundSterling,
+  Target,
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from './components/ui/sheet';
 import { cn } from './lib/utils';
@@ -66,7 +68,7 @@ import type {
 
 type View = 'month' | 'day';
 type MobileView = 'calendar' | 'list';
-type ManagementView = 'calendar' | 'coaches' | 'squads' | 'swimmers' | 'locations' | 'invitations' | 'competitions' | 'addSession' | 'invoices' | 'coachingRates' | 'sessionLibrary';
+type ManagementView = 'calendar' | 'coaches' | 'squads' | 'swimmers' | 'locations' | 'invitations' | 'competitions' | 'addSession' | 'invoices' | 'coachingRates' | 'sessionLibrary' | 'drillsLibrary';
 
 // Landing page with loading screen logic - ONLY for "/" route
 function LandingPage() {
@@ -357,6 +359,15 @@ function CalendarApp() {
             <FileText className="h-4 w-4 mr-2" />
             Session Library
           </Button>
+          <Button
+            variant="ghost"
+            className="w-full justify-start"
+            onClick={() => handleManagementClick('drillsLibrary')}
+            data-testid="button-drills-library"
+          >
+            <Target className="h-4 w-4 mr-2" />
+            Drills Library
+          </Button>
           {user?.role === 'admin' && (
             <>
               <Button
@@ -525,6 +536,8 @@ function CalendarApp() {
             <ManageCoachingRates onBack={handleBackToCalendar} />
           ) : managementView === 'sessionLibrary' ? (
             <SessionLibrary onBack={handleBackToCalendar} />
+          ) : managementView === 'drillsLibrary' ? (
+            <DrillsLibrary onBack={handleBackToCalendar} />
           ) : view === 'month' ? (
             <>
               <div className={mobileView === 'calendar' ? 'block' : 'hidden lg:block'}>
