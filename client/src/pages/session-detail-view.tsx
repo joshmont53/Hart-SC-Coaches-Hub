@@ -402,9 +402,27 @@ export function SessionDetail({
   };
 
   const handlePasteTemplate = (template: SessionTemplate) => {
-    // Paste template content BELOW existing content
-    const separator = sessionContent.trim() ? '\n\n' : '';
-    const newContent = sessionContent + separator + (template.sessionContentHtml || template.sessionContent);
+    // Paste template content BELOW existing content with proper HTML block-level separation
+    let separator = '';
+    if (sessionContent.trim()) {
+      // Use HTML block-level separation for proper rendering
+      separator = '<br /><br />';
+    }
+    
+    // Prefer HTML content, but wrap plain text in paragraph tags if needed
+    let templateContent = template.sessionContentHtml || template.sessionContent;
+    
+    // If template has plain text but no HTML, wrap it in a paragraph for proper block rendering
+    if (!template.sessionContentHtml && template.sessionContent) {
+      // Check if plain text already has HTML tags
+      const hasHtmlTags = /<[^>]+>/.test(template.sessionContent);
+      if (!hasHtmlTags) {
+        // Wrap plain text in paragraph to ensure block-level rendering
+        templateContent = `<p>${template.sessionContent.replace(/\n/g, '<br />')}</p>`;
+      }
+    }
+    
+    const newContent = sessionContent + separator + templateContent;
     setSessionContent(newContent);
     setIsTemplateDialogOpen(false);
     toast({
