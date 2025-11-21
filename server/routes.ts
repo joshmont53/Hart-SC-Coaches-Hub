@@ -15,6 +15,7 @@ import {
   insertCompetitionCoachingSchema,
   updateCoachingRateSchema,
   insertSessionTemplateSchema,
+  insertDrillSchema,
 } from "@shared/schema";
 import { sendInvitationEmail } from "./emailService";
 import { randomBytes } from "crypto";
@@ -1012,6 +1013,139 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: error.message });
       }
       res.status(500).json({ message: "Failed to delete session template" });
+    }
+  });
+
+  // ============================================================================
+  // Drill routes (Drills Library Feature - No impact on existing functionality)
+  // ============================================================================
+
+  // Get all drills
+  app.get("/api/drills", requireAuth, async (req, res) => {
+    try {
+      const drills = await storage.getDrills();
+      res.json(drills);
+    } catch (error) {
+      console.error("Error fetching drills:", error);
+      res.status(500).json({ message: "Failed to fetch drills" });
+    }
+  });
+
+  // Get single drill
+  app.get("/api/drills/:id", requireAuth, async (req, res) => {
+    try {
+      const drill = await storage.getDrill(req.params.id);
+      if (!drill) {
+        return res.status(404).json({ message: "Drill not found" });
+      }
+      res.json(drill);
+    } catch (error) {
+      console.error("Error fetching drill:", error);
+      res.status(500).json({ message: "Failed to fetch drill" });
+    }
+  });
+
+  // Create new drill
+  app.post("/api/drills", requireAuth, async (req: any, res) => {
+    try {
+      // Get current user's coach profile
+      const userId = req.user?.id || req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const coach = await storage.getCoachByUserId(userId);
+      
+      // Verify coach profile exists before proceeding
+      if (!coach) {
+        return res.status(403).json({ message: "No coach profile found. Only coaches can create drills." });
+      }
+
+      // Now safe to validate and create - coach.id is guaranteed to be defined
+      const validatedData = insertDrillSchema.parse({
+        ...req.body,
+        coachId: coach.id, // Ensure coachId is set to current user's coach
+      });
+
+      const drill = await storage.createDrill(validatedData);
+      res.status(201).json(drill);
+    } catch (error: any) {
+      console.error("Error creating drill:", error);
+      // Distinguish between validation errors and server errors
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid drill data", errors: error.errors });
+      }
+      res.status(500).json({ message: error.message || "Failed to create drill" });
+    }
+  });
+
+  // Update drill
+  app.patch("/api/drills/:id", requireAuth, async (req: any, res) => {
+    try {
+      // Get current user's coach profile
+      const userId = req.user?.id || req.user?.claims?.sub;
+      const coach = await storage.getCoachByUserId(userId);
+      
+      if (!coach) {
+        return res.status(403).json({ message: "No coach profile found" });
+      }
+
+      // Get existing drill to check ownership
+      const existingDrill = await storage.getDrill(req.params.id);
+      if (!existingDrill) {
+        return res.status(404).json({ message: "Drill not found" });
+      }
+
+      // Only the owner can update their drill
+      if (existingDrill.coachId !== coach.id) {
+        return res.status(403).json({ message: "You can only edit your own drills" });
+      }
+
+      // Validate and update (don't allow changing coachId)
+      const { coachId, ...updateData } = req.body;
+      const validatedData = insertDrillSchema.partial().parse(updateData);
+
+      const updatedDrill = await storage.updateDrill(req.params.id, validatedData);
+      res.json(updatedDrill);
+    } catch (error: any) {
+      console.error("Error updating drill:", error);
+      if (error.message === "Drill not found") {
+        return res.status(404).json({ message: error.message });
+      }
+      res.status(400).json({ message: error.message || "Failed to update drill" });
+    }
+  });
+
+  // Delete drill
+  app.delete("/api/drills/:id", requireAuth, async (req: any, res) => {
+    try {
+      // Get current user's coach profile
+      const userId = req.user?.id || req.user?.claims?.sub;
+      const coach = await storage.getCoachByUserId(userId);
+      
+      if (!coach) {
+        return res.status(403).json({ message: "No coach profile found" });
+      }
+
+      // Get existing drill to check ownership
+      const existingDrill = await storage.getDrill(req.params.id);
+      if (!existingDrill) {
+        return res.status(404).json({ message: "Drill not found" });
+      }
+
+      // Only the owner can delete their drill
+      if (existingDrill.coachId !== coach.id) {
+        return res.status(403).json({ message: "You can only delete your own drills" });
+      }
+
+      await storage.deleteDrill(req.params.id);
+      res.json({ message: "Drill deleted successfully" });
+    } catch (error: any) {
+      console.error("Error deleting drill:", error);
+      if (error.message === "Drill not found") {
+        return res.status(404).json({ message: error.message });
+      }
+      res.status(500).json({ message: "Failed to delete drill" });
     }
   });
 

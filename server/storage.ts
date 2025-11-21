@@ -13,6 +13,7 @@ import {
   competitionCoaching,
   coachingRates,
   sessionTemplates,
+  drills,
   type User,
   type UpsertUser,
   type Coach,
@@ -39,6 +40,8 @@ import {
   type InsertCoachingRate,
   type SessionTemplate,
   type InsertSessionTemplate,
+  type Drill,
+  type InsertDrill,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, inArray } from "drizzle-orm";
@@ -133,6 +136,13 @@ export interface IStorage {
   createSessionTemplate(template: InsertSessionTemplate): Promise<SessionTemplate>;
   updateSessionTemplate(id: string, template: Partial<InsertSessionTemplate>): Promise<SessionTemplate>;
   deleteSessionTemplate(id: string): Promise<void>;
+  
+  // Drill operations (Drills Library Feature - No impact on existing functionality)
+  getDrills(): Promise<Drill[]>;
+  getDrill(id: string): Promise<Drill | undefined>;
+  createDrill(drill: InsertDrill): Promise<Drill>;
+  updateDrill(id: string, drill: Partial<InsertDrill>): Promise<Drill>;
+  deleteDrill(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -661,6 +671,47 @@ export class DatabaseStorage implements IStorage {
       .returning();
     if (result.length === 0) {
       throw new Error("Session template not found");
+    }
+  }
+
+  // ============================================================================
+  // Drill operations (Drills Library Feature - No impact on existing functionality)
+  // ============================================================================
+
+  async getDrills(): Promise<Drill[]> {
+    return await db.select().from(drills).where(eq(drills.recordStatus, 'active'));
+  }
+
+  async getDrill(id: string): Promise<Drill | undefined> {
+    const [drill] = await db.select().from(drills).where(and(eq(drills.id, id), eq(drills.recordStatus, 'active')));
+    return drill;
+  }
+
+  async createDrill(drill: InsertDrill): Promise<Drill> {
+    const [newDrill] = await db.insert(drills).values(drill).returning();
+    return newDrill;
+  }
+
+  async updateDrill(id: string, drill: Partial<InsertDrill>): Promise<Drill> {
+    const [updatedDrill] = await db
+      .update(drills)
+      .set(drill)
+      .where(eq(drills.id, id))
+      .returning();
+    if (!updatedDrill) {
+      throw new Error("Drill not found");
+    }
+    return updatedDrill;
+  }
+
+  async deleteDrill(id: string): Promise<void> {
+    const result = await db
+      .update(drills)
+      .set({ recordStatus: 'inactive' })
+      .where(eq(drills.id, id))
+      .returning();
+    if (result.length === 0) {
+      throw new Error("Drill not found");
     }
   }
 }

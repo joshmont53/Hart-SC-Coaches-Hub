@@ -500,3 +500,34 @@ export const insertSessionTemplateSchema = createInsertSchema(sessionTemplates).
   recordStatus: true 
 });
 export type InsertSessionTemplate = z.infer<typeof insertSessionTemplateSchema>;
+
+// ============================================================================
+// Drills Library - NEW TABLE (Drills Library Feature - No impact on existing functionality)
+// ============================================================================
+
+// Drills table - Stores swimming drills with videos for coaches
+export const drills = pgTable("drills", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  coachId: varchar("coach_id").references(() => coaches.id).notNull(), // Creator of the drill
+  drillName: varchar("drill_name").notNull(),
+  strokeType: varchar("stroke_type").notNull(), // "Freestyle" | "Backstroke" | "Breaststroke" | "Butterfly" | "Starts" | "Turns"
+  drillDescription: text("drill_description"), // Optional description
+  videoUrl: text("video_url"), // Optional YouTube embed URL or video file URL
+  recordStatus: varchar("record_status").notNull().default("active"), // "active" | "inactive"
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const drillsRelations = relations(drills, ({ one }) => ({
+  coach: one(coaches, {
+    fields: [drills.coachId],
+    references: [coaches.id],
+  }),
+}));
+
+export type Drill = typeof drills.$inferSelect;
+export const insertDrillSchema = createInsertSchema(drills).omit({ 
+  id: true, 
+  createdAt: true, 
+  recordStatus: true 
+});
+export type InsertDrill = z.infer<typeof insertDrillSchema>;
