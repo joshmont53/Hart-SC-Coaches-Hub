@@ -3,6 +3,7 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useLocation } from 'wouter';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -35,7 +36,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Plus, FileText, User, Calendar, Trash2, Pencil, Eye } from 'lucide-react';
+import { Plus, FileText, User, Calendar, Trash2, Pencil, Eye, ArrowLeft } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { RichTextEditor } from '@/components/RichTextEditor';
@@ -57,6 +58,7 @@ type TemplateFormValues = z.infer<typeof templateFormSchema>;
 export function SessionLibrary() {
   const { toast } = useToast();
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterMode, setFilterMode] = useState<'all' | 'mine'>('all');
   const [selectedTemplate, setSelectedTemplate] = useState<BackendTemplate | null>(null);
@@ -267,7 +269,17 @@ export function SessionLibrary() {
     <div className="h-full flex flex-col p-6">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-6" data-testid="text-page-title">Session Library</h1>
+        <div className="flex items-center gap-3 mb-6">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setLocation('/')}
+            data-testid="button-back"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <h1 className="text-3xl font-bold" data-testid="text-page-title">Session Library</h1>
+        </div>
 
         <div className="space-y-3">
           <Button 
