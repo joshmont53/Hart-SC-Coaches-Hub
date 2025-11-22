@@ -725,7 +725,7 @@ export function SessionDetail({
                   placeholder="Enter session content..."
                 />
               ) : (
-                <div className="border rounded-lg p-4 md:p-6 bg-card min-h-[400px]">
+                <div className="relative border rounded-lg p-4 md:p-6 bg-card min-h-[400px]">
                   {sessionContent ? (
                     <div 
                       className="whitespace-pre-wrap font-sans text-sm"
@@ -734,23 +734,40 @@ export function SessionDetail({
                   ) : (
                     <p className="text-muted-foreground">No session content yet. Click Edit to add session details.</p>
                   )}
-                </div>
-              )}
-
-              {/* Drills sidebar button - always visible, positioned below distance button if present */}
-              {!isEditingSession && (
-                <button
-                  onClick={() => setDrillsSidebarOpen(true)}
-                  className={cn(
-                    "absolute border bg-card p-2 rounded-l-lg shadow-lg hover-elevate active-elevate-2 transition-all z-50",
-                    session.distanceBreakdown ? "top-16 md:top-20" : "top-4 md:top-6",
-                    sidebarOpen && session.distanceBreakdown ? "right-[280px] md:right-80" : "right-0"
+                  
+                  {/* Distance breakdown button - attached to content container */}
+                  {session.distanceBreakdown && (
+                    <button
+                      onClick={() => setSidebarOpen(!sidebarOpen)}
+                      className={cn(
+                        "absolute top-4 md:top-6 border bg-card p-2 rounded-l-lg shadow-lg hover-elevate active-elevate-2 transition-all z-50",
+                        sidebarOpen ? "right-[280px] md:right-80" : "right-0"
+                      )}
+                      data-testid="button-toggle-sidebar"
+                    >
+                      <ChevronRight
+                        className={cn(
+                          "h-5 w-5 transition-transform",
+                          sidebarOpen && "rotate-180"
+                        )}
+                      />
+                    </button>
                   )}
-                  data-testid="button-toggle-drills-sidebar"
-                  title={detectedDrills.length > 0 ? `View ${detectedDrills.length} detected drill${detectedDrills.length !== 1 ? 's' : ''}` : 'View detected drills'}
-                >
-                  <Play className="h-5 w-5" />
-                </button>
+                  
+                  {/* Drills sidebar button - positioned below distance button if present */}
+                  <button
+                    onClick={() => setDrillsSidebarOpen(true)}
+                    className={cn(
+                      "absolute border bg-card p-2 rounded-l-lg shadow-lg hover-elevate active-elevate-2 transition-all z-50",
+                      session.distanceBreakdown ? "top-16 md:top-20" : "top-4 md:top-6",
+                      sidebarOpen && session.distanceBreakdown ? "right-[280px] md:right-80" : "right-0"
+                    )}
+                    data-testid="button-toggle-drills-sidebar"
+                    title={detectedDrills.length > 0 ? `View ${detectedDrills.length} detected drill${detectedDrills.length !== 1 ? 's' : ''}` : 'View detected drills'}
+                  >
+                    <Play className="h-5 w-5" />
+                  </button>
+                </div>
               )}
 
               {/* Distance breakdown sidebar (existing implementation) */}
@@ -762,22 +779,6 @@ export function SessionDetail({
                       onClick={() => setSidebarOpen(false)}
                     />
                   )}
-
-                  <button
-                    onClick={() => setSidebarOpen(!sidebarOpen)}
-                    className={cn(
-                      "absolute top-4 md:top-6 border bg-card p-2 rounded-l-lg shadow-lg hover-elevate active-elevate-2 transition-all z-50",
-                      sidebarOpen ? "right-[280px] md:right-80" : "right-0"
-                    )}
-                    data-testid="button-toggle-sidebar"
-                  >
-                    <ChevronRight
-                      className={cn(
-                        "h-5 w-5 transition-transform",
-                        sidebarOpen && "rotate-180"
-                      )}
-                    />
-                  </button>
 
                   <div
                     className={cn(
