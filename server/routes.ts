@@ -610,9 +610,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/sessions/parse-ai", requireAuth, async (req, res) => {
     try {
       const { sessionContent } = req.body;
+      
+      console.log('[Parse AI] Request body keys:', Object.keys(req.body));
+      console.log('[Parse AI] sessionContent type:', typeof sessionContent);
+      console.log('[Parse AI] sessionContent length:', sessionContent?.length || 0);
+      console.log('[Parse AI] sessionContent preview:', sessionContent?.substring(0, 200));
 
-      if (!sessionContent || typeof sessionContent !== 'string') {
-        return res.status(400).json({ error: 'Invalid session content' });
+      // Validate that sessionContent exists and is a string
+      if (sessionContent === undefined || sessionContent === null) {
+        console.error('[Parse AI] sessionContent is null or undefined');
+        return res.status(400).json({ error: 'Session content is required' });
+      }
+      
+      if (typeof sessionContent !== 'string') {
+        console.error('[Parse AI] sessionContent is not a string, type:', typeof sessionContent);
+        return res.status(400).json({ error: 'Session content must be a string' });
+      }
+      
+      // Allow empty strings - just return zero distances
+      if (sessionContent.trim().length === 0) {
+        console.log('[Parse AI] Empty session content - returning zero distances');
+        return res.json({
+          totalFrontCrawlSwim: 0,
+          totalFrontCrawlDrill: 0,
+          totalFrontCrawlKick: 0,
+          totalFrontCrawlPull: 0,
+          totalBackstrokeSwim: 0,
+          totalBackstrokeDrill: 0,
+          totalBackstrokeKick: 0,
+          totalBackstrokePull: 0,
+          totalBreaststrokeSwim: 0,
+          totalBreaststrokeDrill: 0,
+          totalBreaststrokeKick: 0,
+          totalBreaststrokePull: 0,
+          totalButterflySwim: 0,
+          totalButterflyDrill: 0,
+          totalButterflyKick: 0,
+          totalButterflyPull: 0,
+          totalIMSwim: 0,
+          totalIMDrill: 0,
+          totalIMKick: 0,
+          totalIMPull: 0,
+          totalNo1Swim: 0,
+          totalNo1Drill: 0,
+          totalNo1Kick: 0,
+          totalNo1Pull: 0,
+          totalDistance: 0,
+          method: 'empty',
+        });
       }
 
       // Try AI parsing first

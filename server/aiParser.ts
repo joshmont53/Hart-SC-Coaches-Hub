@@ -319,17 +319,22 @@ Be intelligent about matching - consider:
 5. Common abbreviations or shortened names
 6. Don't match if the drill name is too generic and could refer to something else
 
-Return ONLY a JSON array of drill IDs that are referenced in the session content.
-If no drills are found, return an empty array: []
+IMPORTANT: Return drill NAMES (not IDs) from the library that are mentioned in the session content.
 
-Example valid responses:
-["drill-id-1", "drill-id-2"]
-[]
-["single-drill-id"]
+Return a JSON object with this structure:
+{
+  "detectedDrills": ["Drill Name 1", "Drill Name 2"]
+}
 
-Return ONLY the JSON array. No explanation, no commentary.`;
+If no drills are found, return: {"detectedDrills": []}
+
+Return ONLY the JSON object. No explanation, no commentary.`;
 
   try {
+    console.log(`[Drill Detection] Analyzing session content for drills...`);
+    console.log(`[Drill Detection] Available drills: ${availableDrills.length}`);
+    console.log(`[Drill Detection] Drills: ${availableDrills.map(d => d.drillName).join(', ')}`);
+    
     const response = await openai.chat.completions.create({
       model: 'gpt-5-mini',
       messages: [{ role: 'user', content: prompt }],
@@ -338,34 +343,63 @@ Return ONLY the JSON array. No explanation, no commentary.`;
 
     const content = response.choices[0].message.content;
     if (!content) {
-      console.warn('Empty response from AI drill detection');
+      console.warn('[Drill Detection] Empty response from AI drill detection');
       return [];
     }
 
-    // Parse response - expect {drillIds: [...]} or direct array
+    console.log('[Drill Detection] AI response:', content);
+
+    // Parse response - expect {detectedDrills: ["Name1", "Name2"]}
     const parsed = JSON.parse(content);
+    console.log('[Drill Detection] Parsed response:', JSON.stringify(parsed, null, 2));
     
-    // Handle both {drillIds: [...]} and direct array responses
-    let drillIds: string[] = [];
-    if (Array.isArray(parsed)) {
-      drillIds = parsed;
-    } else if (parsed.drillIds && Array.isArray(parsed.drillIds)) {
-      drillIds = parsed.drillIds;
-    } else if (parsed.drill_ids && Array.isArray(parsed.drill_ids)) {
-      drillIds = parsed.drill_ids;
+    // Extract drill names from response
+    let drillNames: string[] = [];
+    if (parsed.detectedDrills && Array.isArray(parsed.detectedDrills)) {
+      drillNames = parsed.detectedDrills;
+      console.log('[Drill Detection] Found detectedDrills in response');
+    } else {
+      console.warn('[Drill Detection] Response format unexpected:', Object.keys(parsed));
     }
 
-    // Validate all returned IDs exist in available drills
-    const validDrillIds = new Set(availableDrills.map(d => d.id));
-    const filteredIds = drillIds.filter(id => validDrillIds.has(id));
+    console.log(`[Drill Detection] Extracted ${drillNames.length} drill names:`, drillNames);
 
-    if (filteredIds.length < drillIds.length) {
-      console.warn(`AI returned ${drillIds.length - filteredIds.length} invalid drill IDs`);
+    // Map drill names back to IDs (case-insensitive matching)
+    const drillIds: string[] = [];
+    const nameToIdMap = new Map(
+      availableDrills.map(d => [d.drillName.toLowerCase(), d.id])
+    );
+
+    for (const name of drillNames) {
+      const id = nameToIdMap.get(name.toLowerCase());
+      if (id) {
+        drillIds.push(id);
+        console.log(`[Drill Detection] Matched "${name}" -> ${id}`);
+      } else {
+        console.warn(`[Drill Detection] Could not find ID for drill name: "${name}"`);
+      }
     }
 
-    return filteredIds;
+    // Fallback: Case-insensitive substring matching for obvious matches
+    if (drillIds.length === 0) {
+      console.log('[Drill Detection] AI found no drills, trying fallback substring match...');
+      const contentLower = sessionContent.toLowerCase();
+      
+      for (const drill of availableDrills) {
+        const nameLower = drill.drillName.toLowerCase();
+        if (contentLower.includes(nameLower)) {
+          if (!drillIds.includes(drill.id)) {
+            drillIds.push(drill.id);
+            console.log(`[Drill Detection] Fallback matched "${drill.drillName}" in content`);
+          }
+        }
+      }
+    }
+
+    console.log(`[Drill Detection] Final result: ${drillIds.length} valid drills`);
+    return drillIds;
   } catch (error) {
-    console.error('AI drill detection error:', error);
+    console.error('[Drill Detection] AI drill detection error:', error);
     // Gracefully fail - return empty array instead of throwing
     return [];
   }
