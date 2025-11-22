@@ -166,6 +166,9 @@ export const swimmingSessions = pgTable("swimming_sessions", {
   sessionContent: text("session_content"),
   sessionContentHtml: text("session_content_html"),
   
+  // Detected drills (AI-identified drill IDs from session content)
+  detectedDrillIds: text("detected_drill_ids").array().default(sql`ARRAY[]::text[]`),
+  
   // Distance fields
   totalDistance: integer("total_distance").notNull().default(0),
   
