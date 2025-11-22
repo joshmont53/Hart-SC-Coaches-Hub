@@ -189,16 +189,12 @@ export function SessionDetail({
 
   const updateContentMutation = useMutation({
     mutationFn: async (content: string) => {
-      console.log('[Session Save] Starting GPT distance parsing...');
-      
       const plainText = stripHtmlTags(content);
       
       const parseResultResponse = await apiRequest('POST', '/api/sessions/parse-ai', { 
         sessionContent: plainText 
       });
       const parseResult = await parseResultResponse.json();
-      
-      console.log('[Session Save] GPT parsing complete, saving to database...');
       
       return await apiRequest('PUT', `/api/sessions/${sessionId}`, { 
         sessionContent: plainText,
