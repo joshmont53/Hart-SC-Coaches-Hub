@@ -1352,9 +1352,9 @@ export function SessionDetail({
             <div className="text-center space-y-4">
               <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" />
               <div>
-                <h3 className="text-lg font-semibold">Calculating distances...</h3>
+                <h3 className="text-lg font-semibold">Preparing session...</h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Calculating the session distance breakdowns, please wait...
+                  Calculating the session distance breakdowns and fetching drills, please wait...
                 </p>
               </div>
             </div>

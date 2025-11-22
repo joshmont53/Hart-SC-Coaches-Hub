@@ -305,51 +305,7 @@ function CalendarApp() {
 
       <nav className="flex-1 p-4">
         <div className="space-y-2">
-          <Button
-            variant="ghost"
-            className="w-full justify-start"
-            onClick={() => handleManagementClick('coaches')}
-            data-testid="button-manage-coaches"
-          >
-            <UserCog className="h-4 w-4 mr-2" />
-            Manage Coaches
-          </Button>
-          <Button
-            variant="ghost"
-            className="w-full justify-start"
-            onClick={() => handleManagementClick('squads')}
-            data-testid="button-manage-squads"
-          >
-            <Users className="h-4 w-4 mr-2" />
-            Manage Squads
-          </Button>
-          <Button
-            variant="ghost"
-            className="w-full justify-start"
-            onClick={() => handleManagementClick('swimmers')}
-            data-testid="button-manage-swimmers"
-          >
-            <Users className="h-4 w-4 mr-2" />
-            Manage Swimmers
-          </Button>
-          <Button
-            variant="ghost"
-            className="w-full justify-start"
-            onClick={() => handleManagementClick('locations')}
-            data-testid="button-manage-locations"
-          >
-            <MapPin className="h-4 w-4 mr-2" />
-            Manage Locations
-          </Button>
-          <Button
-            variant="ghost"
-            className="w-full justify-start"
-            onClick={() => handleManagementClick('invoices')}
-            data-testid="button-invoices"
-          >
-            <FileText className="h-4 w-4 mr-2" />
-            My Invoices
-          </Button>
+          {/* Group 1: Library and Invoices */}
           <Button
             variant="ghost"
             className="w-full justify-start"
@@ -368,17 +324,63 @@ function CalendarApp() {
             <Target className="h-4 w-4 mr-2" />
             Drills Library
           </Button>
+          <Button
+            variant="ghost"
+            className="w-full justify-start"
+            onClick={() => handleManagementClick('invoices')}
+            data-testid="button-invoices"
+          >
+            <FileText className="h-4 w-4 mr-2" />
+            Invoice Tracker
+          </Button>
+
+          {/* Separator */}
+          <div className="h-px bg-border my-2" />
+
+          {/* Group 2: Manage Resources */}
+          <Button
+            variant="ghost"
+            className="w-full justify-start"
+            onClick={() => handleManagementClick('swimmers')}
+            data-testid="button-manage-swimmers"
+          >
+            <Users className="h-4 w-4 mr-2" />
+            Manage Swimmers
+          </Button>
+          <Button
+            variant="ghost"
+            className="w-full justify-start"
+            onClick={() => handleManagementClick('squads')}
+            data-testid="button-manage-squads"
+          >
+            <Users className="h-4 w-4 mr-2" />
+            Manage Squads
+          </Button>
+          <Button
+            variant="ghost"
+            className="w-full justify-start"
+            onClick={() => handleManagementClick('coaches')}
+            data-testid="button-manage-coaches"
+          >
+            <UserCog className="h-4 w-4 mr-2" />
+            Manage Coaches
+          </Button>
+          <Button
+            variant="ghost"
+            className="w-full justify-start"
+            onClick={() => handleManagementClick('locations')}
+            data-testid="button-manage-locations"
+          >
+            <MapPin className="h-4 w-4 mr-2" />
+            Manage Locations
+          </Button>
+
+          {/* Group 3: Admin Only */}
           {user?.role === 'admin' && (
             <>
-              <Button
-                variant="ghost"
-                className="w-full justify-start"
-                onClick={() => handleManagementClick('invitations')}
-                data-testid="button-manage-invitations"
-              >
-                <Mail className="h-4 w-4 mr-2" />
-                Coach Invitations
-              </Button>
+              {/* Separator */}
+              <div className="h-px bg-border my-2" />
+
               <Button
                 variant="ghost"
                 className="w-full justify-start"
@@ -387,6 +389,15 @@ function CalendarApp() {
               >
                 <Trophy className="h-4 w-4 mr-2" />
                 Manage Competitions
+              </Button>
+              <Button
+                variant="ghost"
+                className="w-full justify-start"
+                onClick={() => handleManagementClick('invitations')}
+                data-testid="button-manage-invitations"
+              >
+                <Mail className="h-4 w-4 mr-2" />
+                Coach Invitations
               </Button>
               <Button
                 variant="ghost"

@@ -248,11 +248,12 @@ export function ManageInvitations({ onBack }: ManageInvitationsProps) {
                   >
                     <div className="flex items-start gap-4">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h3 className="font-medium">{invitation.email}</h3>
+                        <div className="flex items-center gap-3 mb-2 flex-wrap">
+                          <h3 className="font-medium truncate">{invitation.email}</h3>
                           <Badge 
                             variant={getStatusBadgeVariant(invitation.status)}
                             data-testid={`status-${invitation.id}`}
+                            className="flex-shrink-0"
                           >
                             {invitation.status}
                           </Badge>
