@@ -1,0 +1,119 @@
+Main Issues in Your Replit Code:
+
+1. Drills Button Positioning (CRITICAL BUG)
+```tsx
+// ❌ WRONG - Replit's code
+drillsSidebarOpen ? "right-[280px] md:right-80" : "right-0"
+// This checks the distance sidebar state, not the drills sidebar state!
+
+// ✅ CORRECT - My code
+drillsSidebarOpen ? "right-[280px] md:right-[30rem]" : "right-0"
+// This checks the drills sidebar state
+```
+
+Why this matters: When the drills sidebar opens, it's 30rem (480px) wide, not 20rem (320px/80) like the distance sidebar. Your button is checking the wrong state and using the wrong width.
+
+2. Drills Button Click Handler
+```tsx
+// ❌ WRONG - Replit's code
+onClick={() => setDrillsSidebarOpen(true)}
+// Only opens, never closes
+
+// ✅ CORRECT - My code
+onClick={() => {
+  setDrillsSidebarOpen(!drillsSidebarOpen);
+  setSidebarOpen(false);
+}}
+// Toggles open/close AND closes the other sidebar
+```
+
+3. Conditional Rendering
+Your drills button always renders. Mine only renders when there are detected drills:
+```tsx
+{allDetectedDrills.length > 0 && (
+  <button>...</button>
+)}
+```
+
+---
+
+Here's the Correct Code to Give to Replit:
+
+```tsx
+{/* Sidebar Toggle Buttons - Only show when not editing */}
+{!isEditingSession && (
+  <>
+    {/* Backdrop overlay for mobile */}
+    {(sidebarOpen || drillsSidebarOpen) && (
+      <div 
+        className="fixed inset-0 bg-black/50 z-40 md:hidden"
+        onClick={() => {
+          setSidebarOpen(false);
+          setDrillsSidebarOpen(false);
+        }}
+      />
+    )}
+
+    {/* Distance Breakdown Toggle Button */}
+    {session.distanceBreakdown && (
+      <button
+        onClick={() => {
+          setSidebarOpen(!sidebarOpen);
+          setDrillsSidebarOpen(false);
+        }}
+        className={cn(
+          "absolute top-4 md:top-6 border bg-card p-2 rounded-l-lg shadow-lg hover:bg-accent transition-all z-50 flex items-center gap-2",
+          sidebarOpen ? "right-[280px] md:right-80" : "right-0"
+        )}
+        title="Distance Breakdown"
+      >
+        <Target className={cn("h-4 w-4 text-primary", sidebarOpen && "mr-1")} />
+        {sidebarOpen && <span className="text-xs hidden md:inline">Distance</span>}
+        <ChevronRight
+          className={cn(
+            "h-5 w-5 transition-transform",
+            sidebarOpen && "rotate-180"
+          )}
+        />
+      </button>
+    )}
+
+    {/* Drills Toggle Button */}
+    {allDetectedDrills.length > 0 && (
+      <button
+        onClick={() => {
+          setDrillsSidebarOpen(!drillsSidebarOpen);
+          setSidebarOpen(false);
+        }}
+        className={cn(
+          "absolute border bg-card p-2 rounded-l-lg shadow-lg hover:bg-accent transition-all z-50 flex items-center gap-2",
+          session.distanceBreakdown ? "top-16 md:top-20" : "top-4 md:top-6",
+          drillsSidebarOpen ? "right-[280px] md:right-[30rem]" : "right-0"
+        )}
+        title="Session Drills"
+      >
+        <Play className={cn("h-4 w-4 text-primary", drillsSidebarOpen && "mr-1")} />
+        {drillsSidebarOpen && <span className="text-xs hidden md:inline">Drills</span>}
+        <ChevronRight
+          className={cn(
+            "h-5 w-5 transition-transform",
+            drillsSidebarOpen && "rotate-180"
+          )}
+        />
+      </button>
+    )}
+  </>
+)}
+```
+
+---
+
+Explanation for Replit:
+
+Issue 1: The drills button was checking `sidebarOpen` (distance sidebar state) instead of `drillsSidebarOpen` for its positioning. This caused the button to not move when the drills sidebar opened.
+
+Issue 2: The drills button width calculation was wrong. The distance sidebar is 280px (md:20rem), but the drills sidebar is 480px (md:30rem). The button needs to move further right for the drills sidebar.
+
+Issue 3: The onClick handlers need to toggle their respective sidebars AND close the other sidebar to prevent both from being open simultaneously.
+
+Issue 4: Both buttons need icons and labels for better UX, and the drills button should only show when drills are detected.
