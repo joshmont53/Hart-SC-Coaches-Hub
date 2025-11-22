@@ -20,10 +20,11 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, Pencil, Trash2, Calendar as CalendarIcon, Clock, MapPin, ChevronRight, Target, Save, Loader2, FileText } from 'lucide-react';
+import { ArrowLeft, Pencil, Trash2, Calendar as CalendarIcon, Clock, MapPin, ChevronRight, Target, Save, Loader2, FileText, Play } from 'lucide-react';
 import { format, isValid } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { RichTextEditor } from '@/components/RichTextEditor';
+import { DrillsSidebar } from '@/components/DrillsSidebar';
 
 interface SessionDetailProps {
   sessionId: string;
@@ -123,6 +124,7 @@ export function SessionDetail({
   const [activeTab, setActiveTab] = useState<TabType>('detail');
   const [isEditingSession, setIsEditingSession] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [drillsSidebarOpen, setDrillsSidebarOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -715,37 +717,6 @@ export function SessionDetail({
               )}
             </div>
 
-            {/* Detected Drills Section */}
-            {!isEditingSession && detectedDrills.length > 0 && (
-              <div className="border rounded-lg p-4 bg-card">
-                <h3 className="text-sm font-medium mb-3">Detected Drills</h3>
-                <div className="flex flex-wrap gap-2">
-                  {detectedDrills.map((drill) => {
-                    // Stroke-type color mapping (matching DrillsLibrary)
-                    const strokeColors: Record<string, string> = {
-                      'Freestyle': 'bg-blue-500 hover:bg-blue-600',
-                      'Backstroke': 'bg-purple-500 hover:bg-purple-600',
-                      'Breaststroke': 'bg-green-500 hover:bg-green-600',
-                      'Butterfly': 'bg-orange-500 hover:bg-orange-600',
-                      'Starts': 'bg-red-500 hover:bg-red-600',
-                      'Turns': 'bg-teal-500 hover:bg-teal-600',
-                    };
-                    const colorClass = strokeColors[drill.strokeType] || 'bg-gray-500 hover:bg-gray-600';
-                    
-                    return (
-                      <Badge
-                        key={drill.id}
-                        className={`${colorClass} text-white cursor-default`}
-                        data-testid={`badge-detected-drill-${drill.id}`}
-                      >
-                        {drill.drillName}
-                      </Badge>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
             <div className="relative">
               {isEditingSession ? (
                 <RichTextEditor
@@ -766,6 +737,34 @@ export function SessionDetail({
                 </div>
               )}
 
+              {/* Sidebar icon buttons - visible when not editing */}
+              {!isEditingSession && (
+                <div className="absolute top-4 md:top-6 right-4 md:right-6 flex gap-2 z-50">
+                  {/* Drills sidebar button - always visible to show empty state message when no drills */}
+                  <button
+                    onClick={() => setDrillsSidebarOpen(true)}
+                    className="border bg-card p-2 rounded-lg shadow-lg hover-elevate active-elevate-2 transition-all"
+                    data-testid="button-toggle-drills-sidebar"
+                    title={detectedDrills.length > 0 ? `View ${detectedDrills.length} detected drill${detectedDrills.length !== 1 ? 's' : ''}` : 'View detected drills'}
+                  >
+                    <Play className="h-5 w-5" />
+                  </button>
+                  
+                  {/* Distance breakdown sidebar button */}
+                  {session.distanceBreakdown && (
+                    <button
+                      onClick={() => setSidebarOpen(true)}
+                      className="border bg-card p-2 rounded-lg shadow-lg hover-elevate active-elevate-2 transition-all"
+                      data-testid="button-toggle-distance-sidebar"
+                      title="View distance breakdown"
+                    >
+                      <Target className="h-5 w-5" />
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Distance breakdown sidebar (existing implementation) */}
               {session.distanceBreakdown && !isEditingSession && (
                 <>
                   {sidebarOpen && (
@@ -1354,6 +1353,13 @@ export function SessionDetail({
           </Card>
         </div>
       )}
+
+      {/* Drills Sidebar */}
+      <DrillsSidebar 
+        open={drillsSidebarOpen}
+        onOpenChange={setDrillsSidebarOpen}
+        detectedDrills={detectedDrills}
+      />
     </div>
   );
 }
