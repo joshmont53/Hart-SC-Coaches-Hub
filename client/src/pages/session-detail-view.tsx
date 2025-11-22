@@ -737,31 +737,20 @@ export function SessionDetail({
                 </div>
               )}
 
-              {/* Sidebar icon buttons - visible when not editing */}
+              {/* Drills sidebar button - always visible, positioned below distance button if present */}
               {!isEditingSession && (
-                <div className="absolute top-4 md:top-6 right-4 md:right-6 flex gap-2 z-50">
-                  {/* Drills sidebar button - always visible to show empty state message when no drills */}
-                  <button
-                    onClick={() => setDrillsSidebarOpen(true)}
-                    className="border bg-card p-2 rounded-lg shadow-lg hover-elevate active-elevate-2 transition-all"
-                    data-testid="button-toggle-drills-sidebar"
-                    title={detectedDrills.length > 0 ? `View ${detectedDrills.length} detected drill${detectedDrills.length !== 1 ? 's' : ''}` : 'View detected drills'}
-                  >
-                    <Play className="h-5 w-5" />
-                  </button>
-                  
-                  {/* Distance breakdown sidebar button */}
-                  {session.distanceBreakdown && (
-                    <button
-                      onClick={() => setSidebarOpen(true)}
-                      className="border bg-card p-2 rounded-lg shadow-lg hover-elevate active-elevate-2 transition-all"
-                      data-testid="button-toggle-distance-sidebar"
-                      title="View distance breakdown"
-                    >
-                      <Target className="h-5 w-5" />
-                    </button>
+                <button
+                  onClick={() => setDrillsSidebarOpen(true)}
+                  className={cn(
+                    "absolute border bg-card p-2 rounded-l-lg shadow-lg hover-elevate active-elevate-2 transition-all z-50",
+                    session.distanceBreakdown ? "top-16 md:top-20" : "top-4 md:top-6",
+                    sidebarOpen && session.distanceBreakdown ? "right-[280px] md:right-80" : "right-0"
                   )}
-                </div>
+                  data-testid="button-toggle-drills-sidebar"
+                  title={detectedDrills.length > 0 ? `View ${detectedDrills.length} detected drill${detectedDrills.length !== 1 ? 's' : ''}` : 'View detected drills'}
+                >
+                  <Play className="h-5 w-5" />
+                </button>
               )}
 
               {/* Distance breakdown sidebar (existing implementation) */}
@@ -777,7 +766,7 @@ export function SessionDetail({
                   <button
                     onClick={() => setSidebarOpen(!sidebarOpen)}
                     className={cn(
-                      "absolute top-4 md:top-6 border bg-card p-2 rounded-l-lg shadow-lg hover:bg-accent transition-all z-50",
+                      "absolute top-4 md:top-6 border bg-card p-2 rounded-l-lg shadow-lg hover-elevate active-elevate-2 transition-all z-50",
                       sidebarOpen ? "right-[280px] md:right-80" : "right-0"
                     )}
                     data-testid="button-toggle-sidebar"
