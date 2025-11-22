@@ -4,7 +4,7 @@ import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import type { Session, Squad, Location, Coach, Swimmer, AttendanceRecord, SessionFocus } from '../lib/typeAdapters';
 import { adaptSession, adaptSquad } from '../lib/typeAdapters';
-import type { SwimmingSession as BackendSession, Squad as BackendSquad, SessionTemplate } from '@shared/schema';
+import type { SwimmingSession as BackendSession, Squad as BackendSquad, SessionTemplate, Drill } from '@shared/schema';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -89,11 +89,28 @@ export function SessionDetail({
     queryKey: ['/api/session-templates'],
   });
 
+  // Fetch drills for displaying detected drills
+  const { data: allDrills = [] } = useQuery<Drill[]>({
+    queryKey: ['/api/drills'],
+  });
+
   // Adapt backend data to frontend types
   const session = useMemo(
     () => backendSession ? adaptSession(backendSession) : null,
     [backendSession]
   );
+
+  // Filter detected drills
+  const detectedDrills = useMemo(() => {
+    if (!backendSession?.detectedDrillIds || backendSession.detectedDrillIds.length === 0) {
+      return [];
+    }
+    // Filter drills that match detected IDs and are still active
+    return allDrills.filter(drill => 
+      backendSession.detectedDrillIds?.includes(drill.id) && 
+      drill.recordStatus === 'active'
+    );
+  }, [backendSession?.detectedDrillIds, allDrills]);
 
   const squads = useMemo(
     () => backendSquads.map(s => adaptSquad(s)),
@@ -697,6 +714,37 @@ export function SessionDetail({
                 </Button>
               )}
             </div>
+
+            {/* Detected Drills Section */}
+            {!isEditingSession && detectedDrills.length > 0 && (
+              <div className="border rounded-lg p-4 bg-card">
+                <h3 className="text-sm font-medium mb-3">Detected Drills</h3>
+                <div className="flex flex-wrap gap-2">
+                  {detectedDrills.map((drill) => {
+                    // Stroke-type color mapping (matching DrillsLibrary)
+                    const strokeColors: Record<string, string> = {
+                      'Freestyle': 'bg-blue-500 hover:bg-blue-600',
+                      'Backstroke': 'bg-purple-500 hover:bg-purple-600',
+                      'Breaststroke': 'bg-green-500 hover:bg-green-600',
+                      'Butterfly': 'bg-orange-500 hover:bg-orange-600',
+                      'Starts': 'bg-red-500 hover:bg-red-600',
+                      'Turns': 'bg-teal-500 hover:bg-teal-600',
+                    };
+                    const colorClass = strokeColors[drill.strokeType] || 'bg-gray-500 hover:bg-gray-600';
+                    
+                    return (
+                      <Badge
+                        key={drill.id}
+                        className={`${colorClass} text-white cursor-default`}
+                        data-testid={`badge-detected-drill-${drill.id}`}
+                      >
+                        {drill.drillName}
+                      </Badge>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             <div className="relative">
               {isEditingSession ? (
