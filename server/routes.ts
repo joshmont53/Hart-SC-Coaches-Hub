@@ -19,7 +19,7 @@ import {
 } from "@shared/schema";
 import { sendInvitationEmail } from "./emailService";
 import { randomBytes } from "crypto";
-import { calculateSessionDistancesAI, validateDistances } from "./aiParser";
+import { calculateSessionDistancesAI, validateDistances, detectDrillsInSession, type DrillReference } from "./aiParser";
 import { parseSessionText } from "@shared/sessionParser";
 import { getNextAvailableColor } from "./squadColors";
 
@@ -509,7 +509,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/sessions", requireAuth, async (req, res) => {
     try {
       const validatedData = insertSwimmingSessionSchema.parse(req.body);
-      const session = await storage.createSession(validatedData);
+      let session = await storage.createSession(validatedData);
+
+      // Run drill detection if session content exists
+      if (session.sessionContent && session.sessionContent.trim()) {
+        try {
+          // Get all active drills for detection
+          const allDrills = await storage.getDrills();
+          const drillReferences: DrillReference[] = allDrills.map(drill => ({
+            id: drill.id,
+            drillName: drill.drillName,
+            strokeType: drill.strokeType,
+            drillDescription: drill.drillDescription,
+          }));
+
+          // Detect drills in session content
+          const detectedDrillIds = await detectDrillsInSession(
+            session.sessionContent,
+            drillReferences
+          );
+
+          // Update session with detected drill IDs
+          if (detectedDrillIds.length > 0) {
+            session = await storage.updateSession(session.id, {
+              detectedDrillIds,
+            });
+            console.log(`[Drill Detection] Found ${detectedDrillIds.length} drills in session ${session.id}`);
+          }
+        } catch (drillError) {
+          // Non-fatal: log error but still return session
+          console.error('[Drill Detection] Error detecting drills:', drillError);
+        }
+      }
+
       res.json(session);
     } catch (error: any) {
       console.error("Error creating session:", error);
@@ -520,7 +552,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/sessions/:id", requireAuth, async (req, res) => {
     try {
       const validatedData = insertSwimmingSessionSchema.partial().parse(req.body);
-      const session = await storage.updateSession(req.params.id, validatedData);
+      let session = await storage.updateSession(req.params.id, validatedData);
+
+      // Re-run drill detection if session content was updated
+      if (validatedData.sessionContent !== undefined && session.sessionContent && session.sessionContent.trim()) {
+        try {
+          // Get all active drills for detection
+          const allDrills = await storage.getDrills();
+          const drillReferences: DrillReference[] = allDrills.map(drill => ({
+            id: drill.id,
+            drillName: drill.drillName,
+            strokeType: drill.strokeType,
+            drillDescription: drill.drillDescription,
+          }));
+
+          // Detect drills in updated session content
+          const detectedDrillIds = await detectDrillsInSession(
+            session.sessionContent,
+            drillReferences
+          );
+
+          // Update session with detected drill IDs (may be empty array if no drills found)
+          session = await storage.updateSession(session.id, {
+            detectedDrillIds,
+          });
+          console.log(`[Drill Detection] Re-detected drills: found ${detectedDrillIds.length} drills in session ${session.id}`);
+        } catch (drillError) {
+          // Non-fatal: log error but still return session
+          console.error('[Drill Detection] Error re-detecting drills:', drillError);
+        }
+      }
+
       res.json(session);
     } catch (error: any) {
       console.error("Error updating session:", error);

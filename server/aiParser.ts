@@ -279,6 +279,98 @@ export interface ValidationResult {
   warnings: string[];
 }
 
+export interface DrillReference {
+  id: string;
+  drillName: string;
+  strokeType: string;
+  drillDescription: string | null;
+}
+
+export async function detectDrillsInSession(
+  sessionContent: string,
+  availableDrills: DrillReference[]
+): Promise<string[]> {
+  // If no session content or no drills available, return empty array
+  if (!sessionContent || !sessionContent.trim() || availableDrills.length === 0) {
+    return [];
+  }
+
+  // Build drill library description for AI
+  const drillsDescription = availableDrills.map(drill => {
+    const description = drill.drillDescription ? ` - ${drill.drillDescription}` : '';
+    return `- ID: ${drill.id}, Name: "${drill.drillName}", Stroke: ${drill.strokeType}${description}`;
+  }).join('\n');
+
+  const prompt = `You are a swimming coach assistant helping identify drills mentioned in training session content.
+
+AVAILABLE DRILLS IN LIBRARY:
+${drillsDescription}
+
+SESSION CONTENT:
+${sessionContent}
+
+TASK:
+Analyze the session content and identify which drills from the library are mentioned or referenced.
+Be intelligent about matching - consider:
+1. Exact name matches (case-insensitive)
+2. Partial name matches (e.g., "catch up" matches "Catch-up Drill")
+3. Variations in spelling/spacing (e.g., "catchup" vs "catch-up" vs "catch up")
+4. Context clues (if session mentions "freestyle catch up drill", match "Catch-up Drill" even if stroke differs)
+5. Common abbreviations or shortened names
+6. Don't match if the drill name is too generic and could refer to something else
+
+Return ONLY a JSON array of drill IDs that are referenced in the session content.
+If no drills are found, return an empty array: []
+
+Example valid responses:
+["drill-id-1", "drill-id-2"]
+[]
+["single-drill-id"]
+
+Return ONLY the JSON array. No explanation, no commentary.`;
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: 'gpt-5-mini',
+      messages: [{ role: 'user', content: prompt }],
+      response_format: { type: 'json_object' },
+    });
+
+    const content = response.choices[0].message.content;
+    if (!content) {
+      console.warn('Empty response from AI drill detection');
+      return [];
+    }
+
+    // Parse response - expect {drillIds: [...]} or direct array
+    const parsed = JSON.parse(content);
+    
+    // Handle both {drillIds: [...]} and direct array responses
+    let drillIds: string[] = [];
+    if (Array.isArray(parsed)) {
+      drillIds = parsed;
+    } else if (parsed.drillIds && Array.isArray(parsed.drillIds)) {
+      drillIds = parsed.drillIds;
+    } else if (parsed.drill_ids && Array.isArray(parsed.drill_ids)) {
+      drillIds = parsed.drill_ids;
+    }
+
+    // Validate all returned IDs exist in available drills
+    const validDrillIds = new Set(availableDrills.map(d => d.id));
+    const filteredIds = drillIds.filter(id => validDrillIds.has(id));
+
+    if (filteredIds.length < drillIds.length) {
+      console.warn(`AI returned ${drillIds.length - filteredIds.length} invalid drill IDs`);
+    }
+
+    return filteredIds;
+  } catch (error) {
+    console.error('AI drill detection error:', error);
+    // Gracefully fail - return empty array instead of throwing
+    return [];
+  }
+}
+
 export function validateDistances(distances: SessionDistances): ValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
