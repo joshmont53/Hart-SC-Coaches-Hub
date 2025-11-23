@@ -17,6 +17,10 @@ import crypto from 'crypto';
  * These are separate from the existing Replit OAuth routes
  */
 export function setupNewAuth(app: Express) {
+  // Trust proxy for secure cookies in production (Replit runs behind reverse proxy)
+  // This allows Express to recognize HTTPS connections via X-Forwarded-Proto header
+  app.set('trust proxy', 1);
+  
   // Initialize PostgreSQL session store
   const PgSession = connectPgSimple(session);
   
