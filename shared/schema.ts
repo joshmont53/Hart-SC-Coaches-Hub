@@ -390,8 +390,8 @@ export const competitions = pgTable("competitions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   competitionName: varchar("competition_name").notNull(),
   locationId: varchar("location_id").references(() => locations.id).notNull(),
-  startDate: date("start_date").notNull(),
-  endDate: date("end_date").notNull(),
+  startDate: date("start_date", { mode: "string" }).notNull(),
+  endDate: date("end_date", { mode: "string" }).notNull(),
   color: varchar("color").notNull().default("#3b82f6"), // For diagonal stripe pattern
   recordStatus: varchar("record_status").notNull().default("active"), // "active" | "inactive"
   createdAt: timestamp("created_at").defaultNow(),
@@ -418,7 +418,7 @@ export const competitionCoaching = pgTable("competition_coaching", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   competitionId: varchar("competition_id").references(() => competitions.id, { onDelete: 'cascade' }).notNull(),
   coachId: varchar("coach_id").references(() => coaches.id).notNull(),
-  coachingDate: date("coaching_date").notNull(), // For multi-day competitions
+  coachingDate: date("coaching_date", { mode: "string" }).notNull(), // For multi-day competitions
   startTime: time("start_time").notNull(),
   endTime: time("end_time").notNull(),
   duration: decimal("duration", { precision: 4, scale: 2 }).notNull(), // Hours (calculated)
