@@ -7,53 +7,25 @@ interface EmailOptions {
   html: string;
 }
 
-let connectionSettings: any;
-
 /**
- * Get Resend API credentials from Replit Connectors
+ * Get Resend client with credentials from environment variables
  */
-async function getCredentials() {
-  const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
-  const xReplitToken = process.env.REPL_IDENTITY 
-    ? 'repl ' + process.env.REPL_IDENTITY 
-    : process.env.WEB_REPL_RENEWAL 
-    ? 'depl ' + process.env.WEB_REPL_RENEWAL 
-    : null;
+function getResendClient() {
+  const apiKey = process.env.RESEND_API_KEY;
+  const fromEmail = process.env.RESEND_FROM_EMAIL;
 
-  if (!xReplitToken) {
-    throw new Error('X_REPLIT_TOKEN not found for repl/depl');
+  if (!apiKey) {
+    throw new Error('RESEND_API_KEY environment variable is not set. Please configure it in your secrets.');
   }
 
-  connectionSettings = await fetch(
-    'https://' + hostname + '/api/v2/connection?include_secrets=true&connector_names=resend',
-    {
-      headers: {
-        'Accept': 'application/json',
-        'X_REPLIT_TOKEN': xReplitToken
-      }
-    }
-  ).then(res => res.json()).then(data => data.items?.[0]);
-
-  if (!connectionSettings || (!connectionSettings.settings.api_key)) {
-    throw new Error('Resend not connected');
+  if (!fromEmail) {
+    throw new Error('RESEND_FROM_EMAIL environment variable is not set. Please configure it in your secrets.');
   }
-  
-  return {
-    apiKey: connectionSettings.settings.api_key, 
-    fromEmail: connectionSettings.settings.from_email
-  };
-}
 
-/**
- * Get Resend client with fresh credentials
- * WARNING: Never cache this client. Access tokens expire.
- */
-async function getResendClient() {
-  const { apiKey, fromEmail } = await getCredentials();
   return {
     client: new Resend(apiKey),
-    // Force use of Resend's test domain for development
-    fromEmail: process.env.NODE_ENV === 'development' ? 'onboarding@resend.dev' : (fromEmail || 'onboarding@resend.dev')
+    // Use test domain in development, configured email in production
+    fromEmail: process.env.NODE_ENV === 'development' ? 'onboarding@resend.dev' : fromEmail
   };
 }
 
@@ -63,7 +35,7 @@ async function getResendClient() {
  */
 export async function sendEmail(options: EmailOptions): Promise<void> {
   try {
-    const { client, fromEmail } = await getResendClient();
+    const { client, fromEmail } = getResendClient();
     
     const { data, error } = await client.emails.send({
       from: fromEmail,
