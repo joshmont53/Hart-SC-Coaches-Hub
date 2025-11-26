@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { motion } from 'framer-motion';
@@ -23,6 +23,8 @@ export default function LoginPage() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading } = useAuth();
   const [, setLocation] = useLocation();
+  const [showResendVerification, setShowResendVerification] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState('');
 
   // Redirect authenticated users to app
   useEffect(() => {
@@ -44,6 +46,7 @@ export default function LoginPage() {
       return await apiRequest('POST', '/api/auth/login', data);
     },
     onSuccess: () => {
+      setShowResendVerification(false);
       // Invalidate auth status to trigger re-fetch
       queryClient.invalidateQueries({ queryKey: ['/api/auth/status'] });
       
@@ -55,9 +58,38 @@ export default function LoginPage() {
       // Navigation handled by App.tsx based on auth status
     },
     onError: (error: any) => {
+      const errorMessage = error.message || 'Invalid email or password';
+      
+      // Check if error is about email verification
+      if (errorMessage.toLowerCase().includes('verify your email')) {
+        setShowResendVerification(true);
+        setPendingEmail(form.getValues('email'));
+      } else {
+        setShowResendVerification(false);
+      }
+      
       toast({
         title: 'Sign in failed',
-        description: error.message || 'Invalid email or password',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+    },
+  });
+  
+  const resendVerificationMutation = useMutation({
+    mutationFn: async (email: string) => {
+      return await apiRequest('POST', '/api/auth/resend-verification', { email });
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Verification email sent!',
+        description: 'Please check your inbox and click the verification link.',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Failed to send verification email',
+        description: error.message || 'Please try again later',
         variant: 'destructive',
       });
     },
@@ -139,6 +171,24 @@ export default function LoginPage() {
                 </Button>
               </form>
             </Form>
+
+            {showResendVerification && (
+              <div className="mt-4 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                <p className="text-sm text-amber-800 dark:text-amber-200 mb-3">
+                  Your email hasn't been verified yet. Check your inbox for the verification link, or request a new one.
+                </p>
+                <Button
+                  type="button"
+                  data-testid="button-resend-verification"
+                  variant="outline"
+                  className="w-full border-amber-400 text-amber-700 hover:bg-amber-100 dark:border-amber-600 dark:text-amber-300 dark:hover:bg-amber-900/40"
+                  disabled={resendVerificationMutation.isPending}
+                  onClick={() => resendVerificationMutation.mutate(pendingEmail)}
+                >
+                  {resendVerificationMutation.isPending ? 'Sending...' : 'Resend Verification Email'}
+                </Button>
+              </div>
+            )}
 
             <div className="mt-5 text-center">
               <button 

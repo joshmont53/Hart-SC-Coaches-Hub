@@ -110,6 +110,7 @@ export interface IStorage {
   createVerificationToken(token: InsertEmailVerificationToken): Promise<EmailVerificationToken>;
   getVerificationToken(token: string): Promise<EmailVerificationToken | undefined>;
   deleteVerificationToken(id: string): Promise<void>;
+  deleteVerificationTokensForUser(userId: string): Promise<void>;
   
   // Competition operations (NEW - No impact on existing functionality)
   getCompetitions(): Promise<Competition[]>;
@@ -523,6 +524,10 @@ export class DatabaseStorage implements IStorage {
 
   async deleteVerificationToken(id: string): Promise<void> {
     await db.delete(emailVerificationTokens).where(eq(emailVerificationTokens.id, id));
+  }
+  
+  async deleteVerificationTokensForUser(userId: string): Promise<void> {
+    await db.delete(emailVerificationTokens).where(eq(emailVerificationTokens.userId, userId));
   }
 
   // ============================================================================

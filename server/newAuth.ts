@@ -421,6 +421,54 @@ export function setupNewAuth(app: Express) {
     }
   });
   
+  // Resend verification email endpoint
+  app.post('/api/auth/resend-verification', async (req, res) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ message: 'Email is required' });
+      }
+      
+      // Find user by email
+      const user = await storage.getUserByEmail(email.toLowerCase());
+      
+      if (!user) {
+        // Don't reveal if email exists or not for security
+        return res.json({ message: 'If an account exists with this email, a verification link has been sent.' });
+      }
+      
+      // Check if already verified
+      if (user.isEmailVerified && user.accountStatus === 'active') {
+        return res.status(400).json({ message: 'Email is already verified. Please try logging in.' });
+      }
+      
+      // Delete any existing verification tokens for this user
+      await storage.deleteVerificationTokensForUser(user.id);
+      
+      // Generate new verification token
+      const verificationToken = generateSecureToken();
+      await db.insert(emailVerificationTokens).values({
+        userId: user.id,
+        token: verificationToken,
+        expiresAt: getVerificationExpiry(),
+      });
+      
+      // Send verification email
+      try {
+        await sendVerificationEmail(user.email!, verificationToken, user.firstName || 'Coach');
+        res.json({ message: 'Verification email sent. Please check your inbox.' });
+      } catch (emailError: any) {
+        console.error('Failed to send verification email:', emailError);
+        res.status(500).json({ message: 'Failed to send verification email. Please try again later.' });
+      }
+      
+    } catch (error: any) {
+      console.error('Resend verification error:', error);
+      res.status(500).json({ message: error.message || 'Failed to resend verification email' });
+    }
+  });
+  
   // Logout endpoint
   app.post('/api/auth/logout', async (req, res) => {
     try {
