@@ -67,10 +67,18 @@ export async function sendInvitationEmail(
   inviteToken: string,
   coachName: string
 ): Promise<void> {
-  // Use Replit dev domain in development, or APP_URL in production
-  const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-    ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
-    : (process.env.APP_URL || 'http://localhost:5000');
+  // Use APP_URL in production, REPLIT_DEV_DOMAIN in development
+  let baseUrl: string;
+  if (process.env.NODE_ENV === 'development') {
+    baseUrl = process.env.REPLIT_DEV_DOMAIN 
+      ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
+      : 'http://localhost:5000';
+  } else {
+    baseUrl = process.env.APP_URL || '';
+    if (!baseUrl) {
+      throw new Error('APP_URL environment variable is required in production for email links');
+    }
+  }
   const registrationUrl = `${baseUrl}/register?token=${inviteToken}`;
   
   await sendEmail({
@@ -151,7 +159,19 @@ export async function sendVerificationEmail(
   verificationToken: string,
   firstName: string
 ): Promise<void> {
-  const verificationUrl = `${process.env.APP_URL || 'http://localhost:5000'}/verify-email?token=${verificationToken}`;
+  // Use APP_URL in production, REPLIT_DEV_DOMAIN in development
+  let baseUrl: string;
+  if (process.env.NODE_ENV === 'development') {
+    baseUrl = process.env.REPLIT_DEV_DOMAIN 
+      ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
+      : 'http://localhost:5000';
+  } else {
+    baseUrl = process.env.APP_URL || '';
+    if (!baseUrl) {
+      throw new Error('APP_URL environment variable is required in production for email links');
+    }
+  }
+  const verificationUrl = `${baseUrl}/verify-email?token=${verificationToken}`;
   
   await sendEmail({
     to: email,
