@@ -268,9 +268,9 @@ export function SessionLibrary({ onBack }: SessionLibraryProps) {
   }
 
   return (
-    <div className="h-full flex flex-col p-6">
+    <div className="h-full flex flex-col p-6 overflow-hidden">
       {/* Header */}
-      <div className="mb-6">
+      <div className="flex-shrink-0 mb-6">
         <div className="flex items-center gap-3 mb-6">
           <Button
             variant="ghost"
@@ -322,7 +322,7 @@ export function SessionLibrary({ onBack }: SessionLibraryProps) {
       </div>
 
       {/* Templates Grid */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto overflow-x-hidden scroll-container">
         {filteredTemplates.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 text-center">
             <FileText className="h-12 w-12 text-muted-foreground mb-4" />

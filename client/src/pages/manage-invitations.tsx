@@ -199,8 +199,8 @@ export function ManageInvitations({ onBack }: ManageInvitationsProps) {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-background" data-testid="view-manage-invitations">
-      <div className="sticky top-0 z-10 bg-background">
+    <div className="flex flex-col h-full bg-background overflow-hidden" data-testid="view-manage-invitations">
+      <div className="flex-shrink-0 sticky top-0 z-10 bg-background">
         <div className="max-w-3xl mx-auto px-4 py-4">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
@@ -225,7 +225,7 @@ export function ManageInvitations({ onBack }: ManageInvitationsProps) {
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto overflow-x-hidden scroll-container">
         <div className="max-w-3xl mx-auto px-4 py-6">
           {isLoadingInvitations ? (
             <Card className="p-8 text-center">

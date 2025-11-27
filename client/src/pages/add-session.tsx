@@ -81,9 +81,9 @@ export function AddSession({ squads, locations, coaches, onSave, onCancel }: Add
   };
 
   return (
-    <div className="h-screen flex flex-col bg-background" data-testid="view-add-session">
+    <div className="h-full flex flex-col bg-background overflow-hidden" data-testid="view-add-session">
       {/* Header */}
-      <div className="border-b p-4 flex items-center justify-between" style={{ borderBottomColor: '#4B9A4A' }}>
+      <div className="flex-shrink-0 border-b p-4 flex items-center justify-between" style={{ borderBottomColor: '#4B9A4A' }}>
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={onCancel} data-testid="button-back">
             <ArrowLeft className="h-5 w-5" />
@@ -98,7 +98,7 @@ export function AddSession({ squads, locations, coaches, onSave, onCancel }: Add
       </div>
 
       {/* Form Content */}
-      <div className="flex-1 overflow-auto p-4 md:p-6">
+      <div className="flex-1 overflow-auto overflow-x-hidden scroll-container p-4 md:p-6">
         <div className="max-w-3xl mx-auto space-y-6">
           <div>
             <h2 className="text-xl font-semibold mb-2">Session Details</h2>

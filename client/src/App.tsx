@@ -428,8 +428,8 @@ function CalendarApp() {
   );
 
   return (
-    <div className="h-screen flex overflow-hidden bg-background">
-      <aside className="hidden lg:block w-64 border-r bg-card">
+    <div className="h-full flex overflow-hidden bg-background">
+      <aside className="hidden lg:block w-64 border-r bg-card overflow-hidden">
         <SidebarContent />
       </aside>
 
@@ -508,7 +508,7 @@ function CalendarApp() {
         </header>
 
         <main className={cn(
-          "flex-1 overflow-auto",
+          "flex-1 overflow-auto scroll-container",
           selectedSessionId ? "p-0" : "p-4 md:p-6"
         )}>
           {selectedSessionId ? (

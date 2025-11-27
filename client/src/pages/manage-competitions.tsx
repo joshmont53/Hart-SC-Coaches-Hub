@@ -382,9 +382,9 @@ export function ManageCompetitions({ onBack }: ManageCompetitionsProps) {
   }, {} as Record<string, CompetitionCoaching[]>);
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full overflow-hidden">
       {/* Header - Fixed/Sticky */}
-      <div className="sticky top-0 z-10 bg-background border-b pb-4 mb-6 space-y-4">
+      <div className="flex-shrink-0 sticky top-0 z-10 bg-background border-b pb-4 mb-6 space-y-4">
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
@@ -410,7 +410,7 @@ export function ManageCompetitions({ onBack }: ManageCompetitionsProps) {
       </div>
 
       {/* Competitions List */}
-      <div className="space-y-4">
+      <div className="flex-1 overflow-auto overflow-x-hidden scroll-container space-y-4">
         {isLoadingCompetitions ? (
           <Card>
             <CardContent className="p-6">

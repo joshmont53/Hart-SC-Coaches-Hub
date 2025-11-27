@@ -101,7 +101,7 @@ export default function LoginPage() {
 
   return (
     <div 
-      className="h-screen w-full flex items-center justify-center overflow-hidden bg-gradient-to-br from-[#4B9A4A] to-[#3d7d3d]"
+      className="h-full min-h-screen w-full flex items-center justify-center overflow-y-auto scroll-container bg-gradient-to-br from-[#4B9A4A] to-[#3d7d3d] py-8"
     >
       <div className="max-w-md w-full px-6">
         <motion.div

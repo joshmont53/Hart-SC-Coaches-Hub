@@ -171,7 +171,7 @@ export function DayCalendarView({
           No sessions or competitions scheduled for this day
         </div>
       ) : (daySessions.length > 0 || dayCompetitions.length > 0) && (
-        <div className="flex-1 overflow-auto">
+        <div className="flex-1 overflow-auto overflow-x-hidden scroll-container">
           <div className="flex gap-4">
             <div className="w-16 flex-shrink-0">
               {timeSlots.map((time) => (

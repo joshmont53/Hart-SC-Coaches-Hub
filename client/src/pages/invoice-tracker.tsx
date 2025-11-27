@@ -317,7 +317,7 @@ export function InvoiceTracker({ onBack }: InvoiceTrackerProps) {
   }
 
   return (
-    <div className="h-full flex flex-col print:p-8">
+    <div className="h-full flex flex-col print:p-8 overflow-hidden">
       {/* Header - Hidden when printing */}
       <div className="print:hidden border-b bg-card p-4 space-y-4 flex-shrink-0">
         <div className="flex items-center gap-3">
@@ -531,7 +531,7 @@ export function InvoiceTracker({ onBack }: InvoiceTrackerProps) {
 
       {/* Summary Cards - Mobile View */}
       {invoiceData && (
-        <div className="p-4 space-y-3 print:hidden overflow-y-auto flex-1 pb-6">
+        <div className="p-4 space-y-3 print:hidden overflow-y-auto overflow-x-hidden flex-1 pb-6 scroll-container">
           {/* Coaching Hours Card - Expandable */}
           <Collapsible open={coachingExpanded} onOpenChange={setCoachingExpanded}>
             <Card className="overflow-hidden">

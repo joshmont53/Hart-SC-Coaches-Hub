@@ -272,9 +272,9 @@ export function DrillsLibrary({ onBack }: DrillsLibraryProps) {
   };
 
   return (
-    <div className="h-full flex flex-col p-6">
+    <div className="h-full flex flex-col p-6 overflow-hidden">
       {/* Header */}
-      <div className="mb-6">
+      <div className="flex-shrink-0 mb-6">
         <div className="flex items-center gap-4 mb-4">
           <Button 
             variant="ghost" 
@@ -326,7 +326,7 @@ export function DrillsLibrary({ onBack }: DrillsLibraryProps) {
       </div>
 
       {/* Drills Grid */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto overflow-x-hidden scroll-container">
         {drillsLoading ? (
           <div className="flex items-center justify-center h-64">
             <p className="text-muted-foreground">Loading drills...</p>

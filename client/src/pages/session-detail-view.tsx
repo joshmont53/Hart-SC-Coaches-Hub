@@ -496,7 +496,7 @@ export function SessionDetail({
   };
 
   return (
-    <div className="flex flex-col h-full max-w-7xl mx-auto" data-testid="view-session-detail">
+    <div className="flex flex-col h-full max-w-7xl mx-auto overflow-hidden" data-testid="view-session-detail">
       <div className="flex-shrink-0">
         <div className="mb-4 md:mb-6">
           <div className="flex items-start justify-between gap-4">
@@ -569,7 +569,7 @@ export function SessionDetail({
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto mt-4 md:mt-6">
+      <div className="flex-1 overflow-auto overflow-x-hidden scroll-container mt-4 md:mt-6">
         {activeTab === 'detail' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between mb-4">

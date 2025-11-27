@@ -269,8 +269,8 @@ export function ManageSwimmers({ swimmers, squads, onBack }: ManageSwimmersProps
   }, [swimmers, searchQuery, filterSquadId]);
 
   return (
-    <div className="flex flex-col h-screen bg-background" data-testid="view-manage-swimmers">
-      <div className="sticky top-0 z-10 bg-background">
+    <div className="flex flex-col h-full bg-background overflow-hidden" data-testid="view-manage-swimmers">
+      <div className="flex-shrink-0 sticky top-0 z-10 bg-background">
         <div className="max-w-2xl mx-auto px-4 py-4">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
@@ -325,7 +325,7 @@ export function ManageSwimmers({ swimmers, squads, onBack }: ManageSwimmersProps
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto overflow-x-hidden scroll-container">
         <div className="max-w-2xl mx-auto px-4 py-6">
           {/* Select all control - only show if there are swimmers to select */}
           {filteredSwimmers.length > 0 && (
