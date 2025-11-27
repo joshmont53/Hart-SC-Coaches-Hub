@@ -801,7 +801,7 @@ export function SessionDetail({
               {session.distanceBreakdown && !isEditingSession && (
                 <div
                   className={cn(
-                    "fixed md:absolute top-0 md:top-0 right-0 h-full md:h-auto border rounded-lg bg-card overflow-y-auto transition-all duration-300 ease-in-out z-50 scroll-container",
+                    "fixed inset-y-0 right-0 md:absolute md:top-0 md:bottom-auto md:h-auto border rounded-lg bg-card overflow-y-auto transition-all duration-300 ease-in-out z-50 scroll-container",
                     sidebarOpen ? "w-[280px] md:w-80 p-4 md:p-6" : "w-0 p-0 overflow-hidden"
                   )}
                 >
