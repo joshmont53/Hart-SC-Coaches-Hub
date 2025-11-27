@@ -722,17 +722,6 @@ export function SessionDetail({
                 />
               ) : (
                 <>
-                  {/* Backdrop overlay for mobile */}
-                  {(sidebarOpen || drillsSidebarOpen) && (
-                    <div 
-                      className="fixed inset-0 bg-black/50 z-40 md:hidden"
-                      onClick={() => {
-                        setSidebarOpen(false);
-                        setDrillsSidebarOpen(false);
-                      }}
-                    />
-                  )}
-
                   <div className="relative border rounded-lg p-4 md:p-6 bg-card min-h-[400px]">
                     {sessionContent ? (
                       <div 
@@ -795,189 +784,6 @@ export function SessionDetail({
                     )}
                   </div>
                 </>
-              )}
-
-              {/* Distance breakdown sidebar */}
-              {session.distanceBreakdown && !isEditingSession && (
-                <div
-                  className={cn(
-                    "fixed inset-y-0 right-0 md:absolute md:top-0 md:bottom-auto md:h-auto border rounded-lg bg-card overflow-y-auto transition-all duration-300 ease-in-out z-50 scroll-container",
-                    sidebarOpen ? "w-[280px] md:w-80 p-4 md:p-6" : "w-0 p-0 overflow-hidden"
-                  )}
-                >
-                  {sidebarOpen && (
-                    <div className="space-y-4">
-                      <div>
-                        <h3>Distance Breakdown</h3>
-                        <p className="text-sm text-muted-foreground">Stroke-by-stroke analysis</p>
-                      </div>
-
-                      <div className="space-y-3">
-                        {session.distanceBreakdown.frontCrawl > 0 && session.distanceBreakdown.frontCrawlBreakdown && (
-                          <div className="border rounded-lg p-3">
-                            <div className="flex items-center justify-between mb-2 gap-2">
-                              <span className="whitespace-nowrap">Front Crawl</span>
-                              <span className="text-primary whitespace-nowrap">{session.distanceBreakdown.frontCrawl}m</span>
-                            </div>
-                            <div className="pl-3 space-y-1 text-sm text-muted-foreground">
-                              <div className="flex justify-between">
-                                <span>Swim</span>
-                                <span>{session.distanceBreakdown.frontCrawlBreakdown.swim}m</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Drill</span>
-                                <span>{session.distanceBreakdown.frontCrawlBreakdown.drill}m</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Kick</span>
-                                <span>{session.distanceBreakdown.frontCrawlBreakdown.kick}m</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Pull</span>
-                                <span>{session.distanceBreakdown.frontCrawlBreakdown.pull}m</span>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {session.distanceBreakdown.backstroke > 0 && session.distanceBreakdown.backstrokeBreakdown && (
-                          <div className="border rounded-lg p-3">
-                            <div className="flex items-center justify-between mb-2 gap-2">
-                              <span className="whitespace-nowrap">Backstroke</span>
-                              <span className="text-primary whitespace-nowrap">{session.distanceBreakdown.backstroke}m</span>
-                            </div>
-                            <div className="pl-3 space-y-1 text-sm text-muted-foreground">
-                              <div className="flex justify-between">
-                                <span>Swim</span>
-                                <span>{session.distanceBreakdown.backstrokeBreakdown.swim}m</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Drill</span>
-                                <span>{session.distanceBreakdown.backstrokeBreakdown.drill}m</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Kick</span>
-                                <span>{session.distanceBreakdown.backstrokeBreakdown.kick}m</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Pull</span>
-                                <span>{session.distanceBreakdown.backstrokeBreakdown.pull}m</span>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {session.distanceBreakdown.breaststroke > 0 && session.distanceBreakdown.breaststrokeBreakdown && (
-                          <div className="border rounded-lg p-3">
-                            <div className="flex items-center justify-between mb-2 gap-2">
-                              <span className="whitespace-nowrap">Breaststroke</span>
-                              <span className="text-primary whitespace-nowrap">{session.distanceBreakdown.breaststroke}m</span>
-                            </div>
-                            <div className="pl-3 space-y-1 text-sm text-muted-foreground">
-                              <div className="flex justify-between">
-                                <span>Swim</span>
-                                <span>{session.distanceBreakdown.breaststrokeBreakdown.swim}m</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Drill</span>
-                                <span>{session.distanceBreakdown.breaststrokeBreakdown.drill}m</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Kick</span>
-                                <span>{session.distanceBreakdown.breaststrokeBreakdown.kick}m</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Pull</span>
-                                <span>{session.distanceBreakdown.breaststrokeBreakdown.pull}m</span>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {session.distanceBreakdown.butterfly > 0 && session.distanceBreakdown.butterflyBreakdown && (
-                          <div className="border rounded-lg p-3">
-                            <div className="flex items-center justify-between mb-2 gap-2">
-                              <span className="whitespace-nowrap">Butterfly</span>
-                              <span className="text-primary whitespace-nowrap">{session.distanceBreakdown.butterfly}m</span>
-                            </div>
-                            <div className="pl-3 space-y-1 text-sm text-muted-foreground">
-                              <div className="flex justify-between">
-                                <span>Swim</span>
-                                <span>{session.distanceBreakdown.butterflyBreakdown.swim}m</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Drill</span>
-                                <span>{session.distanceBreakdown.butterflyBreakdown.drill}m</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Kick</span>
-                                <span>{session.distanceBreakdown.butterflyBreakdown.kick}m</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Pull</span>
-                                <span>{session.distanceBreakdown.butterflyBreakdown.pull}m</span>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {session.distanceBreakdown.individualMedley > 0 && session.distanceBreakdown.individualMedleyBreakdown && (
-                          <div className="border rounded-lg p-3">
-                            <div className="flex items-center justify-between mb-2 gap-2">
-                              <span className="whitespace-nowrap">Individual Medley</span>
-                              <span className="text-primary whitespace-nowrap">{session.distanceBreakdown.individualMedley}m</span>
-                            </div>
-                            <div className="pl-3 space-y-1 text-sm text-muted-foreground">
-                              <div className="flex justify-between">
-                                <span>Swim</span>
-                                <span>{session.distanceBreakdown.individualMedleyBreakdown.swim}m</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Drill</span>
-                                <span>{session.distanceBreakdown.individualMedleyBreakdown.drill}m</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Kick</span>
-                                <span>{session.distanceBreakdown.individualMedleyBreakdown.kick}m</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Pull</span>
-                                <span>{session.distanceBreakdown.individualMedleyBreakdown.pull}m</span>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {session.distanceBreakdown.no1 > 0 && session.distanceBreakdown.no1Breakdown && (
-                          <div className="border rounded-lg p-3">
-                            <div className="flex items-center justify-between mb-2 gap-2">
-                              <span className="whitespace-nowrap">No 1</span>
-                              <span className="text-primary whitespace-nowrap">{session.distanceBreakdown.no1}m</span>
-                            </div>
-                            <div className="pl-3 space-y-1 text-sm text-muted-foreground">
-                              <div className="flex justify-between">
-                                <span>Swim</span>
-                                <span>{session.distanceBreakdown.no1Breakdown.swim}m</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Drill</span>
-                                <span>{session.distanceBreakdown.no1Breakdown.drill}m</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Kick</span>
-                                <span>{session.distanceBreakdown.no1Breakdown.kick}m</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Pull</span>
-                                <span>{session.distanceBreakdown.no1Breakdown.pull}m</span>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
               )}
             </div>
           </div>
@@ -1064,6 +870,197 @@ export function SessionDetail({
           </div>
         )}
       </div>
+
+      {/* Mobile backdrop overlay - rendered outside scroll container for iOS Safari compatibility */}
+      {activeTab === 'session' && sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Distance breakdown sidebar - rendered outside scroll container for iOS Safari compatibility */}
+      {activeTab === 'session' && session.distanceBreakdown && !isEditingSession && (
+        <div
+          className={cn(
+            "fixed inset-y-0 right-0 md:inset-y-auto md:top-[180px] md:bottom-4 md:right-4 border-l md:border md:rounded-lg bg-card overflow-y-auto transition-all duration-300 ease-in-out z-50",
+            sidebarOpen ? "w-[280px] md:w-80 p-4 md:p-6" : "w-0 p-0 overflow-hidden"
+          )}
+        >
+          {sidebarOpen && (
+            <div className="space-y-4">
+              <div>
+                <h3>Distance Breakdown</h3>
+                <p className="text-sm text-muted-foreground">Stroke-by-stroke analysis</p>
+              </div>
+
+              <div className="space-y-3">
+                {session.distanceBreakdown.frontCrawl > 0 && session.distanceBreakdown.frontCrawlBreakdown && (
+                  <div className="border rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-2 gap-2">
+                      <span className="whitespace-nowrap">Front Crawl</span>
+                      <span className="text-primary whitespace-nowrap">{session.distanceBreakdown.frontCrawl}m</span>
+                    </div>
+                    <div className="pl-3 space-y-1 text-sm text-muted-foreground">
+                      <div className="flex justify-between">
+                        <span>Swim</span>
+                        <span>{session.distanceBreakdown.frontCrawlBreakdown.swim}m</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Drill</span>
+                        <span>{session.distanceBreakdown.frontCrawlBreakdown.drill}m</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Kick</span>
+                        <span>{session.distanceBreakdown.frontCrawlBreakdown.kick}m</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Pull</span>
+                        <span>{session.distanceBreakdown.frontCrawlBreakdown.pull}m</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {session.distanceBreakdown.backstroke > 0 && session.distanceBreakdown.backstrokeBreakdown && (
+                  <div className="border rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-2 gap-2">
+                      <span className="whitespace-nowrap">Backstroke</span>
+                      <span className="text-primary whitespace-nowrap">{session.distanceBreakdown.backstroke}m</span>
+                    </div>
+                    <div className="pl-3 space-y-1 text-sm text-muted-foreground">
+                      <div className="flex justify-between">
+                        <span>Swim</span>
+                        <span>{session.distanceBreakdown.backstrokeBreakdown.swim}m</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Drill</span>
+                        <span>{session.distanceBreakdown.backstrokeBreakdown.drill}m</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Kick</span>
+                        <span>{session.distanceBreakdown.backstrokeBreakdown.kick}m</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Pull</span>
+                        <span>{session.distanceBreakdown.backstrokeBreakdown.pull}m</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {session.distanceBreakdown.breaststroke > 0 && session.distanceBreakdown.breaststrokeBreakdown && (
+                  <div className="border rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-2 gap-2">
+                      <span className="whitespace-nowrap">Breaststroke</span>
+                      <span className="text-primary whitespace-nowrap">{session.distanceBreakdown.breaststroke}m</span>
+                    </div>
+                    <div className="pl-3 space-y-1 text-sm text-muted-foreground">
+                      <div className="flex justify-between">
+                        <span>Swim</span>
+                        <span>{session.distanceBreakdown.breaststrokeBreakdown.swim}m</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Drill</span>
+                        <span>{session.distanceBreakdown.breaststrokeBreakdown.drill}m</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Kick</span>
+                        <span>{session.distanceBreakdown.breaststrokeBreakdown.kick}m</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Pull</span>
+                        <span>{session.distanceBreakdown.breaststrokeBreakdown.pull}m</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {session.distanceBreakdown.butterfly > 0 && session.distanceBreakdown.butterflyBreakdown && (
+                  <div className="border rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-2 gap-2">
+                      <span className="whitespace-nowrap">Butterfly</span>
+                      <span className="text-primary whitespace-nowrap">{session.distanceBreakdown.butterfly}m</span>
+                    </div>
+                    <div className="pl-3 space-y-1 text-sm text-muted-foreground">
+                      <div className="flex justify-between">
+                        <span>Swim</span>
+                        <span>{session.distanceBreakdown.butterflyBreakdown.swim}m</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Drill</span>
+                        <span>{session.distanceBreakdown.butterflyBreakdown.drill}m</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Kick</span>
+                        <span>{session.distanceBreakdown.butterflyBreakdown.kick}m</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Pull</span>
+                        <span>{session.distanceBreakdown.butterflyBreakdown.pull}m</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {session.distanceBreakdown.individualMedley > 0 && session.distanceBreakdown.individualMedleyBreakdown && (
+                  <div className="border rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-2 gap-2">
+                      <span className="whitespace-nowrap">Individual Medley</span>
+                      <span className="text-primary whitespace-nowrap">{session.distanceBreakdown.individualMedley}m</span>
+                    </div>
+                    <div className="pl-3 space-y-1 text-sm text-muted-foreground">
+                      <div className="flex justify-between">
+                        <span>Swim</span>
+                        <span>{session.distanceBreakdown.individualMedleyBreakdown.swim}m</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Drill</span>
+                        <span>{session.distanceBreakdown.individualMedleyBreakdown.drill}m</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Kick</span>
+                        <span>{session.distanceBreakdown.individualMedleyBreakdown.kick}m</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Pull</span>
+                        <span>{session.distanceBreakdown.individualMedleyBreakdown.pull}m</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {session.distanceBreakdown.no1 > 0 && session.distanceBreakdown.no1Breakdown && (
+                  <div className="border rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-2 gap-2">
+                      <span className="whitespace-nowrap">No 1</span>
+                      <span className="text-primary whitespace-nowrap">{session.distanceBreakdown.no1}m</span>
+                    </div>
+                    <div className="pl-3 space-y-1 text-sm text-muted-foreground">
+                      <div className="flex justify-between">
+                        <span>Swim</span>
+                        <span>{session.distanceBreakdown.no1Breakdown.swim}m</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Drill</span>
+                        <span>{session.distanceBreakdown.no1Breakdown.drill}m</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Kick</span>
+                        <span>{session.distanceBreakdown.no1Breakdown.kick}m</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Pull</span>
+                        <span>{session.distanceBreakdown.no1Breakdown.pull}m</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="max-w-2xl">
