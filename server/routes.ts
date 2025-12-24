@@ -2520,10 +2520,6 @@ CRITICAL RULES:
 4. Keep each recommendation 25-45 words
 5. Return ONLY valid JSON, no markdown or explanation`;
 
-      console.log("[SessionHelper] Calling OpenAI with model gpt-4o-mini...");
-      console.log("[SessionHelper] API Key exists:", !!process.env.AI_INTEGRATIONS_OPENAI_API_KEY);
-      console.log("[SessionHelper] Base URL:", process.env.AI_INTEGRATIONS_OPENAI_BASE_URL);
-      
       const response = await openai.chat.completions.create({
         model: 'gpt-4o-mini',
         messages: [
@@ -2533,17 +2529,13 @@ CRITICAL RULES:
         max_tokens: 2048,
       });
 
-      console.log("[SessionHelper] OpenAI response received, choices:", response.choices?.length);
-
       let insights: { whatsWorking: string[]; areasToAddress: string[]; focusTips: string[] };
       
       try {
         const content = response.choices[0]?.message?.content || '{}';
-        console.log("[SessionHelper] AI raw response:", content.substring(0, 300));
         // Clean up potential markdown formatting
         const cleanedContent = content.replace(/```json\n?|\n?```/g, '').trim();
         insights = JSON.parse(cleanedContent);
-        console.log("[SessionHelper] Parsed insights:", insights.whatsWorking?.length, "working,", insights.areasToAddress?.length, "areas");
       } catch (parseError) {
         console.error("[SessionHelper] Failed to parse AI response:", parseError);
         // Fallback to empty arrays
@@ -2574,7 +2566,6 @@ CRITICAL RULES:
       });
     } catch (error: any) {
       console.error("[SessionHelper] Error generating insights:", error.message);
-      console.error("[SessionHelper] Full error:", JSON.stringify(error, null, 2));
       res.status(500).json({ 
         message: error.message || "Failed to generate insights",
         whatsWorking: [],
