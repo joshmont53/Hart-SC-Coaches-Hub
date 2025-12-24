@@ -2148,7 +2148,7 @@ Generate insights in exactly 3 sections with 1-2 bullet points each:
 
 CRITICAL RULES:
 1. Frame each insight as a TREND or CORRELATION, not a data dump (e.g., "Sessions heavy on drill work tend to score lower on enjoyment" not "Drill: 5.3 enjoyment")
-2. Always compare against the baseline average of ${payload.overview.overallAverage}/10
+2. Compare metrics against each other or describe them as "above/below average" - do NOT repeatedly mention the specific baseline number
 3. Include 1-2 specific numbers per insight to support your claim
 4. Each bullet should be 30-50 words - enough depth to be useful
 5. If a pattern seems significant but data is limited (<10 sessions), note it as an "emerging trend"
