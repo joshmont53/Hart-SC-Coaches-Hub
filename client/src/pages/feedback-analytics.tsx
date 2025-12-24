@@ -794,31 +794,63 @@ export function FeedbackAnalytics({ onBack }: FeedbackAnalyticsProps) {
                   <div className="w-full">
                     <h3 className="text-xs font-medium mb-2">Distribution Analysis</h3>
                     <Card className="p-3 w-full">
-                      <div className="h-[160px] flex items-end gap-1 w-full">
-                        {drillData.chartData.map((item, index) => {
-                          const maxHeight = 120;
-                          const barHeight = (item.rating / 10) * maxHeight;
-                          
-                          return (
-                            <div key={index} className="flex-1 min-w-0 flex flex-col items-center gap-0.5">
-                              <div className="w-full flex flex-col items-center justify-end" style={{ height: maxHeight }}>
-                                <span className={cn("text-[10px] font-medium mb-0.5", getRatingColor(item.rating))}>
-                                  {item.rating.toFixed(1)}
-                                </span>
-                                <div 
-                                  className="w-full max-w-[40px] mx-auto rounded-t transition-all"
-                                  style={{ 
-                                    height: barHeight,
-                                    backgroundColor: getBarColor(item.rating)
-                                  }}
-                                />
-                              </div>
-                              <span className="text-[8px] text-muted-foreground text-center leading-tight w-full break-words hyphens-auto">
-                                {item.name.split(' ')[0]}
-                              </span>
-                            </div>
-                          );
-                        })}
+                      <div className="flex w-full">
+                        {/* Y-Axis */}
+                        <div className="flex flex-col justify-between h-[120px] pr-2 text-[9px] text-muted-foreground">
+                          <span>10</span>
+                          <span>8</span>
+                          <span>6</span>
+                          <span>4</span>
+                          <span>2</span>
+                          <span>0</span>
+                        </div>
+                        {/* Chart area with gridlines */}
+                        <div className="flex-1 relative">
+                          {/* Gridlines */}
+                          <div className="absolute inset-0 flex flex-col justify-between pointer-events-none" style={{ height: 120 }}>
+                            {[0, 1, 2, 3, 4, 5].map(i => (
+                              <div key={i} className="border-t border-dashed border-muted-foreground/20 w-full" />
+                            ))}
+                          </div>
+                          {/* Bars */}
+                          <div className="h-[120px] flex items-end gap-1 w-full relative">
+                            {drillData.chartData.map((item: { name: string; rating: number }, index: number) => {
+                              const maxHeight = 120;
+                              const barHeight = (item.rating / 10) * maxHeight;
+                              const shortLabel = item.name.split(' ')[0].substring(0, 6);
+                              
+                              return (
+                                <div key={index} className="flex-1 min-w-0 flex flex-col items-center">
+                                  <div className="w-full flex flex-col items-center justify-end" style={{ height: maxHeight }}>
+                                    <span className={cn("text-[9px] font-medium mb-0.5", getRatingColor(item.rating))}>
+                                      {item.rating.toFixed(1)}
+                                    </span>
+                                    <div 
+                                      className="w-full max-w-[32px] mx-auto rounded-t transition-all"
+                                      style={{ 
+                                        height: barHeight,
+                                        backgroundColor: getBarColor(item.rating)
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          {/* X-Axis Labels - Fixed height, no wrapping */}
+                          <div className="flex gap-1 mt-1">
+                            {drillData.chartData.map((item: { name: string; rating: number }, index: number) => {
+                              const shortLabel = item.name.split(' ')[0].substring(0, 7);
+                              return (
+                                <div key={index} className="flex-1 min-w-0 text-center">
+                                  <span className="text-[8px] text-muted-foreground truncate block">
+                                    {shortLabel}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
                       </div>
                     </Card>
                   </div>
