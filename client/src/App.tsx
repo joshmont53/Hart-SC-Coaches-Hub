@@ -25,6 +25,7 @@ import { InvoiceTracker } from '@/pages/invoice-tracker';
 import { ManageCoachingRates } from '@/pages/manage-coaching-rates';
 import { SessionLibrary } from '@/pages/session-library';
 import { DrillsLibrary } from '@/pages/drills-library';
+import { FeedbackAnalytics } from '@/pages/feedback-analytics';
 import { CompetitionDetailModal } from '@/components/CompetitionDetailModal';
 import { Button } from './components/ui/button';
 import { Switch as ToggleSwitch } from './components/ui/switch';
@@ -44,6 +45,7 @@ import {
   FileText,
   PoundSterling,
   Target,
+  BarChart3,
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from './components/ui/sheet';
 import { cn } from './lib/utils';
@@ -68,7 +70,7 @@ import type {
 
 type View = 'month' | 'day';
 type MobileView = 'calendar' | 'list';
-type ManagementView = 'calendar' | 'coaches' | 'squads' | 'swimmers' | 'locations' | 'invitations' | 'competitions' | 'addSession' | 'invoices' | 'coachingRates' | 'sessionLibrary' | 'drillsLibrary';
+type ManagementView = 'calendar' | 'coaches' | 'squads' | 'swimmers' | 'locations' | 'invitations' | 'competitions' | 'addSession' | 'invoices' | 'coachingRates' | 'sessionLibrary' | 'drillsLibrary' | 'feedbackAnalytics';
 
 // Landing page with loading screen logic - ONLY for "/" route
 function LandingPage() {
@@ -333,6 +335,15 @@ function CalendarApp() {
             <FileText className="h-4 w-4 mr-2" />
             Invoice Tracker
           </Button>
+          <Button
+            variant="ghost"
+            className="w-full justify-start"
+            onClick={() => handleManagementClick('feedbackAnalytics')}
+            data-testid="button-feedback-analytics"
+          >
+            <BarChart3 className="h-4 w-4 mr-2" />
+            Feedback Analytics
+          </Button>
 
           {/* Separator */}
           <div className="h-px bg-border my-2" />
@@ -549,6 +560,8 @@ function CalendarApp() {
             <SessionLibrary onBack={handleBackToCalendar} />
           ) : managementView === 'drillsLibrary' ? (
             <DrillsLibrary onBack={handleBackToCalendar} />
+          ) : managementView === 'feedbackAnalytics' ? (
+            <FeedbackAnalytics onBack={handleBackToCalendar} />
           ) : view === 'month' ? (
             <>
               <div className={mobileView === 'calendar' ? 'block' : 'hidden lg:block'}>

@@ -1474,6 +1474,290 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============================================================================
+  // Feedback Analytics API (Phase 2 - Analytics Dashboard)
+  // ============================================================================
+
+  // Get analytics data with filters
+  app.get("/api/feedback/analytics", requireAuth, async (req, res) => {
+    try {
+      const { squadId, coachId, startDate, endDate } = req.query;
+
+      // Fetch all feedback
+      const allFeedback = await storage.getAllFeedback();
+      
+      // Fetch sessions and squads for filtering
+      const allSessions = await storage.getSessions();
+      const allSquads = await storage.getSquads();
+      const allCoaches = await storage.getCoaches();
+
+      // Create lookup maps
+      const sessionMap = new Map(allSessions.map(s => [s.id, s]));
+      const squadMap = new Map(allSquads.map(s => [s.id, s]));
+      const coachMap = new Map(allCoaches.map(c => [c.id, c]));
+
+      // Enrich feedback with session data
+      const enrichedFeedback = allFeedback.map(f => {
+        const session = sessionMap.get(f.sessionId);
+        const squad = session ? squadMap.get(session.squadId) : undefined;
+        const coach = coachMap.get(f.coachId);
+        return {
+          ...f,
+          session,
+          squadId: session?.squadId,
+          squadName: squad?.squadName,
+          sessionDate: session?.sessionDate,
+          duration: session?.duration,
+          coachName: coach ? `${coach.firstName} ${coach.lastName}` : undefined,
+        };
+      });
+
+      // Apply filters
+      let filteredFeedback = enrichedFeedback;
+
+      if (squadId && typeof squadId === 'string') {
+        filteredFeedback = filteredFeedback.filter(f => f.squadId === squadId);
+      }
+
+      if (coachId && typeof coachId === 'string') {
+        filteredFeedback = filteredFeedback.filter(f => f.coachId === coachId);
+      }
+
+      if (startDate && typeof startDate === 'string') {
+        filteredFeedback = filteredFeedback.filter(f => f.sessionDate && f.sessionDate >= startDate);
+      }
+
+      if (endDate && typeof endDate === 'string') {
+        filteredFeedback = filteredFeedback.filter(f => f.sessionDate && f.sessionDate <= endDate);
+      }
+
+      // Calculate overall averages
+      const ratingCategories = [
+        'engagement', 'effortAndIntent', 'enjoyment', 
+        'sessionClarity', 'appropriatenessOfChallenge', 'sessionFlow'
+      ] as const;
+
+      const calculateAverage = (data: typeof filteredFeedback, category: typeof ratingCategories[number]) => {
+        if (data.length === 0) return 0;
+        const sum = data.reduce((acc, f) => acc + (f[category] || 0), 0);
+        return Math.round((sum / data.length) * 10) / 10;
+      };
+
+      const categoryAverages = Object.fromEntries(
+        ratingCategories.map(cat => [cat, calculateAverage(filteredFeedback, cat)])
+      );
+
+      // Calculate overall average
+      const allRatings = filteredFeedback.flatMap(f => 
+        ratingCategories.map(cat => f[cat] || 0)
+      );
+      const overallAverage = allRatings.length > 0 
+        ? Math.round((allRatings.reduce((a, b) => a + b, 0) / allRatings.length) * 10) / 10 
+        : 0;
+
+      // Calculate trends (last 15 days vs previous 15 days)
+      const now = new Date();
+      const fifteenDaysAgo = new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000);
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+      const recentFeedback = filteredFeedback.filter(f => 
+        f.sessionDate && new Date(f.sessionDate) >= fifteenDaysAgo
+      );
+      const previousFeedback = filteredFeedback.filter(f => 
+        f.sessionDate && new Date(f.sessionDate) >= thirtyDaysAgo && new Date(f.sessionDate) < fifteenDaysAgo
+      );
+
+      const recentAvg = recentFeedback.length > 0 
+        ? recentFeedback.flatMap(f => ratingCategories.map(cat => f[cat] || 0)).reduce((a, b) => a + b, 0) / (recentFeedback.length * 6)
+        : null;
+      const previousAvg = previousFeedback.length > 0 
+        ? previousFeedback.flatMap(f => ratingCategories.map(cat => f[cat] || 0)).reduce((a, b) => a + b, 0) / (previousFeedback.length * 6)
+        : null;
+
+      const trend = recentAvg !== null && previousAvg !== null 
+        ? Math.round((recentAvg - previousAvg) * 10) / 10 
+        : null;
+
+      // Generate chart data (weekly averages for last 8 weeks)
+      const chartData = [];
+      for (let i = 7; i >= 0; i--) {
+        const weekEnd = new Date(now.getTime() - i * 7 * 24 * 60 * 60 * 1000);
+        const weekStart = new Date(weekEnd.getTime() - 7 * 24 * 60 * 60 * 1000);
+        
+        const weekFeedback = filteredFeedback.filter(f => {
+          if (!f.sessionDate) return false;
+          const date = new Date(f.sessionDate);
+          return date >= weekStart && date < weekEnd;
+        });
+
+        const weekAvg = weekFeedback.length > 0
+          ? weekFeedback.flatMap(f => ratingCategories.map(cat => f[cat] || 0)).reduce((a, b) => a + b, 0) / (weekFeedback.length * 6)
+          : null;
+
+        chartData.push({
+          weekStart: weekStart.toISOString().split('T')[0],
+          weekEnd: weekEnd.toISOString().split('T')[0],
+          average: weekAvg !== null ? Math.round(weekAvg * 10) / 10 : null,
+          count: weekFeedback.length,
+        });
+      }
+
+      // Pattern detection engine - generate dynamic insights
+      const patterns: Array<{ type: string; title: string; description: string; significance: number; direction: 'positive' | 'negative' | 'neutral'; category?: string }> = [];
+
+      // 1. Identify strongest and weakest categories
+      const categoryEntries = Object.entries(categoryAverages).sort((a, b) => b[1] - a[1]);
+      const categoryLabels: Record<string, string> = {
+        engagement: 'Engagement',
+        effortAndIntent: 'Effort & Intent',
+        enjoyment: 'Enjoyment',
+        sessionClarity: 'Session Clarity',
+        appropriatenessOfChallenge: 'Appropriateness of Challenge',
+        sessionFlow: 'Session Flow',
+      };
+
+      if (categoryEntries.length > 0 && categoryEntries[0][1] > 0) {
+        const strongest = categoryEntries[0];
+        if (strongest[1] >= 7) {
+          patterns.push({
+            type: 'strength',
+            title: `Strong ${categoryLabels[strongest[0]]}`,
+            description: `${categoryLabels[strongest[0]]} is your highest-rated area with an average of ${strongest[1]}/10.`,
+            significance: strongest[1],
+            direction: 'positive',
+            category: strongest[0],
+          });
+        }
+
+        const weakest = categoryEntries[categoryEntries.length - 1];
+        if (weakest[1] < 6 && weakest[1] > 0) {
+          patterns.push({
+            type: 'improvement',
+            title: `Focus on ${categoryLabels[weakest[0]]}`,
+            description: `${categoryLabels[weakest[0]]} has the lowest average at ${weakest[1]}/10. Consider strategies to improve this area.`,
+            significance: 10 - weakest[1],
+            direction: 'negative',
+            category: weakest[0],
+          });
+        }
+      }
+
+      // 2. Duration-based patterns
+      const durationBands = {
+        short: filteredFeedback.filter(f => f.duration && parseFloat(f.duration) <= 60),
+        medium: filteredFeedback.filter(f => f.duration && parseFloat(f.duration) > 60 && parseFloat(f.duration) <= 90),
+        long: filteredFeedback.filter(f => f.duration && parseFloat(f.duration) > 90),
+      };
+
+      const durationAverages = {
+        short: durationBands.short.length > 0 
+          ? durationBands.short.flatMap(f => ratingCategories.map(cat => f[cat] || 0)).reduce((a, b) => a + b, 0) / (durationBands.short.length * 6)
+          : null,
+        medium: durationBands.medium.length > 0 
+          ? durationBands.medium.flatMap(f => ratingCategories.map(cat => f[cat] || 0)).reduce((a, b) => a + b, 0) / (durationBands.medium.length * 6)
+          : null,
+        long: durationBands.long.length > 0 
+          ? durationBands.long.flatMap(f => ratingCategories.map(cat => f[cat] || 0)).reduce((a, b) => a + b, 0) / (durationBands.long.length * 6)
+          : null,
+      };
+
+      const validDurationAverages = Object.entries(durationAverages).filter(([, v]) => v !== null) as [string, number][];
+      if (validDurationAverages.length >= 2) {
+        const sorted = validDurationAverages.sort((a, b) => b[1] - a[1]);
+        const best = sorted[0];
+        const worst = sorted[sorted.length - 1];
+        const diff = best[1] - worst[1];
+        
+        if (diff >= 0.5) {
+          const durationLabels: Record<string, string> = { short: '60-minute', medium: '90-minute', long: '120-minute' };
+          patterns.push({
+            type: 'duration',
+            title: `${durationLabels[best[0]]} sessions perform best`,
+            description: `${durationLabels[best[0]]} sessions average ${Math.round(best[1] * 10) / 10}/10 vs ${Math.round(worst[1] * 10) / 10}/10 for ${durationLabels[worst[0]]} sessions.`,
+            significance: diff,
+            direction: 'neutral',
+          });
+        }
+      }
+
+      // 3. Squad-based patterns (if not filtered by squad)
+      if (!squadId) {
+        const squadAverages: Record<string, { total: number; count: number; name: string }> = {};
+        filteredFeedback.forEach(f => {
+          if (f.squadId && f.squadName) {
+            if (!squadAverages[f.squadId]) {
+              squadAverages[f.squadId] = { total: 0, count: 0, name: f.squadName };
+            }
+            const avgForFeedback = ratingCategories.reduce((sum, cat) => sum + (f[cat] || 0), 0) / 6;
+            squadAverages[f.squadId].total += avgForFeedback;
+            squadAverages[f.squadId].count += 1;
+          }
+        });
+
+        const squadResults = Object.entries(squadAverages)
+          .filter(([, v]) => v.count >= 2)
+          .map(([id, v]) => ({ id, name: v.name, average: v.total / v.count }))
+          .sort((a, b) => b.average - a.average);
+
+        if (squadResults.length >= 2) {
+          const best = squadResults[0];
+          const worst = squadResults[squadResults.length - 1];
+          if (best.average - worst.average >= 1) {
+            patterns.push({
+              type: 'squad',
+              title: `${best.name} leads in satisfaction`,
+              description: `${best.name} has the highest average rating at ${Math.round(best.average * 10) / 10}/10, while ${worst.name} averages ${Math.round(worst.average * 10) / 10}/10.`,
+              significance: best.average - worst.average,
+              direction: 'positive',
+            });
+          }
+        }
+      }
+
+      // 4. Trend-based pattern
+      if (trend !== null && Math.abs(trend) >= 0.3) {
+        patterns.push({
+          type: 'trend',
+          title: trend > 0 ? 'Ratings are improving' : 'Ratings are declining',
+          description: `Average ratings ${trend > 0 ? 'increased' : 'decreased'} by ${Math.abs(trend).toFixed(1)} points over the last 15 days compared to the previous period.`,
+          significance: Math.abs(trend),
+          direction: trend > 0 ? 'positive' : 'negative',
+        });
+      }
+
+      // Sort patterns by significance and take top 3
+      const topPatterns = patterns.sort((a, b) => b.significance - a.significance).slice(0, 3);
+
+      // Build response
+      const analyticsData = {
+        overview: {
+          overallAverage,
+          totalFeedbackCount: filteredFeedback.length,
+          categoryAverages,
+          trend,
+          trendPeriod: '15 days',
+        },
+        chartData,
+        patterns: topPatterns,
+        filters: {
+          squadId: squadId || null,
+          coachId: coachId || null,
+          startDate: startDate || null,
+          endDate: endDate || null,
+        },
+        meta: {
+          squads: allSquads.filter(s => s.recordStatus === 'active').map(s => ({ id: s.id, name: s.squadName })),
+          coaches: allCoaches.filter(c => c.recordStatus === 'active').map(c => ({ id: c.id, name: `${c.firstName} ${c.lastName}` })),
+        },
+      };
+
+      res.json(analyticsData);
+    } catch (error: any) {
+      console.error("Error fetching feedback analytics:", error);
+      res.status(500).json({ message: error.message || "Failed to fetch analytics" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
