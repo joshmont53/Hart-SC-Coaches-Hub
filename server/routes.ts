@@ -2122,38 +2122,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
         baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
       });
 
-      const systemPrompt = `You are an elite swimming performance analyst helping coaches identify patterns in their training feedback.
-Analyze the provided data and generate 3-5 specific, evidence-backed observations.
-Every observation MUST cite exact numbers from the data - never invent statistics.
-Write in natural language - never use abbreviations like "avgDistance" or "avgEngagement". Instead write "average distance" or "average engagement".
-Use markdown formatting with bold headers for each section.`;
+      const systemPrompt = `You are an elite swimming performance analyst discovering hidden trends that coaches couldn't spot without database analysis.
+Your job is to find NON-OBVIOUS correlations and patterns - not just restate the numbers.
+Always frame insights as comparative trends (e.g., "Sessions with X tend to show Y compared to baseline").
+Write naturally and conversationally - never use technical abbreviations or JSON field names.
+The overall average rating is ${payload.overview.overallAverage}/10 - use this as your baseline for comparisons.`;
 
-      const userPrompt = `Context:
-- Active filters: Squad = ${payload.filters.squad}, Coach = ${payload.filters.coach}
-- Disciplines tracked: swim, drill, kick, pull (measured in metres)
-- Strokes: Freestyle, Backstroke, Breaststroke, Butterfly, IM
-- Feedback categories: Engagement, Effort & Intent, Enjoyment, Session Clarity, Challenge Level, Session Flow (all rated 1-10)
+      const userPrompt = `Analyze this swimming coaching data to find hidden patterns:
 
-Analytics Data:
 ${JSON.stringify(payload, null, 2)}
 
-Instructions:
-1. Generate observations in these sections only:
-   - **Discipline Patterns**: How do different training types (drill, kick, swim) correlate with feedback scores?
-   - **Stroke Sentiment**: Which strokes show the highest/lowest enjoyment or engagement? Note any patterns.
-   - **Coach Performance**: Any notable differences between coaches? Highlight standout performers.
+Generate insights in exactly 3 sections with 1-2 bullet points each:
 
-2. For each observation, reference specific figures from the data (e.g., "Butterfly sessions average 7.0 enjoyment compared to 6.1 for Breaststroke")
+**Training Load Patterns**
+- Compare how different training types (swim vs drill vs kick) correlate with engagement and enjoyment
+- Look for: Does more drill work lead to better or worse feedback? Do high-volume swim sessions differ from shorter ones?
 
-3. If sample size is small (<10 sessions), briefly note this limitation
+**Stroke Sentiment Trends**
+- Identify which strokes swimmers respond to most/least positively
+- Look for: Are certain strokes consistently underperforming? Any surprising outliers?
 
-4. Flag concerning patterns (ratings below 6.5) or positive trends (above 8.0)
+**Coach Highlights**
+- Note any standout coach performance relative to the ${payload.overview.overallAverage}/10 average
+- Look for: Who is exceeding expectations? Any patterns in their session approach?
 
-5. IMPORTANT FORMATTING RULES:
-   - Keep each bullet point to a maximum of 20 words
-   - Use simple, natural language - no technical abbreviations
-   - Total response should be under 250 words
-   - Do NOT include recommendations - just observations and patterns`;
+CRITICAL RULES:
+1. Frame each insight as a TREND or CORRELATION, not a data dump (e.g., "Sessions heavy on drill work tend to score lower on enjoyment" not "Drill: 5.3 enjoyment")
+2. Always compare against the baseline average of ${payload.overview.overallAverage}/10
+3. Include 1-2 specific numbers per insight to support your claim
+4. Each bullet should be 30-50 words - enough depth to be useful
+5. If a pattern seems significant but data is limited (<10 sessions), note it as an "emerging trend"
+6. Never list raw numbers without context or comparison
+7. Write as if explaining to a head coach who wants actionable intelligence`;
 
       const response = await openai.chat.completions.create({
         model: 'gpt-5-mini',
