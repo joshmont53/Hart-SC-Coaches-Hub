@@ -61,11 +61,31 @@ const categoryLabels: Record<string, string> = {
   sessionFlow: 'Session Flow',
 };
 
+interface AttributeAnalyticsData {
+  attribute: string;
+  category: string;
+  chartData: Array<{ name: string; rating: number; count: number }>;
+  totalEntries: number;
+}
+
+const attributeLabels: Record<string, string> = {
+  dayOfWeek: 'Day of Week',
+  timeOfDay: 'Time of Day',
+  duration: 'Session Duration',
+  focus: 'Session Focus',
+  squad: 'Squad',
+  staffing: 'Staffing Level',
+};
+
 export function FeedbackAnalytics({ onBack }: FeedbackAnalyticsProps) {
   const [squadFilter, setSquadFilter] = useState<string>('all');
   const [coachFilter, setCoachFilter] = useState<string>('all');
   const [filtersExpanded, setFiltersExpanded] = useState(false);
   const [drillDownDialog, setDrillDownDialog] = useState<DrillDownDialog>({ open: false, pattern: null });
+  
+  // Session Attributes filters
+  const [selectedAttribute, setSelectedAttribute] = useState<string>('dayOfWeek');
+  const [selectedCategory, setSelectedCategory] = useState<string>('engagement');
 
   const buildQueryString = () => {
     const params = new URLSearchParams();
@@ -83,6 +103,22 @@ export function FeedbackAnalytics({ onBack }: FeedbackAnalyticsProps) {
       if (!response.ok) throw new Error('Failed to fetch analytics');
       return response.json();
     },
+  });
+
+  // Query for Session Attributes chart
+  const { data: attributeData, isLoading: isAttributeLoading } = useQuery<AttributeAnalyticsData>({
+    queryKey: ['/api/feedback/analytics/attributes', selectedAttribute, selectedCategory, squadFilter, coachFilter],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      params.append('attribute', selectedAttribute);
+      params.append('category', selectedCategory);
+      if (squadFilter && squadFilter !== 'all') params.append('squadId', squadFilter);
+      if (coachFilter && coachFilter !== 'all') params.append('coachId', coachFilter);
+      const response = await fetch(`/api/feedback/analytics/attributes?${params.toString()}`, { credentials: 'include' });
+      if (!response.ok) throw new Error('Failed to fetch attribute analytics');
+      return response.json();
+    },
+    enabled: !!analytics && analytics.overview.totalFeedbackCount > 0,
   });
 
   const getTrendIcon = (rating: number) => {
@@ -412,47 +448,89 @@ export function FeedbackAnalytics({ onBack }: FeedbackAnalyticsProps) {
               )}
             </div>
 
-            {/* Weekly Performance Chart */}
+            {/* Session Attributes vs Feedback */}
             <div>
-              <h2 className="text-sm font-medium mb-4">Weekly Performance</h2>
-              <Card className="p-4">
-                <div className="h-[200px] flex items-end gap-2">
-                  {analytics.chartData.map((week, index) => {
-                    const maxHeight = 160;
-                    const barHeight = week.average !== null ? (week.average / 10) * maxHeight : 0;
-                    const weekLabel = new Date(week.weekEnd).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-                    
-                    const getBarColorClass = (avg: number | null) => {
-                      if (avg === null) return 'bg-muted';
-                      if (avg >= 8) return 'bg-green-500';
-                      if (avg >= 6.5) return 'bg-amber-500';
-                      return 'bg-red-500';
-                    };
-                    
-                    return (
-                      <div key={index} className="flex-1 flex flex-col items-center gap-1">
-                        <div className="w-full flex flex-col items-center justify-end" style={{ height: maxHeight }}>
-                          {week.average !== null ? (
-                            <>
-                              <span className="text-xs font-medium mb-1">{week.average.toFixed(1)}</span>
-                              <div 
-                                className={cn("w-full rounded-t transition-all", getBarColorClass(week.average))}
-                                style={{ height: barHeight }}
-                                data-testid={`bar-week-${index}`}
-                              />
-                            </>
-                          ) : (
-                            <div className="w-full h-8 rounded-t bg-muted flex items-center justify-center">
-                              <span className="text-xs text-muted-foreground">-</span>
-                            </div>
-                          )}
-                        </div>
-                        <span className="text-xs text-muted-foreground">{weekLabel}</span>
-                        <span className="text-xs text-muted-foreground">({week.count})</span>
-                      </div>
-                    );
-                  })}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                <h2 className="text-sm font-medium">Session Attributes vs Feedback</h2>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Select value={selectedAttribute} onValueChange={setSelectedAttribute}>
+                    <SelectTrigger className="w-[140px] text-xs h-8" data-testid="select-attribute">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="dayOfWeek">Day of Week</SelectItem>
+                      <SelectItem value="timeOfDay">Time of Day</SelectItem>
+                      <SelectItem value="duration">Duration</SelectItem>
+                      <SelectItem value="focus">Session Focus</SelectItem>
+                      <SelectItem value="squad">Squad</SelectItem>
+                      <SelectItem value="staffing">Staffing Level</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                    <SelectTrigger className="w-[140px] text-xs h-8" data-testid="select-category">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="engagement">Engagement</SelectItem>
+                      <SelectItem value="effortAndIntent">Effort & Intent</SelectItem>
+                      <SelectItem value="enjoyment">Enjoyment</SelectItem>
+                      <SelectItem value="sessionClarity">Session Clarity</SelectItem>
+                      <SelectItem value="appropriatenessOfChallenge">Challenge Level</SelectItem>
+                      <SelectItem value="sessionFlow">Session Flow</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
+              </div>
+              
+              <Card className="p-4">
+                {isAttributeLoading ? (
+                  <div className="h-[200px] flex items-center justify-center">
+                    <Skeleton className="h-[180px] w-full" />
+                  </div>
+                ) : attributeData && attributeData.chartData.length > 0 ? (
+                  <div className="h-[220px] flex flex-col">
+                    <div className="flex-1 flex items-end gap-2">
+                      {attributeData.chartData.map((item, index) => {
+                        const maxHeight = 160;
+                        const barHeight = (item.rating / 10) * maxHeight;
+                        
+                        const getBarColorClass = (rating: number) => {
+                          if (rating >= 8) return 'bg-green-500';
+                          if (rating >= 6.5) return 'bg-amber-500';
+                          return 'bg-red-500';
+                        };
+                        
+                        return (
+                          <div key={index} className="flex-1 min-w-0 flex flex-col items-center gap-1">
+                            <div className="w-full flex flex-col items-center justify-end" style={{ height: maxHeight }}>
+                              <span className={cn("text-xs font-medium mb-1", getRatingColor(item.rating))}>
+                                {item.rating.toFixed(1)}
+                              </span>
+                              <div 
+                                className={cn("w-full max-w-[50px] mx-auto rounded-t transition-all", getBarColorClass(item.rating))}
+                                style={{ height: Math.max(barHeight, 4) }}
+                                data-testid={`bar-attr-${index}`}
+                              />
+                            </div>
+                            <span className="text-[10px] text-muted-foreground text-center leading-tight truncate w-full">
+                              {item.name}
+                            </span>
+                            <span className="text-[9px] text-muted-foreground">({item.count})</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="mt-3 pt-2 border-t text-center">
+                      <span className="text-[10px] text-muted-foreground">
+                        Showing {categoryLabels[selectedCategory]} by {attributeLabels[selectedAttribute]}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="h-[200px] flex items-center justify-center text-muted-foreground text-sm">
+                    No data available for this combination
+                  </div>
+                )}
               </Card>
             </div>
           </>

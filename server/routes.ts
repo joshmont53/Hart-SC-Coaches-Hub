@@ -17,6 +17,7 @@ import {
   insertSessionTemplateSchema,
   insertDrillSchema,
   insertSessionFeedbackSchema,
+  type SessionFeedback,
 } from "@shared/schema";
 import { sendInvitationEmail } from "./emailService";
 import { randomBytes } from "crypto";
@@ -1780,7 +1781,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Fetch all feedback with their sessions
-      const allFeedback = await storage.getAllSessionFeedback();
+      const allFeedback = await storage.getAllFeedback();
       const allSessions = await storage.getSessions();
       const allSquads = await storage.getSquads();
       
@@ -1789,7 +1790,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const squadMap = new Map(allSquads.filter(s => s.recordStatus === 'active').map(s => [s.id, s.squadName]));
       
       // Filter feedback based on squad/coach filters
-      let filteredFeedback = allFeedback.filter(f => {
+      let filteredFeedback = allFeedback.filter((f: SessionFeedback) => {
         const session = sessionMap.get(f.sessionId);
         if (!session) return false;
         if (squadId && session.squadId !== squadId) return false;
@@ -1842,7 +1843,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Group and aggregate data
       const aggregated: Record<string, { total: number; count: number }> = {};
       
-      filteredFeedback.forEach(feedback => {
+      filteredFeedback.forEach((feedback: SessionFeedback) => {
         const session = sessionMap.get(feedback.sessionId);
         if (!session) return;
         
@@ -1860,20 +1861,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const getAttributeOrder = (attr: string, value: string): number => {
         if (attr === 'dayOfWeek') {
           const order = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-          return order.indexOf(value);
+          const idx = order.indexOf(value);
+          return idx >= 0 ? idx : 999;
         }
         if (attr === 'timeOfDay') {
           const order = ['Morning', 'Afternoon', 'Evening'];
-          return order.indexOf(value);
+          const idx = order.indexOf(value);
+          return idx >= 0 ? idx : 999;
         }
         if (attr === 'duration') {
           const order = ['≤60 min', '60-90 min', '>90 min'];
-          return order.indexOf(value);
+          const idx = order.indexOf(value);
+          return idx >= 0 ? idx : 999;
         }
         if (attr === 'staffing') {
           const order = ['1 coach', '2 coaches', '3 coaches'];
-          return order.indexOf(value);
+          const idx = order.indexOf(value);
+          return idx >= 0 ? idx : 999;
         }
+        // For focus, squad, and other attributes - sort alphabetically
         return 0;
       };
 
@@ -1883,7 +1889,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           rating: data.count > 0 ? Math.round((data.total / data.count) * 10) / 10 : 0,
           count: data.count,
         }))
-        .sort((a, b) => getAttributeOrder(attribute as string, a.name) - getAttributeOrder(attribute as string, b.name));
+        .sort((a, b) => {
+          const orderA = getAttributeOrder(attribute as string, a.name);
+          const orderB = getAttributeOrder(attribute as string, b.name);
+          if (orderA !== orderB) return orderA - orderB;
+          // Fallback to alphabetical for same order or unknown values
+          return a.name.localeCompare(b.name);
+        });
 
       res.json({
         attribute,
