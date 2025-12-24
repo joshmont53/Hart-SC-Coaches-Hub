@@ -2200,6 +2200,343 @@ CRITICAL RULES:
     }
   });
 
+  // ============================================================================
+  // Session Writer Helper Endpoints
+  // ============================================================================
+
+  // In-memory cache for session helper AI insights
+  const sessionHelperCache = new Map<string, { data: any; timestamp: number; dataHash: string }>();
+  const SESSION_HELPER_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+
+  // Session Writer Helper - Non-AI data endpoint
+  app.get("/api/feedback/session-helper", requireAuth, async (req, res) => {
+    try {
+      const { squadId, sessionFocus } = req.query;
+      
+      if (!squadId) {
+        return res.status(400).json({ message: "squadId is required" });
+      }
+
+      const allFeedback = await storage.getAllFeedback();
+      const allSessions = await storage.getSessions();
+      
+      // Create session lookup map
+      const sessionMap = new Map(allSessions.map(s => [s.id, s]));
+      
+      // Filter feedback by squad (and optionally focus)
+      const filteredFeedback = allFeedback.filter((f: SessionFeedback) => {
+        const session = sessionMap.get(f.sessionId);
+        if (!session) return false;
+        if (session.squadId !== squadId) return false;
+        if (sessionFocus && session.focus !== sessionFocus) return false;
+        return true;
+      });
+
+      if (filteredFeedback.length === 0) {
+        return res.json({
+          sessionCount: 0,
+          averages: null,
+          trends: null,
+          lowestCategory: null,
+          highestCategory: null,
+        });
+      }
+
+      // Sort feedback by session date (most recent first)
+      const sortedFeedback = filteredFeedback
+        .map((f: SessionFeedback) => ({
+          feedback: f,
+          session: sessionMap.get(f.sessionId),
+        }))
+        .filter(item => item.session)
+        .sort((a, b) => {
+          const dateA = new Date(a.session!.sessionDate);
+          const dateB = new Date(b.session!.sessionDate);
+          return dateB.getTime() - dateA.getTime();
+        })
+        .map(item => item.feedback);
+
+      // Calculate averages
+      const categories = ['engagement', 'effortAndIntent', 'enjoyment', 'sessionClarity', 'appropriatenessOfChallenge', 'sessionFlow'] as const;
+      const averages: Record<string, number> = {};
+      
+      categories.forEach(cat => {
+        const total = sortedFeedback.reduce((sum: number, f: any) => sum + (f[cat] || 0), 0);
+        averages[cat] = Math.round((total / sortedFeedback.length) * 10) / 10;
+      });
+
+      // Calculate trends (compare last 5 vs previous 5)
+      const trends: Record<string, 'up' | 'down' | 'stable'> = {};
+      const recent5 = sortedFeedback.slice(0, 5);
+      const previous5 = sortedFeedback.slice(5, 10);
+      
+      if (previous5.length >= 2) {
+        categories.forEach(cat => {
+          const recentAvg = recent5.reduce((sum: number, f: any) => sum + (f[cat] || 0), 0) / recent5.length;
+          const prevAvg = previous5.reduce((sum: number, f: any) => sum + (f[cat] || 0), 0) / previous5.length;
+          const diff = recentAvg - prevAvg;
+          
+          if (diff >= 0.5) trends[cat] = 'up';
+          else if (diff <= -0.5) trends[cat] = 'down';
+          else trends[cat] = 'stable';
+        });
+      } else {
+        categories.forEach(cat => {
+          trends[cat] = 'stable';
+        });
+      }
+
+      // Find highest and lowest categories
+      const sortedCategories = Object.entries(averages).sort((a, b) => b[1] - a[1]);
+      const highestCategory = sortedCategories[0]?.[0] || 'engagement';
+      const lowestCategory = sortedCategories[sortedCategories.length - 1]?.[0] || 'enjoyment';
+
+      res.json({
+        sessionCount: sortedFeedback.length,
+        averages,
+        trends,
+        lowestCategory,
+        highestCategory,
+      });
+    } catch (error: any) {
+      console.error("Error fetching session helper data:", error);
+      res.status(500).json({ message: error.message || "Failed to fetch session helper data" });
+    }
+  });
+
+  // Session Writer Helper - AI Insights endpoint
+  app.get("/api/feedback/session-helper/insights", requireAuth, async (req, res) => {
+    try {
+      const { squadId, sessionFocus, forceRefresh } = req.query;
+      
+      if (!squadId) {
+        return res.status(400).json({ message: "squadId is required" });
+      }
+
+      const allFeedback = await storage.getAllFeedback();
+      const allSessions = await storage.getSessions();
+      const allSquads = await storage.getSquads();
+      
+      // Create lookup maps
+      const sessionMap = new Map(allSessions.map(s => [s.id, s]));
+      const squadMap = new Map(allSquads.map(s => [s.id, s.squadName]));
+      
+      const squadName = squadMap.get(squadId as string) || 'Unknown Squad';
+      
+      // Filter feedback by squad (and optionally focus)
+      const filteredFeedback = allFeedback.filter((f: SessionFeedback) => {
+        const session = sessionMap.get(f.sessionId);
+        if (!session) return false;
+        if (session.squadId !== squadId) return false;
+        if (sessionFocus && session.focus !== sessionFocus) return false;
+        return true;
+      });
+
+      if (filteredFeedback.length < 3) {
+        return res.json({
+          whatsWorking: [],
+          areasToAddress: [],
+          focusTips: [],
+          message: "Not enough feedback data (minimum 3 sessions required)",
+        });
+      }
+
+      // Create data hash for cache invalidation
+      const dataHash = `${squadId}-${sessionFocus || 'all'}-${filteredFeedback.length}-${filteredFeedback.reduce((sum: number, f: SessionFeedback) => sum + f.engagement + f.enjoyment, 0)}`;
+      const cacheKey = `helper-${squadId}-${sessionFocus || 'all'}`;
+      
+      // Check cache
+      const cached = sessionHelperCache.get(cacheKey);
+      if (!forceRefresh && cached && 
+          Date.now() - cached.timestamp < SESSION_HELPER_CACHE_TTL && 
+          cached.dataHash === dataHash) {
+        return res.json({
+          ...cached.data,
+          cached: true,
+        });
+      }
+
+      // Calculate category averages
+      const categories = ['engagement', 'effortAndIntent', 'enjoyment', 'sessionClarity', 'appropriatenessOfChallenge', 'sessionFlow'] as const;
+      const categoryAverages: Record<string, number> = {};
+      
+      categories.forEach(cat => {
+        const total = filteredFeedback.reduce((sum: number, f: any) => sum + (f[cat] || 0), 0);
+        categoryAverages[cat] = Math.round((total / filteredFeedback.length) * 10) / 10;
+      });
+
+      // Calculate discipline impact (swim, drill, kick, pull)
+      const disciplineStats: Record<string, { total: number; count: number; avgEngagement: number; avgEnjoyment: number }> = {
+        swim: { total: 0, count: 0, avgEngagement: 0, avgEnjoyment: 0 },
+        drill: { total: 0, count: 0, avgEngagement: 0, avgEnjoyment: 0 },
+        kick: { total: 0, count: 0, avgEngagement: 0, avgEnjoyment: 0 },
+        pull: { total: 0, count: 0, avgEngagement: 0, avgEnjoyment: 0 },
+      };
+
+      filteredFeedback.forEach((f: SessionFeedback) => {
+        const session = sessionMap.get(f.sessionId);
+        if (!session) return;
+
+        const swimTotal = (session.totalFrontCrawlSwim || 0) + (session.totalBackstrokeSwim || 0) + 
+                         (session.totalBreaststrokeSwim || 0) + (session.totalButterflySwim || 0) + 
+                         (session.totalIMSwim || 0) + (session.totalNo1Swim || 0);
+        const drillTotal = (session.totalFrontCrawlDrill || 0) + (session.totalBackstrokeDrill || 0) + 
+                          (session.totalBreaststrokeDrill || 0) + (session.totalButterflyDrill || 0) + 
+                          (session.totalIMDrill || 0) + (session.totalNo1Drill || 0);
+        const kickTotal = (session.totalFrontCrawlKick || 0) + (session.totalBackstrokeKick || 0) + 
+                         (session.totalBreaststrokeKick || 0) + (session.totalButterflyKick || 0) + 
+                         (session.totalIMKick || 0) + (session.totalNo1Kick || 0);
+        const pullTotal = (session.totalFrontCrawlPull || 0) + (session.totalBackstrokePull || 0) + 
+                         (session.totalBreaststrokePull || 0) + (session.totalButterflyPull || 0) + 
+                         (session.totalIMPull || 0) + (session.totalNo1Pull || 0);
+
+        if (swimTotal > 0) {
+          disciplineStats.swim.count++;
+          disciplineStats.swim.avgEngagement += f.engagement;
+          disciplineStats.swim.avgEnjoyment += f.enjoyment;
+        }
+        if (drillTotal > 0) {
+          disciplineStats.drill.count++;
+          disciplineStats.drill.avgEngagement += f.engagement;
+          disciplineStats.drill.avgEnjoyment += f.enjoyment;
+        }
+        if (kickTotal > 0) {
+          disciplineStats.kick.count++;
+          disciplineStats.kick.avgEngagement += f.engagement;
+          disciplineStats.kick.avgEnjoyment += f.enjoyment;
+        }
+        if (pullTotal > 0) {
+          disciplineStats.pull.count++;
+          disciplineStats.pull.avgEngagement += f.engagement;
+          disciplineStats.pull.avgEnjoyment += f.enjoyment;
+        }
+      });
+
+      // Calculate discipline averages
+      const disciplineImpact = Object.entries(disciplineStats)
+        .filter(([, v]) => v.count >= 2)
+        .map(([discipline, stats]) => ({
+          discipline,
+          sessionCount: stats.count,
+          avgEngagement: Math.round((stats.avgEngagement / stats.count) * 10) / 10,
+          avgEnjoyment: Math.round((stats.avgEnjoyment / stats.count) * 10) / 10,
+        }));
+
+      // Find lowest and highest categories
+      const sortedCategories = Object.entries(categoryAverages).sort((a, b) => b[1] - a[1]);
+      const highestCat = sortedCategories[0];
+      const lowestCat = sortedCategories[sortedCategories.length - 1];
+
+      // Build AI payload
+      const payload = {
+        squadName,
+        sessionFocus: sessionFocus || 'All focuses',
+        sessionCount: filteredFeedback.length,
+        categoryAverages,
+        highestCategory: { name: highestCat[0], value: highestCat[1] },
+        lowestCategory: { name: lowestCat[0], value: lowestCat[1] },
+        disciplineImpact,
+      };
+
+      // Call OpenAI for insights
+      const OpenAI = (await import('openai')).default;
+      const openai = new OpenAI({
+        apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+        baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+      });
+
+      const systemPrompt = `You are a swimming coaching assistant providing actionable recommendations for planning training sessions.
+Your role is to analyze past feedback data and provide specific, practical advice.
+Write in a friendly, helpful tone. Use specific numbers to support your recommendations.
+Focus on what the coach can DO differently, not just what the data shows.`;
+
+      const focusTipsContext = sessionFocus 
+        ? `The coach is planning a "${sessionFocus}" session.` 
+        : `The coach hasn't specified a session focus yet.`;
+
+      const userPrompt = `Based on this feedback data for ${squadName}:
+
+${JSON.stringify(payload, null, 2)}
+
+${focusTipsContext}
+
+Generate exactly 3 sections of recommendations in valid JSON format:
+
+{
+  "whatsWorking": [
+    "2-3 specific things that are going well with this squad based on the data, mentioning actual numbers"
+  ],
+  "areasToAddress": [
+    "2-3 specific areas for improvement, with actionable suggestions based on the lowest scoring categories"
+  ],
+  "focusTips": [
+    "2-3 specific tips for ${sessionFocus || 'upcoming sessions'} based on what the data suggests works well"
+  ]
+}
+
+RULES:
+1. Each recommendation should be 20-40 words
+2. Include specific numbers from the data (e.g., "averaging 7.8")
+3. Make recommendations actionable (e.g., "Consider adding..." not just "X is low")
+4. Reference the discipline data to suggest training approaches
+5. For areasToAddress, always suggest a concrete solution
+6. Return ONLY valid JSON, no markdown or explanation`;
+
+      const response = await openai.chat.completions.create({
+        model: 'gpt-5-mini',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        max_completion_tokens: 2048,
+      });
+
+      let insights: { whatsWorking: string[]; areasToAddress: string[]; focusTips: string[] };
+      
+      try {
+        const content = response.choices[0]?.message?.content || '{}';
+        // Clean up potential markdown formatting
+        const cleanedContent = content.replace(/```json\n?|\n?```/g, '').trim();
+        insights = JSON.parse(cleanedContent);
+      } catch (parseError) {
+        console.error("Failed to parse AI response:", parseError);
+        // Fallback to empty arrays
+        insights = {
+          whatsWorking: [],
+          areasToAddress: [],
+          focusTips: [],
+        };
+      }
+
+      const result = {
+        whatsWorking: insights.whatsWorking || [],
+        areasToAddress: insights.areasToAddress || [],
+        focusTips: insights.focusTips || [],
+        generatedAt: new Date().toISOString(),
+      };
+
+      // Cache the result
+      sessionHelperCache.set(cacheKey, {
+        data: result,
+        timestamp: Date.now(),
+        dataHash,
+      });
+
+      res.json({
+        ...result,
+        cached: false,
+      });
+    } catch (error: any) {
+      console.error("Error generating session helper insights:", error);
+      res.status(500).json({ 
+        message: error.message || "Failed to generate insights",
+        whatsWorking: [],
+        areasToAddress: [],
+        focusTips: [],
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

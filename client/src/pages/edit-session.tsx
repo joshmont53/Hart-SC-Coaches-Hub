@@ -12,9 +12,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { ArrowLeft, ArrowRight, Save, AlertCircle } from "lucide-react";
+import { ArrowLeft, ArrowRight, Save, AlertCircle, Lightbulb } from "lucide-react";
 import { useLocation, useRoute } from "wouter";
 import type { Coach, Squad, Location, Swimmer, SwimmingSession } from "@shared/schema";
+import { SessionWriterHelper } from "@/components/SessionWriterHelper";
 
 const sessionFormSchema = z.object({
   sessionDate: z.string().min(1, "Date is required"),
@@ -62,6 +63,7 @@ export default function EditSession() {
   const sessionId = params?.id;
   const [step, setStep] = useState(1);
   const [isParsing, setIsParsing] = useState(false);
+  const [isHelperOpen, setIsHelperOpen] = useState(false);
   const { toast } = useToast();
   const parseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -534,10 +536,25 @@ export default function EditSession() {
                 {/* Session Text Entry */}
                 <Card className="lg:col-span-2">
                   <CardHeader>
-                    <CardTitle>Session Content</CardTitle>
-                    <CardDescription>
-                      Write or paste your full session - distances will be calculated automatically
-                    </CardDescription>
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <CardTitle>Session Content</CardTitle>
+                        <CardDescription>
+                          Write or paste your full session - distances will be calculated automatically
+                        </CardDescription>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsHelperOpen(true)}
+                        className="shrink-0"
+                        data-testid="button-open-helper"
+                      >
+                        <Lightbulb className="h-4 w-4 mr-1.5" />
+                        Helper
+                      </Button>
+                    </div>
                   </CardHeader>
                   <CardContent>
                     <FormField
@@ -728,6 +745,15 @@ export default function EditSession() {
           </form>
         </Form>
       </div>
+
+      {/* Session Writer Helper Panel */}
+      <SessionWriterHelper
+        isOpen={isHelperOpen}
+        onClose={() => setIsHelperOpen(false)}
+        squadId={form.watch("squadId")}
+        sessionFocus={form.watch("focus")}
+        squads={squads}
+      />
     </div>
   );
 }
