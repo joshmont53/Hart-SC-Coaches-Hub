@@ -131,32 +131,43 @@ export function FeedbackAnalytics({ onBack }: FeedbackAnalyticsProps) {
 
   const getDrillDownData = (patternType: string) => {
     switch (patternType) {
-      case 'strongest_category':
-      case 'weakest_category':
+      case 'strength':
         return {
           chartData: Object.entries(analytics?.overview.categoryAverages || {}).map(([key, value]) => ({
             name: categoryLabels[key] || key,
             rating: value,
           })),
-          insights: patternType === 'strongest_category' 
-            ? ['This category consistently scores above average', 'Swimmers respond well to this aspect of sessions', 'Consider leveraging this strength in other areas']
-            : ['This category has room for improvement', 'Consider specific techniques to enhance this area', 'Small improvements here could boost overall satisfaction'],
-        };
-      case 'duration_pattern':
-        return {
-          chartData: [
-            { name: '45-60 min', rating: 7.2 },
-            { name: '60-75 min', rating: 8.1 },
-            { name: '75-90 min', rating: 7.5 },
-            { name: '90+ min', rating: 6.8 },
+          insights: [
+            'This category consistently scores above average',
+            'Swimmers respond well to this aspect of sessions',
+            'Consider leveraging this strength in other areas',
           ],
+        };
+      case 'improvement':
+        return {
+          chartData: Object.entries(analytics?.overview.categoryAverages || {}).map(([key, value]) => ({
+            name: categoryLabels[key] || key,
+            rating: value,
+          })),
+          insights: [
+            'This category has room for improvement',
+            'Consider specific techniques to enhance this area',
+            'Small improvements here could boost overall satisfaction',
+          ],
+        };
+      case 'duration':
+        return {
+          chartData: Object.entries(analytics?.overview.categoryAverages || {}).map(([key, value]) => ({
+            name: categoryLabels[key] || key,
+            rating: value,
+          })),
           insights: [
             'Session duration affects engagement and focus',
-            'Optimal duration appears to be 60-75 minutes',
-            'Longer sessions may benefit from more breaks',
+            'Consider experimenting with different session lengths',
+            'Monitor how swimmers respond to varying durations',
           ],
         };
-      case 'squad_comparison':
+      case 'squad':
         return {
           chartData: Object.entries(analytics?.overview.categoryAverages || {}).map(([key, value]) => ({
             name: categoryLabels[key] || key,
@@ -168,7 +179,7 @@ export function FeedbackAnalytics({ onBack }: FeedbackAnalyticsProps) {
             'Age groups may respond differently to training styles',
           ],
         };
-      case 'trend_pattern':
+      case 'trend':
         return {
           chartData: analytics?.chartData.slice(-6).map(week => ({
             name: new Date(week.weekEnd).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
@@ -182,8 +193,11 @@ export function FeedbackAnalytics({ onBack }: FeedbackAnalyticsProps) {
         };
       default:
         return {
-          chartData: [],
-          insights: ['More data needed to generate detailed breakdown'],
+          chartData: Object.entries(analytics?.overview.categoryAverages || {}).map(([key, value]) => ({
+            name: categoryLabels[key] || key,
+            rating: value,
+          })),
+          insights: ['Pattern analysis showing category breakdown'],
         };
     }
   };
