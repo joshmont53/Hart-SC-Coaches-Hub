@@ -473,10 +473,10 @@ export function FeedbackAnalytics({ onBack }: FeedbackAnalyticsProps) {
 
       {/* Drill-down Dialog */}
       <Dialog open={drillDownDialog.open} onOpenChange={(open) => setDrillDownDialog({ ...drillDownDialog, open })}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-lg w-[calc(100%-2rem)] max-h-[90vh] overflow-y-auto overflow-x-hidden">
           <DialogHeader>
-            <DialogTitle className="text-base sm:text-lg">{drillDownDialog.pattern?.title}</DialogTitle>
-            <DialogDescription className="text-xs sm:text-sm">
+            <DialogTitle className="text-base">{drillDownDialog.pattern?.title}</DialogTitle>
+            <DialogDescription className="text-xs">
               Detailed breakdown and supporting data
             </DialogDescription>
           </DialogHeader>
@@ -485,43 +485,43 @@ export function FeedbackAnalytics({ onBack }: FeedbackAnalyticsProps) {
             const drillData = getDrillDownData(drillDownDialog.pattern.type);
             
             return (
-              <div className="space-y-4 sm:space-y-6">
+              <div className="space-y-4 w-full">
                 {/* Pattern Description */}
-                <Card className={cn("p-3 sm:p-4 border", getPatternBgColor(drillDownDialog.pattern.direction))}>
-                  <div className="flex items-start gap-3">
-                    <div className={cn("p-2 rounded-lg shrink-0", getPatternBgColor(drillDownDialog.pattern.direction))}>
-                      <Info className={cn("h-4 w-4", getPatternIconColor(drillDownDialog.pattern.direction))} />
+                <Card className={cn("p-3 border", getPatternBgColor(drillDownDialog.pattern.direction))}>
+                  <div className="flex items-start gap-2">
+                    <div className={cn("p-1.5 rounded-lg shrink-0", getPatternBgColor(drillDownDialog.pattern.direction))}>
+                      <Info className={cn("h-3.5 w-3.5", getPatternIconColor(drillDownDialog.pattern.direction))} />
                     </div>
-                    <p className="text-xs sm:text-sm">{drillDownDialog.pattern.description}</p>
+                    <p className="text-xs leading-relaxed">{drillDownDialog.pattern.description}</p>
                   </div>
                 </Card>
 
                 {/* Chart Visualization */}
                 {drillData.chartData.length > 0 && (
-                  <div>
-                    <h3 className="text-xs sm:text-sm font-medium mb-2 sm:mb-3">Distribution Analysis</h3>
-                    <Card className="p-3 sm:p-4">
-                      <div className="h-[180px] flex items-end gap-2">
+                  <div className="w-full">
+                    <h3 className="text-xs font-medium mb-2">Distribution Analysis</h3>
+                    <Card className="p-3 w-full">
+                      <div className="h-[160px] flex items-end gap-1 w-full">
                         {drillData.chartData.map((item, index) => {
-                          const maxHeight = 140;
+                          const maxHeight = 120;
                           const barHeight = (item.rating / 10) * maxHeight;
                           
                           return (
-                            <div key={index} className="flex-1 flex flex-col items-center gap-1">
+                            <div key={index} className="flex-1 min-w-0 flex flex-col items-center gap-0.5">
                               <div className="w-full flex flex-col items-center justify-end" style={{ height: maxHeight }}>
-                                <span className={cn("text-xs font-medium mb-1", getRatingColor(item.rating))}>
+                                <span className={cn("text-[10px] font-medium mb-0.5", getRatingColor(item.rating))}>
                                   {item.rating.toFixed(1)}
                                 </span>
                                 <div 
-                                  className="w-full rounded-t transition-all"
+                                  className="w-full max-w-[40px] mx-auto rounded-t transition-all"
                                   style={{ 
                                     height: barHeight,
                                     backgroundColor: getBarColor(item.rating)
                                   }}
                                 />
                               </div>
-                              <span className="text-[10px] text-muted-foreground text-center leading-tight max-w-full truncate">
-                                {item.name}
+                              <span className="text-[8px] text-muted-foreground text-center leading-tight w-full break-words hyphens-auto">
+                                {item.name.split(' ')[0]}
                               </span>
                             </div>
                           );
@@ -532,14 +532,14 @@ export function FeedbackAnalytics({ onBack }: FeedbackAnalyticsProps) {
                 )}
 
                 {/* Key Insights */}
-                <div>
-                  <h3 className="text-xs sm:text-sm font-medium mb-2 sm:mb-3">Key Takeaways</h3>
-                  <Card className="p-3 sm:p-4 bg-slate-50 dark:bg-slate-900/50 border">
-                    <ul className="space-y-2">
+                <div className="w-full">
+                  <h3 className="text-xs font-medium mb-2">Key Takeaways</h3>
+                  <Card className="p-3 bg-slate-50 dark:bg-slate-900/50 border">
+                    <ul className="space-y-1.5">
                       {drillData.insights.map((insight, index) => (
-                        <li key={index} className="text-xs sm:text-sm text-muted-foreground flex items-start gap-2">
-                          <span className="text-slate-400 mt-0.5">•</span>
-                          <span>{insight}</span>
+                        <li key={index} className="text-xs text-muted-foreground flex items-start gap-1.5">
+                          <span className="text-slate-400 mt-0.5 shrink-0">•</span>
+                          <span className="break-words">{insight}</span>
                         </li>
                       ))}
                     </ul>
@@ -548,10 +548,10 @@ export function FeedbackAnalytics({ onBack }: FeedbackAnalyticsProps) {
 
                 {/* Category badge */}
                 {drillDownDialog.pattern.category && (
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs text-muted-foreground">Related to:</span>
-                    <span className={cn("text-xs px-2 py-1 rounded", getPatternBadgeStyle(drillDownDialog.pattern.direction))}>
-                      {drillDownDialog.pattern.category}
+                    <span className={cn("text-xs px-2 py-0.5 rounded", getPatternBadgeStyle(drillDownDialog.pattern.direction))}>
+                      {categoryLabels[drillDownDialog.pattern.category] || drillDownDialog.pattern.category}
                     </span>
                   </div>
                 )}
