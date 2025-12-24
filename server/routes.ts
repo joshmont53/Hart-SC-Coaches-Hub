@@ -1909,6 +1909,286 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // In-memory cache for AI insights (10 minute TTL)
+  const insightsCache = new Map<string, { data: any; timestamp: number; dataHash: string }>();
+  const INSIGHTS_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+
+  // AI-Powered Insights endpoint
+  app.get("/api/feedback/analytics/insights", requireAuth, async (req, res) => {
+    try {
+      const { squadId, coachId, forceRefresh } = req.query;
+      
+      // Fetch all data
+      const allFeedback = await storage.getAllFeedback();
+      const allSessions = await storage.getSessions();
+      const allSquads = await storage.getSquads();
+      const allCoaches = await storage.getCoaches();
+      
+      // Create lookup maps
+      const sessionMap = new Map(allSessions.map(s => [s.id, s]));
+      const squadMap = new Map(allSquads.filter(s => s.recordStatus === 'active').map(s => [s.id, s.squadName]));
+      const coachMap = new Map(allCoaches.filter(c => c.recordStatus === 'active').map(c => [c.id, `${c.firstName} ${c.lastName}`]));
+      
+      // Filter feedback based on squad/coach filters
+      const filteredFeedback = allFeedback.filter((f: SessionFeedback) => {
+        const session = sessionMap.get(f.sessionId);
+        if (!session) return false;
+        if (squadId && session.squadId !== squadId) return false;
+        if (coachId) {
+          const isInvolved = session.leadCoachId === coachId || 
+                            session.secondCoachId === coachId || 
+                            session.helperId === coachId;
+          if (!isInvolved) return false;
+        }
+        return true;
+      });
+
+      if (filteredFeedback.length < 3) {
+        return res.json({
+          insights: null,
+          message: "Not enough feedback data to generate insights (minimum 3 sessions required)",
+          cached: false,
+        });
+      }
+
+      // Create data hash for cache invalidation
+      const dataHash = `${filteredFeedback.length}-${filteredFeedback.reduce((sum, f) => sum + f.engagement + f.enjoyment, 0)}`;
+      const cacheKey = `${squadId || 'all'}-${coachId || 'all'}`;
+      
+      // Check cache
+      const cached = insightsCache.get(cacheKey);
+      if (!forceRefresh && cached && 
+          Date.now() - cached.timestamp < INSIGHTS_CACHE_TTL && 
+          cached.dataHash === dataHash) {
+        return res.json({
+          ...cached.data,
+          cached: true,
+          cachedAt: new Date(cached.timestamp).toISOString(),
+        });
+      }
+
+      // Aggregate discipline data (swim, drill, kick, pull totals across all strokes)
+      const disciplineStats: Record<string, { totalDistance: number; sessionCount: number; feedbackTotals: Record<string, number>; feedbackCount: number }> = {
+        swim: { totalDistance: 0, sessionCount: 0, feedbackTotals: { engagement: 0, effortAndIntent: 0, enjoyment: 0, sessionClarity: 0, appropriatenessOfChallenge: 0, sessionFlow: 0 }, feedbackCount: 0 },
+        drill: { totalDistance: 0, sessionCount: 0, feedbackTotals: { engagement: 0, effortAndIntent: 0, enjoyment: 0, sessionClarity: 0, appropriatenessOfChallenge: 0, sessionFlow: 0 }, feedbackCount: 0 },
+        kick: { totalDistance: 0, sessionCount: 0, feedbackTotals: { engagement: 0, effortAndIntent: 0, enjoyment: 0, sessionClarity: 0, appropriatenessOfChallenge: 0, sessionFlow: 0 }, feedbackCount: 0 },
+        pull: { totalDistance: 0, sessionCount: 0, feedbackTotals: { engagement: 0, effortAndIntent: 0, enjoyment: 0, sessionClarity: 0, appropriatenessOfChallenge: 0, sessionFlow: 0 }, feedbackCount: 0 },
+      };
+
+      // Aggregate stroke data
+      const strokeStats: Record<string, { totalDistance: number; sessionCount: number; avgEnjoyment: number; avgEngagement: number; feedbackCount: number }> = {};
+      const strokes = ['FrontCrawl', 'Backstroke', 'Breaststroke', 'Butterfly', 'IM'];
+      strokes.forEach(s => {
+        strokeStats[s] = { totalDistance: 0, sessionCount: 0, avgEnjoyment: 0, avgEngagement: 0, feedbackCount: 0 };
+      });
+
+      // Aggregate coach data
+      const coachStats: Record<string, { name: string; sessionCount: number; totalRating: number; feedbackCount: number }> = {};
+      
+      // Process each feedback with its session
+      filteredFeedback.forEach((f: SessionFeedback) => {
+        const session = sessionMap.get(f.sessionId);
+        if (!session) return;
+
+        // Discipline aggregation
+        const swimTotal = (session.totalFrontCrawlSwim || 0) + (session.totalBackstrokeSwim || 0) + 
+                         (session.totalBreaststrokeSwim || 0) + (session.totalButterflySwim || 0) + 
+                         (session.totalIMSwim || 0) + (session.totalNo1Swim || 0);
+        const drillTotal = (session.totalFrontCrawlDrill || 0) + (session.totalBackstrokeDrill || 0) + 
+                          (session.totalBreaststrokeDrill || 0) + (session.totalButterflyDrill || 0) + 
+                          (session.totalIMDrill || 0) + (session.totalNo1Drill || 0);
+        const kickTotal = (session.totalFrontCrawlKick || 0) + (session.totalBackstrokeKick || 0) + 
+                         (session.totalBreaststrokeKick || 0) + (session.totalButterflyKick || 0) + 
+                         (session.totalIMKick || 0) + (session.totalNo1Kick || 0);
+        const pullTotal = (session.totalFrontCrawlPull || 0) + (session.totalBackstrokePull || 0) + 
+                         (session.totalBreaststrokePull || 0) + (session.totalButterflyPull || 0) + 
+                         (session.totalIMPull || 0) + (session.totalNo1Pull || 0);
+
+        if (swimTotal > 0) {
+          disciplineStats.swim.totalDistance += swimTotal;
+          disciplineStats.swim.sessionCount++;
+          disciplineStats.swim.feedbackTotals.engagement += f.engagement;
+          disciplineStats.swim.feedbackTotals.enjoyment += f.enjoyment;
+          disciplineStats.swim.feedbackTotals.effortAndIntent += f.effortAndIntent;
+          disciplineStats.swim.feedbackCount++;
+        }
+        if (drillTotal > 0) {
+          disciplineStats.drill.totalDistance += drillTotal;
+          disciplineStats.drill.sessionCount++;
+          disciplineStats.drill.feedbackTotals.engagement += f.engagement;
+          disciplineStats.drill.feedbackTotals.enjoyment += f.enjoyment;
+          disciplineStats.drill.feedbackTotals.effortAndIntent += f.effortAndIntent;
+          disciplineStats.drill.feedbackCount++;
+        }
+        if (kickTotal > 0) {
+          disciplineStats.kick.totalDistance += kickTotal;
+          disciplineStats.kick.sessionCount++;
+          disciplineStats.kick.feedbackTotals.engagement += f.engagement;
+          disciplineStats.kick.feedbackTotals.enjoyment += f.enjoyment;
+          disciplineStats.kick.feedbackCount++;
+        }
+        if (pullTotal > 0) {
+          disciplineStats.pull.totalDistance += pullTotal;
+          disciplineStats.pull.sessionCount++;
+          disciplineStats.pull.feedbackTotals.engagement += f.engagement;
+          disciplineStats.pull.feedbackTotals.enjoyment += f.enjoyment;
+          disciplineStats.pull.feedbackCount++;
+        }
+
+        // Stroke aggregation
+        strokes.forEach(stroke => {
+          const strokeKey = `total${stroke}Swim` as keyof typeof session;
+          const strokeDistance = (session[strokeKey] as number) || 0;
+          if (strokeDistance > 0) {
+            strokeStats[stroke].totalDistance += strokeDistance;
+            strokeStats[stroke].sessionCount++;
+            strokeStats[stroke].avgEnjoyment += f.enjoyment;
+            strokeStats[stroke].avgEngagement += f.engagement;
+            strokeStats[stroke].feedbackCount++;
+          }
+        });
+
+        // Coach aggregation (lead coach)
+        if (session.leadCoachId) {
+          const coachName = coachMap.get(session.leadCoachId) || 'Unknown';
+          if (!coachStats[session.leadCoachId]) {
+            coachStats[session.leadCoachId] = { name: coachName, sessionCount: 0, totalRating: 0, feedbackCount: 0 };
+          }
+          const avgRating = (f.engagement + f.effortAndIntent + f.enjoyment + f.sessionClarity + f.appropriatenessOfChallenge + f.sessionFlow) / 6;
+          coachStats[session.leadCoachId].sessionCount++;
+          coachStats[session.leadCoachId].totalRating += avgRating;
+          coachStats[session.leadCoachId].feedbackCount++;
+        }
+      });
+
+      // Calculate averages
+      const disciplineImpact = Object.entries(disciplineStats)
+        .filter(([, v]) => v.feedbackCount >= 2)
+        .map(([discipline, stats]) => ({
+          discipline,
+          avgDistance: Math.round(stats.totalDistance / stats.sessionCount),
+          sessionCount: stats.sessionCount,
+          avgEngagement: Math.round((stats.feedbackTotals.engagement / stats.feedbackCount) * 10) / 10,
+          avgEnjoyment: Math.round((stats.feedbackTotals.enjoyment / stats.feedbackCount) * 10) / 10,
+        }));
+
+      const strokeImpact = Object.entries(strokeStats)
+        .filter(([, v]) => v.feedbackCount >= 2)
+        .map(([stroke, stats]) => ({
+          stroke: stroke === 'FrontCrawl' ? 'Freestyle' : stroke,
+          totalDistance: stats.totalDistance,
+          sessionCount: stats.sessionCount,
+          avgEnjoyment: Math.round((stats.avgEnjoyment / stats.feedbackCount) * 10) / 10,
+          avgEngagement: Math.round((stats.avgEngagement / stats.feedbackCount) * 10) / 10,
+        }));
+
+      const coachInfluence = Object.entries(coachStats)
+        .filter(([, v]) => v.feedbackCount >= 2)
+        .map(([id, stats]) => ({
+          coach: stats.name,
+          sessionCount: stats.sessionCount,
+          avgRating: Math.round((stats.totalRating / stats.feedbackCount) * 10) / 10,
+        }))
+        .sort((a, b) => b.avgRating - a.avgRating);
+
+      // Overall category averages
+      const categoryAverages: Record<string, number> = {};
+      const categories = ['engagement', 'effortAndIntent', 'enjoyment', 'sessionClarity', 'appropriatenessOfChallenge', 'sessionFlow'];
+      categories.forEach(cat => {
+        const total = filteredFeedback.reduce((sum, f: any) => sum + (f[cat] || 0), 0);
+        categoryAverages[cat] = Math.round((total / filteredFeedback.length) * 10) / 10;
+      });
+
+      // Build the AI prompt payload
+      const payload = {
+        filters: {
+          squad: squadId ? squadMap.get(squadId as string) || 'Selected Squad' : 'All Squads',
+          coach: coachId ? coachMap.get(coachId as string) || 'Selected Coach' : 'All Coaches',
+        },
+        overview: {
+          totalSessions: filteredFeedback.length,
+          overallAverage: Math.round(Object.values(categoryAverages).reduce((a, b) => a + b, 0) / 6 * 10) / 10,
+        },
+        categoryAverages,
+        disciplineImpact,
+        strokeImpact,
+        coachInfluence: coachInfluence.slice(0, 5), // Top 5 coaches
+      };
+
+      // Call OpenAI for insights
+      const OpenAI = (await import('openai')).default;
+      const openai = new OpenAI({
+        apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+        baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+      });
+
+      const systemPrompt = `You are an elite swimming performance analyst helping coaches improve their training sessions.
+Analyze the provided JSON data and generate 4-6 specific, evidence-backed insights.
+Every insight MUST cite exact numbers from the data - never invent statistics.
+Focus on actionable recommendations that coaches can implement immediately.
+Use markdown formatting with bold headers for each section.`;
+
+      const userPrompt = `Context:
+- Active filters: Squad = ${payload.filters.squad}, Coach = ${payload.filters.coach}
+- Disciplines tracked: swim, drill, kick, pull (measured in metres)
+- Strokes: Freestyle, Backstroke, Breaststroke, Butterfly, IM
+- Feedback categories: Engagement, Effort & Intent, Enjoyment, Session Clarity, Challenge Level, Session Flow (all rated 1-10)
+
+Analytics Data:
+${JSON.stringify(payload, null, 2)}
+
+Instructions:
+1. Generate insights in these sections:
+   - **Discipline Patterns**: How do different training types (drill, kick, swim) affect feedback scores?
+   - **Stroke Sentiment**: Which strokes do swimmers enjoy most/least? Any concerning patterns?
+   - **Coach Impact**: Any notable differences between coaches? What's working well?
+   - **Recommendations**: 2-3 specific experiments the coaching team could try
+
+2. For each insight, reference concrete figures (e.g., "Sessions with >1500m of drill work show higher Engagement (7.8 vs 6.6 baseline)")
+
+3. If sample size is <10 for any metric, note this limitation
+
+4. Highlight any concerning trends (ratings below 6.5) or positive outliers (above 8.0)
+
+5. Keep total response under 400 words, using bullet points for clarity`;
+
+      const response = await openai.chat.completions.create({
+        model: 'gpt-5-mini',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        max_completion_tokens: 1000,
+      });
+
+      const insightsText = response.choices[0]?.message?.content || 'Unable to generate insights.';
+
+      const result = {
+        insights: insightsText,
+        dataUsed: payload,
+        generatedAt: new Date().toISOString(),
+      };
+
+      // Cache the result
+      insightsCache.set(cacheKey, {
+        data: result,
+        timestamp: Date.now(),
+        dataHash,
+      });
+
+      res.json({
+        ...result,
+        cached: false,
+      });
+    } catch (error: any) {
+      console.error("Error generating AI insights:", error);
+      res.status(500).json({ 
+        message: error.message || "Failed to generate insights",
+        insights: null,
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

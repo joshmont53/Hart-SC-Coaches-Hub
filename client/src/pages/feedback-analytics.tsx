@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, TrendingUp, TrendingDown, Minus, ChevronDown, ChevronUp, BarChart3, Info, X } from 'lucide-react';
+import { queryClient } from '@/lib/queryClient';
+import { ArrowLeft, TrendingUp, TrendingDown, Minus, ChevronDown, ChevronUp, BarChart3, Info, X, Sparkles, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -77,6 +78,14 @@ const attributeLabels: Record<string, string> = {
   staffing: 'Staffing Level',
 };
 
+interface AIInsightsData {
+  insights: string | null;
+  message?: string;
+  cached: boolean;
+  cachedAt?: string;
+  generatedAt?: string;
+}
+
 export function FeedbackAnalytics({ onBack }: FeedbackAnalyticsProps) {
   const [squadFilter, setSquadFilter] = useState<string>('all');
   const [coachFilter, setCoachFilter] = useState<string>('all');
@@ -120,6 +129,66 @@ export function FeedbackAnalytics({ onBack }: FeedbackAnalyticsProps) {
     },
     enabled: !!analytics && analytics.overview.totalFeedbackCount > 0,
   });
+
+  // Query for AI Insights - cache key includes a refresh counter for force refresh
+  const [insightsRefreshKey, setInsightsRefreshKey] = useState(0);
+  const { data: aiInsights, isLoading: isInsightsLoading, isFetching: isInsightsFetching } = useQuery<AIInsightsData>({
+    queryKey: ['/api/feedback/analytics/insights', squadFilter, coachFilter, insightsRefreshKey],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (squadFilter && squadFilter !== 'all') params.append('squadId', squadFilter);
+      if (coachFilter && coachFilter !== 'all') params.append('coachId', coachFilter);
+      if (insightsRefreshKey > 0) params.append('forceRefresh', 'true');
+      const response = await fetch(`/api/feedback/analytics/insights?${params.toString()}`, { credentials: 'include' });
+      if (!response.ok) throw new Error('Failed to fetch AI insights');
+      return response.json();
+    },
+    enabled: !!analytics && analytics.overview.totalFeedbackCount >= 3,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
+  });
+
+  const handleRefreshInsights = () => {
+    setInsightsRefreshKey(prev => prev + 1);
+  };
+
+  // Helper to safely render markdown-like text without dangerouslySetInnerHTML
+  const renderInsights = (text: string) => {
+    const lines = text.split('\n');
+    return lines.map((line, index) => {
+      // Bold text
+      const parts = line.split(/\*\*(.*?)\*\*/g);
+      const formattedLine = parts.map((part, i) => 
+        i % 2 === 1 ? <strong key={i}>{part}</strong> : part
+      );
+      
+      // Bullet points
+      if (line.trim().startsWith('- ') || line.trim().startsWith('• ')) {
+        return (
+          <div key={index} className="flex items-start gap-2 ml-2">
+            <span className="text-muted-foreground mt-0.5">•</span>
+            <span>{formattedLine.map((p, i) => typeof p === 'string' ? p.replace(/^[-•]\s*/, '') : p)}</span>
+          </div>
+        );
+      }
+      
+      // Headers (lines that are bold)
+      if (line.startsWith('**') && line.endsWith('**')) {
+        return (
+          <h4 key={index} className="font-semibold mt-3 first:mt-0 text-sm">
+            {line.replace(/\*\*/g, '')}
+          </h4>
+        );
+      }
+      
+      // Regular lines
+      if (line.trim()) {
+        return <p key={index} className="mb-1">{formattedLine}</p>;
+      }
+      
+      return <div key={index} className="h-2" />;
+    });
+  };
 
   const getTrendIcon = (rating: number) => {
     if (rating >= 8) return <TrendingUp className="h-4 w-4 text-green-600" />;
@@ -561,6 +630,71 @@ export function FeedbackAnalytics({ onBack }: FeedbackAnalyticsProps) {
                 ) : (
                   <div className="h-[200px] flex items-center justify-center text-muted-foreground text-sm">
                     No data available for this combination
+                  </div>
+                )}
+              </Card>
+            </div>
+
+            {/* AI Insights Section */}
+            <div>
+              <div className="flex items-center justify-between gap-3 mb-4">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-purple-500" />
+                  <h2 className="text-sm font-medium">AI Insights</h2>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleRefreshInsights}
+                  disabled={isInsightsLoading || isInsightsFetching}
+                  className="h-7 px-2 text-xs"
+                  data-testid="button-refresh-insights"
+                >
+                  <RefreshCw className={cn("h-3 w-3 mr-1", (isInsightsLoading || isInsightsFetching) && "animate-spin")} />
+                  {(isInsightsLoading || isInsightsFetching) ? 'Generating...' : 'Refresh'}
+                </Button>
+              </div>
+              
+              <Card className="p-4">
+                {(isInsightsLoading || isInsightsFetching) ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Sparkles className="h-4 w-4 animate-pulse text-purple-500" />
+                      <span>Analyzing your session data...</span>
+                    </div>
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-[90%]" />
+                    <Skeleton className="h-4 w-[95%]" />
+                    <Skeleton className="h-4 w-[85%]" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-[80%]" />
+                  </div>
+                ) : aiInsights?.insights ? (
+                  <div className="space-y-3">
+                    <div className="text-sm leading-relaxed" data-testid="text-ai-insights">
+                      {renderInsights(aiInsights.insights)}
+                    </div>
+                    <div className="flex items-center justify-between pt-2 border-t text-[10px] text-muted-foreground">
+                      <span>
+                        {aiInsights.cached ? 'Cached' : 'Generated'} {aiInsights.generatedAt || aiInsights.cachedAt ? 
+                          new Date(aiInsights.generatedAt || aiInsights.cachedAt!).toLocaleString('en-GB', { 
+                            day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' 
+                          }) : ''}
+                      </span>
+                      <span className="text-purple-500">Powered by AI</span>
+                    </div>
+                  </div>
+                ) : aiInsights?.message ? (
+                  <div className="text-center py-4">
+                    <Sparkles className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                    <p className="text-sm text-muted-foreground">{aiInsights.message}</p>
+                  </div>
+                ) : (
+                  <div className="text-center py-4">
+                    <Sparkles className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                    <p className="text-sm text-muted-foreground">
+                      AI insights will appear once you have at least 3 sessions with feedback.
+                    </p>
                   </div>
                 )}
               </Card>
