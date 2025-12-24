@@ -25,6 +25,8 @@ import { format, isValid } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { RichTextEditor } from '@/components/RichTextEditor';
 import { DrillsSidebar } from '@/components/DrillsSidebar';
+import { FeedbackForm } from '@/components/FeedbackForm';
+import type { Coach as BackendCoach } from '@shared/schema';
 
 interface SessionDetailProps {
   sessionId: string;
@@ -34,7 +36,7 @@ interface SessionDetailProps {
   onBack: () => void;
 }
 
-type TabType = 'detail' | 'session' | 'attendance';
+type TabType = 'detail' | 'session' | 'attendance' | 'feedback';
 type AttendanceStatus = 'Present' | '1st half only' | '2nd half only' | 'Absent';
 type AttendanceNote = '-' | 'Late' | 'Very Late';
 
@@ -93,6 +95,11 @@ export function SessionDetail({
   // Fetch drills for displaying detected drills
   const { data: allDrills = [] } = useQuery<Drill[]>({
     queryKey: ['/api/drills'],
+  });
+
+  // Fetch current coach for feedback form
+  const { data: currentCoach } = useQuery<BackendCoach>({
+    queryKey: ['/api/coaches/me'],
   });
 
   // Adapt backend data to frontend types
@@ -565,6 +572,21 @@ export function SessionDetail({
                 <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
               )}
             </button>
+            <button
+              onClick={() => setActiveTab('feedback')}
+              className={cn(
+                'px-4 md:px-6 py-3 text-sm transition-colors relative',
+                activeTab === 'feedback'
+                  ? 'text-primary'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+              data-testid="tab-feedback"
+            >
+              Feedback
+              {activeTab === 'feedback' && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+              )}
+            </button>
           </div>
         </div>
       </div>
@@ -866,6 +888,25 @@ export function SessionDetail({
                   );
                 })}
               </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'feedback' && (
+          <div className="space-y-4">
+            <div className="mb-4">
+              <h2>Session Feedback</h2>
+              <p className="text-sm text-muted-foreground">
+                Rate this session across 6 categories
+              </p>
+            </div>
+
+            <div className="border rounded-lg p-4 md:p-6 bg-card">
+              {currentCoach ? (
+                <FeedbackForm sessionId={sessionId} coachId={currentCoach.id} />
+              ) : (
+                <p className="text-muted-foreground">You need to be linked to a coach profile to submit feedback.</p>
+              )}
             </div>
           </div>
         )}
