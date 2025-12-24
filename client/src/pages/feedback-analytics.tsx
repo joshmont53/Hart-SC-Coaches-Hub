@@ -127,7 +127,7 @@ export function FeedbackAnalytics({ onBack }: FeedbackAnalyticsProps) {
       if (!response.ok) throw new Error('Failed to fetch attribute analytics');
       return response.json();
     },
-    enabled: !!analytics && analytics.overview.totalFeedbackCount > 0,
+    enabled: !!analytics && analytics.overview.totalFeedbackCount >= 3,
   });
 
   // Query for AI Insights - cache key includes a refresh counter for force refresh
@@ -443,7 +443,7 @@ export function FeedbackAnalytics({ onBack }: FeedbackAnalyticsProps) {
               </div>
             </div>
           </div>
-        ) : analytics && analytics.overview.totalFeedbackCount > 0 ? (
+        ) : analytics && analytics.overview.totalFeedbackCount >= 3 ? (
           <>
             {/* Feedback Overview - 6 Category Cards */}
             <div>
@@ -703,12 +703,14 @@ export function FeedbackAnalytics({ onBack }: FeedbackAnalyticsProps) {
         ) : (
           <Card className="p-12 text-center">
             <BarChart3 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium mb-2">No Feedback Data Yet</h3>
+            <h3 className="text-lg font-medium mb-2">Not Enough Data Yet</h3>
             <p className="text-muted-foreground max-w-md mx-auto">
-              No feedback data available for the selected filters.
+              {analytics && analytics.overview.totalFeedbackCount > 0 
+                ? `You have ${analytics.overview.totalFeedbackCount} session${analytics.overview.totalFeedbackCount === 1 ? '' : 's'} with feedback. Analytics require at least 3 sessions to generate meaningful insights.`
+                : 'No feedback data available for the selected filters.'}
               <br />
               <span className="text-xs mt-2 block">
-                Insights will appear as more feedback is collected.
+                Keep collecting feedback to unlock analytics.
               </span>
             </p>
           </Card>
