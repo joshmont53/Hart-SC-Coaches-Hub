@@ -489,38 +489,70 @@ export function FeedbackAnalytics({ onBack }: FeedbackAnalyticsProps) {
                   </div>
                 ) : attributeData && attributeData.chartData.length > 0 ? (
                   <div className="h-[220px] flex flex-col">
-                    <div className="flex-1 flex items-end gap-2">
-                      {attributeData.chartData.map((item, index) => {
-                        const maxHeight = 160;
-                        const barHeight = (item.rating / 10) * maxHeight;
-                        
-                        const getBarColorClass = (rating: number) => {
-                          if (rating >= 8) return 'bg-green-500';
-                          if (rating >= 6.5) return 'bg-amber-500';
-                          return 'bg-red-500';
-                        };
-                        
-                        return (
-                          <div key={index} className="flex-1 min-w-0 flex flex-col items-center gap-1">
-                            <div className="w-full flex flex-col items-center justify-end" style={{ height: maxHeight }}>
-                              <span className={cn("text-xs font-medium mb-1", getRatingColor(item.rating))}>
-                                {item.rating.toFixed(1)}
-                              </span>
-                              <div 
-                                className={cn("w-full max-w-[50px] mx-auto rounded-t transition-all", getBarColorClass(item.rating))}
-                                style={{ height: Math.max(barHeight, 4) }}
-                                data-testid={`bar-attr-${index}`}
-                              />
-                            </div>
+                    <div className="flex-1 flex gap-2">
+                      {/* Y-axis */}
+                      <div className="w-6 flex flex-col justify-between text-[9px] text-muted-foreground pr-1" style={{ height: 160 }}>
+                        <span>10</span>
+                        <span>8</span>
+                        <span>6</span>
+                        <span>4</span>
+                        <span>2</span>
+                        <span>0</span>
+                      </div>
+                      {/* Chart area with gridlines */}
+                      <div className="flex-1 relative">
+                        {/* Horizontal gridlines */}
+                        <div className="absolute inset-0 flex flex-col justify-between pointer-events-none" style={{ height: 160 }}>
+                          {[0, 1, 2].map((i) => (
+                            <div key={i} className="w-full border-t border-muted/30" />
+                          ))}
+                          <div className="w-full border-t border-muted/50" />
+                        </div>
+                        {/* Bars */}
+                        <div className="flex items-end gap-2 h-full" style={{ height: 160 }}>
+                          {attributeData.chartData.map((item, index) => {
+                            const maxHeight = 160;
+                            const barHeight = (item.rating / 10) * maxHeight;
+                            
+                            const getBarColorClass = (rating: number) => {
+                              if (rating >= 8) return 'bg-green-500';
+                              if (rating >= 6.5) return 'bg-amber-500';
+                              return 'bg-red-500';
+                            };
+                            
+                            return (
+                              <div key={index} className="flex-1 min-w-0 flex flex-col items-center">
+                                <div className="w-full flex flex-col items-center justify-end" style={{ height: maxHeight }}>
+                                  <span className={cn("text-xs font-medium mb-1", getRatingColor(item.rating))}>
+                                    {item.rating.toFixed(1)}
+                                  </span>
+                                  <div 
+                                    className={cn("w-full max-w-[50px] mx-auto rounded-t transition-all", getBarColorClass(item.rating))}
+                                    style={{ height: Math.max(barHeight, 4) }}
+                                    data-testid={`bar-attr-${index}`}
+                                  />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                    {/* X-axis labels */}
+                    <div className="flex gap-2 mt-1">
+                      <div className="w-6" />
+                      <div className="flex-1 flex gap-2">
+                        {attributeData.chartData.map((item, index) => (
+                          <div key={index} className="flex-1 min-w-0 flex flex-col items-center">
                             <span className="text-[10px] text-muted-foreground text-center leading-tight truncate w-full">
                               {item.name}
                             </span>
                             <span className="text-[9px] text-muted-foreground">({item.count})</span>
                           </div>
-                        );
-                      })}
+                        ))}
+                      </div>
                     </div>
-                    <div className="mt-3 pt-2 border-t text-center">
+                    <div className="mt-2 pt-2 border-t text-center">
                       <span className="text-[10px] text-muted-foreground">
                         Showing {categoryLabels[selectedCategory]} by {attributeLabels[selectedAttribute]}
                       </span>
