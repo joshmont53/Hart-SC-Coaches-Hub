@@ -2510,20 +2510,23 @@ RULES:
 5. For areasToAddress, always suggest a concrete solution
 6. Return ONLY valid JSON, no markdown or explanation`;
 
+      console.log("[SessionHelper] Calling OpenAI with model gpt-4o-mini...");
       const response = await openai.chat.completions.create({
-        model: 'gpt-5-mini',
+        model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
         ],
-        max_completion_tokens: 2048,
+        max_tokens: 2048,
       });
+
+      console.log("[SessionHelper] OpenAI response received, choices:", response.choices?.length);
 
       let insights: { whatsWorking: string[]; areasToAddress: string[]; focusTips: string[] };
       
       try {
         const content = response.choices[0]?.message?.content || '{}';
-        console.log("[SessionHelper] AI raw response:", content.substring(0, 200));
+        console.log("[SessionHelper] AI raw response:", content.substring(0, 300));
         // Clean up potential markdown formatting
         const cleanedContent = content.replace(/```json\n?|\n?```/g, '').trim();
         insights = JSON.parse(cleanedContent);
