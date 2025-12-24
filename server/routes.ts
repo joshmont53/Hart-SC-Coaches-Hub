@@ -2523,11 +2523,13 @@ RULES:
       
       try {
         const content = response.choices[0]?.message?.content || '{}';
+        console.log("[SessionHelper] AI raw response:", content.substring(0, 200));
         // Clean up potential markdown formatting
         const cleanedContent = content.replace(/```json\n?|\n?```/g, '').trim();
         insights = JSON.parse(cleanedContent);
+        console.log("[SessionHelper] Parsed insights:", insights.whatsWorking?.length, "working,", insights.areasToAddress?.length, "areas");
       } catch (parseError) {
-        console.error("Failed to parse AI response:", parseError);
+        console.error("[SessionHelper] Failed to parse AI response:", parseError);
         // Fallback to empty arrays
         insights = {
           whatsWorking: [],
