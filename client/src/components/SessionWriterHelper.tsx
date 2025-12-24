@@ -36,6 +36,7 @@ interface HelperData {
   } | null;
   lowestCategory: string | null;
   highestCategory: string | null;
+  usingFallback?: boolean;
 }
 
 interface AIInsights {
@@ -142,9 +143,16 @@ export function SessionWriterHelper({ isOpen, onClose, squadId, sessionFocus, sq
                 </div>
               </div>
               {helperData && helperData.sessionCount > 0 && (
-                <p className="text-[10px] text-muted-foreground mt-1.5 pt-1.5 border-t">
-                  Based on {helperData.sessionCount} session{helperData.sessionCount !== 1 ? 's' : ''} with feedback
-                </p>
+                <div className="mt-1.5 pt-1.5 border-t">
+                  <p className="text-[10px] text-muted-foreground">
+                    Based on {helperData.sessionCount} session{helperData.sessionCount !== 1 ? 's' : ''} with feedback
+                  </p>
+                  {helperData.usingFallback && (
+                    <p className="text-[10px] text-amber-600 dark:text-amber-500 mt-0.5">
+                      Showing all squad data (not enough {sessionFocus} sessions)
+                    </p>
+                  )}
+                </div>
               )}
             </Card>
 

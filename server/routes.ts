@@ -2224,13 +2224,24 @@ CRITICAL RULES:
       const sessionMap = new Map(allSessions.map(s => [s.id, s]));
       
       // Filter feedback by squad (and optionally focus)
-      const filteredFeedback = allFeedback.filter((f: SessionFeedback) => {
+      let filteredFeedback = allFeedback.filter((f: SessionFeedback) => {
         const session = sessionMap.get(f.sessionId);
         if (!session) return false;
         if (session.squadId !== squadId) return false;
         if (sessionFocus && session.focus !== sessionFocus) return false;
         return true;
       });
+
+      // Fallback to all squad data if focus-specific data is insufficient
+      let usingFallback = false;
+      if (filteredFeedback.length < 3 && sessionFocus) {
+        filteredFeedback = allFeedback.filter((f: SessionFeedback) => {
+          const session = sessionMap.get(f.sessionId);
+          if (!session) return false;
+          return session.squadId === squadId;
+        });
+        usingFallback = filteredFeedback.length >= 1;
+      }
 
       if (filteredFeedback.length === 0) {
         return res.json({
@@ -2239,6 +2250,7 @@ CRITICAL RULES:
           trends: null,
           lowestCategory: null,
           highestCategory: null,
+          usingFallback: false,
         });
       }
 
@@ -2297,6 +2309,7 @@ CRITICAL RULES:
         trends,
         lowestCategory,
         highestCategory,
+        usingFallback,
       });
     } catch (error: any) {
       console.error("Error fetching session helper data:", error);
@@ -2325,7 +2338,7 @@ CRITICAL RULES:
       const squadName = squadMap.get(squadId as string) || 'Unknown Squad';
       
       // Filter feedback by squad (and optionally focus)
-      const filteredFeedback = allFeedback.filter((f: SessionFeedback) => {
+      let filteredFeedback = allFeedback.filter((f: SessionFeedback) => {
         const session = sessionMap.get(f.sessionId);
         if (!session) return false;
         if (session.squadId !== squadId) return false;
@@ -2333,12 +2346,24 @@ CRITICAL RULES:
         return true;
       });
 
+      // Fallback to all squad data if focus-specific data is insufficient
+      let usingFallback = false;
+      if (filteredFeedback.length < 3 && sessionFocus) {
+        filteredFeedback = allFeedback.filter((f: SessionFeedback) => {
+          const session = sessionMap.get(f.sessionId);
+          if (!session) return false;
+          return session.squadId === squadId;
+        });
+        usingFallback = filteredFeedback.length >= 3;
+      }
+
       if (filteredFeedback.length < 3) {
         return res.json({
           whatsWorking: [],
           areasToAddress: [],
           focusTips: [],
           message: "Not enough feedback data (minimum 3 sessions required)",
+          usingFallback: false,
         });
       }
 
