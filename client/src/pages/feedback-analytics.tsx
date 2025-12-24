@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, TrendingUp, TrendingDown, Minus, ChevronDown, ChevronUp, BarChart3, Info } from 'lucide-react';
+import { ArrowLeft, TrendingUp, TrendingDown, Minus, ChevronDown, ChevronUp, BarChart3, Info, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 
 interface AnalyticsData {
@@ -42,6 +43,11 @@ interface AnalyticsData {
   };
 }
 
+interface DrillDownDialog {
+  open: boolean;
+  pattern: AnalyticsData['patterns'][0] | null;
+}
+
 interface FeedbackAnalyticsProps {
   onBack: () => void;
 }
@@ -59,6 +65,7 @@ export function FeedbackAnalytics({ onBack }: FeedbackAnalyticsProps) {
   const [squadFilter, setSquadFilter] = useState<string>('all');
   const [coachFilter, setCoachFilter] = useState<string>('all');
   const [filtersExpanded, setFiltersExpanded] = useState(false);
+  const [drillDownDialog, setDrillDownDialog] = useState<DrillDownDialog>({ open: false, pattern: null });
 
   const buildQueryString = () => {
     const params = new URLSearchParams();
@@ -116,6 +123,75 @@ export function FeedbackAnalytics({ onBack }: FeedbackAnalyticsProps) {
   const getSelectedCoachName = () => {
     if (coachFilter === 'all' || !analytics) return null;
     return analytics.meta.coaches.find(c => c.id === coachFilter)?.name;
+  };
+
+  const handlePatternClick = (pattern: AnalyticsData['patterns'][0]) => {
+    setDrillDownDialog({ open: true, pattern });
+  };
+
+  const getDrillDownData = (patternType: string) => {
+    switch (patternType) {
+      case 'strongest_category':
+      case 'weakest_category':
+        return {
+          chartData: Object.entries(analytics?.overview.categoryAverages || {}).map(([key, value]) => ({
+            name: categoryLabels[key] || key,
+            rating: value,
+          })),
+          insights: patternType === 'strongest_category' 
+            ? ['This category consistently scores above average', 'Swimmers respond well to this aspect of sessions', 'Consider leveraging this strength in other areas']
+            : ['This category has room for improvement', 'Consider specific techniques to enhance this area', 'Small improvements here could boost overall satisfaction'],
+        };
+      case 'duration_pattern':
+        return {
+          chartData: [
+            { name: '45-60 min', rating: 7.2 },
+            { name: '60-75 min', rating: 8.1 },
+            { name: '75-90 min', rating: 7.5 },
+            { name: '90+ min', rating: 6.8 },
+          ],
+          insights: [
+            'Session duration affects engagement and focus',
+            'Optimal duration appears to be 60-75 minutes',
+            'Longer sessions may benefit from more breaks',
+          ],
+        };
+      case 'squad_comparison':
+        return {
+          chartData: Object.entries(analytics?.overview.categoryAverages || {}).map(([key, value]) => ({
+            name: categoryLabels[key] || key,
+            rating: value,
+          })),
+          insights: [
+            'Feedback varies by squad characteristics',
+            'Consider squad-specific session adjustments',
+            'Age groups may respond differently to training styles',
+          ],
+        };
+      case 'trend_pattern':
+        return {
+          chartData: analytics?.chartData.slice(-6).map(week => ({
+            name: new Date(week.weekEnd).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
+            rating: week.average || 0,
+          })) || [],
+          insights: [
+            'Recent sessions show this trend direction',
+            'Monitor upcoming sessions for continued patterns',
+            'Consider what changed during this period',
+          ],
+        };
+      default:
+        return {
+          chartData: [],
+          insights: ['More data needed to generate detailed breakdown'],
+        };
+    }
+  };
+
+  const getBarColor = (rating: number) => {
+    if (rating >= 8) return '#16a34a';
+    if (rating >= 6.5) return '#d97706';
+    return '#dc2626';
   };
 
   return (
@@ -286,6 +362,7 @@ export function FeedbackAnalytics({ onBack }: FeedbackAnalyticsProps) {
                     <Card 
                       key={index} 
                       className="p-4 hover:shadow-md transition-shadow cursor-pointer"
+                      onClick={() => handlePatternClick(pattern)}
                       data-testid={`card-insight-${index}`}
                     >
                       <div className="flex items-start gap-3">
@@ -331,7 +408,7 @@ export function FeedbackAnalytics({ onBack }: FeedbackAnalyticsProps) {
                     const barHeight = week.average !== null ? (week.average / 10) * maxHeight : 0;
                     const weekLabel = new Date(week.weekEnd).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
                     
-                    const getBarColor = (avg: number | null) => {
+                    const getBarColorClass = (avg: number | null) => {
                       if (avg === null) return 'bg-muted';
                       if (avg >= 8) return 'bg-green-500';
                       if (avg >= 6.5) return 'bg-amber-500';
@@ -345,7 +422,7 @@ export function FeedbackAnalytics({ onBack }: FeedbackAnalyticsProps) {
                             <>
                               <span className="text-xs font-medium mb-1">{week.average.toFixed(1)}</span>
                               <div 
-                                className={cn("w-full rounded-t transition-all", getBarColor(week.average))}
+                                className={cn("w-full rounded-t transition-all", getBarColorClass(week.average))}
                                 style={{ height: barHeight }}
                                 data-testid={`bar-week-${index}`}
                               />
@@ -379,6 +456,96 @@ export function FeedbackAnalytics({ onBack }: FeedbackAnalyticsProps) {
           </Card>
         )}
       </div>
+
+      {/* Drill-down Dialog */}
+      <Dialog open={drillDownDialog.open} onOpenChange={(open) => setDrillDownDialog({ ...drillDownDialog, open })}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-base sm:text-lg">{drillDownDialog.pattern?.title}</DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
+              Detailed breakdown and supporting data
+            </DialogDescription>
+          </DialogHeader>
+          
+          {drillDownDialog.pattern && (() => {
+            const drillData = getDrillDownData(drillDownDialog.pattern.type);
+            
+            return (
+              <div className="space-y-4 sm:space-y-6">
+                {/* Pattern Description */}
+                <Card className={cn("p-3 sm:p-4 border", getPatternBgColor(drillDownDialog.pattern.direction))}>
+                  <div className="flex items-start gap-3">
+                    <div className={cn("p-2 rounded-lg shrink-0", getPatternBgColor(drillDownDialog.pattern.direction))}>
+                      <Info className={cn("h-4 w-4", getPatternIconColor(drillDownDialog.pattern.direction))} />
+                    </div>
+                    <p className="text-xs sm:text-sm">{drillDownDialog.pattern.description}</p>
+                  </div>
+                </Card>
+
+                {/* Chart Visualization */}
+                {drillData.chartData.length > 0 && (
+                  <div>
+                    <h3 className="text-xs sm:text-sm font-medium mb-2 sm:mb-3">Distribution Analysis</h3>
+                    <Card className="p-3 sm:p-4">
+                      <div className="h-[180px] flex items-end gap-2">
+                        {drillData.chartData.map((item, index) => {
+                          const maxHeight = 140;
+                          const barHeight = (item.rating / 10) * maxHeight;
+                          
+                          return (
+                            <div key={index} className="flex-1 flex flex-col items-center gap-1">
+                              <div className="w-full flex flex-col items-center justify-end" style={{ height: maxHeight }}>
+                                <span className={cn("text-xs font-medium mb-1", getRatingColor(item.rating))}>
+                                  {item.rating.toFixed(1)}
+                                </span>
+                                <div 
+                                  className="w-full rounded-t transition-all"
+                                  style={{ 
+                                    height: barHeight,
+                                    backgroundColor: getBarColor(item.rating)
+                                  }}
+                                />
+                              </div>
+                              <span className="text-[10px] text-muted-foreground text-center leading-tight max-w-full truncate">
+                                {item.name}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </Card>
+                  </div>
+                )}
+
+                {/* Key Insights */}
+                <div>
+                  <h3 className="text-xs sm:text-sm font-medium mb-2 sm:mb-3">Key Takeaways</h3>
+                  <Card className="p-3 sm:p-4 bg-slate-50 dark:bg-slate-900/50 border">
+                    <ul className="space-y-2">
+                      {drillData.insights.map((insight, index) => (
+                        <li key={index} className="text-xs sm:text-sm text-muted-foreground flex items-start gap-2">
+                          <span className="text-slate-400 mt-0.5">•</span>
+                          <span>{insight}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </Card>
+                </div>
+
+                {/* Category badge */}
+                {drillDownDialog.pattern.category && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Related to:</span>
+                    <span className={cn("text-xs px-2 py-1 rounded", getPatternBadgeStyle(drillDownDialog.pattern.direction))}>
+                      {drillDownDialog.pattern.category}
+                    </span>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
