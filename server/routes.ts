@@ -1521,7 +1521,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       if (coachId && typeof coachId === 'string') {
-        filteredFeedback = filteredFeedback.filter(f => f.coachId === coachId);
+        filteredFeedback = filteredFeedback.filter(f => {
+          const session = f.session;
+          if (!session) return false;
+          return session.leadCoachId === coachId || 
+                 session.secondCoachId === coachId || 
+                 session.helperId === coachId;
+        });
       }
 
       if (startDate && typeof startDate === 'string') {
