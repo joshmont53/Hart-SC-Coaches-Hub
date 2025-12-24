@@ -2152,6 +2152,8 @@ Instructions:
 
 5. Keep total response under 400 words, using bullet points for clarity`;
 
+      console.log("Calling OpenAI for insights with payload:", JSON.stringify(payload, null, 2));
+      
       const response = await openai.chat.completions.create({
         model: 'gpt-5-mini',
         messages: [
@@ -2161,6 +2163,8 @@ Instructions:
         max_completion_tokens: 1000,
       });
 
+      console.log("OpenAI response received:", JSON.stringify(response, null, 2));
+      
       const insightsText = response.choices[0]?.message?.content || 'Unable to generate insights.';
 
       const result = {
