@@ -186,7 +186,7 @@ export function SessionWriterHelper({ isOpen, onClose, squadId, sessionFocus, sq
                         key === helperData.lowestCategory && "bg-amber-50 dark:bg-amber-950/20"
                       )}
                     >
-                      <span className="text-muted-foreground truncate">{categoryLabels[key]?.split(' ')[0]}</span>
+                      <span className="text-muted-foreground truncate">{categoryLabels[key]?.replace('Session ', '')}</span>
                       <div className="flex items-center gap-0.5">
                         <span className={cn('font-medium', getRatingColor(value))}>{value.toFixed(1)}</span>
                         {helperData.trends && getTrendIcon(helperData.trends[key as keyof typeof helperData.trends])}

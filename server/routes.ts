@@ -2464,6 +2464,8 @@ CRITICAL RULES:
         disciplineImpact,
       };
 
+      console.log("[SessionHelper] Generating AI insights for squad:", squadName, "with", filteredFeedback.length, "sessions");
+
       // Call OpenAI for insights
       const OpenAI = (await import('openai')).default;
       const openai = new OpenAI({
