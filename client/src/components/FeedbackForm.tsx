@@ -95,12 +95,12 @@ const feedbackCategories: FeedbackCategory[] = [
 ];
 
 type FeedbackRatings = {
-  engagement: number;
-  effortAndIntent: number;
-  enjoyment: number;
-  sessionClarity: number;
-  appropriatenessOfChallenge: number;
-  sessionFlow: number;
+  engagement: number | null;
+  effortAndIntent: number | null;
+  enjoyment: number | null;
+  sessionClarity: number | null;
+  appropriatenessOfChallenge: number | null;
+  sessionFlow: number | null;
 };
 
 interface FeedbackFormProps {
@@ -111,12 +111,12 @@ interface FeedbackFormProps {
 export function FeedbackForm({ sessionId, coachId }: FeedbackFormProps) {
   const { toast } = useToast();
   const [ratings, setRatings] = useState<FeedbackRatings>({
-    engagement: 5,
-    effortAndIntent: 5,
-    enjoyment: 5,
-    sessionClarity: 5,
-    appropriatenessOfChallenge: 5,
-    sessionFlow: 5,
+    engagement: null,
+    effortAndIntent: null,
+    enjoyment: null,
+    sessionClarity: null,
+    appropriatenessOfChallenge: null,
+    sessionFlow: null,
   });
   const [notes, setNotes] = useState('');
   const [isPrivate, setIsPrivate] = useState(false);
@@ -181,7 +181,11 @@ export function FeedbackForm({ sessionId, coachId }: FeedbackFormProps) {
     saveMutation.mutate();
   };
 
-  const averageRating = Object.values(ratings).reduce((sum, val) => sum + val, 0) / Object.values(ratings).length;
+  const validRatings = Object.values(ratings).filter((val): val is number => val !== null);
+  const allRatingsComplete = validRatings.length === 6;
+  const averageRating = allRatingsComplete 
+    ? validRatings.reduce((sum, val) => sum + val, 0) / validRatings.length 
+    : null;
 
   if (isLoading) {
     return <div className="p-4 text-center text-muted-foreground">Loading feedback...</div>;
@@ -208,12 +212,17 @@ export function FeedbackForm({ sessionId, coachId }: FeedbackFormProps) {
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium">Average Rating</span>
           <div className="flex items-center gap-2">
-            <div className="text-2xl font-bold text-primary">
-              {averageRating.toFixed(1)}
+            <div className="text-2xl font-bold text-green-600 dark:text-green-500">
+              {averageRating !== null ? averageRating.toFixed(1) : '-'}
             </div>
             <span className="text-sm text-muted-foreground">/ 10</span>
           </div>
         </div>
+        {!allRatingsComplete && (
+          <p className="text-xs text-muted-foreground mt-2">
+            Complete all 6 ratings to see average
+          </p>
+        )}
       </Card>
 
       <div className="space-y-3">
@@ -259,7 +268,7 @@ export function FeedbackForm({ sessionId, coachId }: FeedbackFormProps) {
                     className={cn(
                       'aspect-square rounded-md flex items-center justify-center text-sm font-medium transition-all',
                       ratings[category.key] === num
-                        ? 'bg-primary text-primary-foreground shadow-md scale-110'
+                        ? 'bg-green-600 text-white shadow-md scale-110'
                         : 'bg-muted hover-elevate'
                     )}
                     data-testid={`button-rating-${category.key}-${num}`}
@@ -271,7 +280,9 @@ export function FeedbackForm({ sessionId, coachId }: FeedbackFormProps) {
 
               <div className="text-center">
                 <span className="text-xs text-muted-foreground">
-                  Current: <span className="text-primary font-medium">{ratings[category.key]}/10</span>
+                  Current: <span className="text-green-600 dark:text-green-500 font-medium">
+                    {ratings[category.key] !== null ? `${ratings[category.key]}/10` : 'Not selected'}
+                  </span>
                 </span>
               </div>
 
@@ -344,10 +355,10 @@ export function FeedbackForm({ sessionId, coachId }: FeedbackFormProps) {
       <div className="flex justify-end">
         <Button
           onClick={handleSave}
-          disabled={isSaved || saveMutation.isPending}
+          disabled={isSaved || saveMutation.isPending || !allRatingsComplete}
           data-testid="button-save-feedback"
         >
-          {saveMutation.isPending ? 'Saving...' : isSaved ? 'Saved' : 'Save Feedback'}
+          {saveMutation.isPending ? 'Saving...' : isSaved ? 'Saved' : !allRatingsComplete ? 'Rate All Categories to Save' : 'Save Feedback'}
         </Button>
       </div>
     </div>
