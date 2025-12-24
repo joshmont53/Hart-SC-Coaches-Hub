@@ -2209,9 +2209,9 @@ CRITICAL RULES:
   const SESSION_HELPER_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
 
   // Session Writer Helper - Non-AI data endpoint
-  app.get("/api/feedback/session-helper", requireAuth, async (req, res) => {
+  app.get("/api/feedback/session-helper/:squadId/:sessionFocus?", requireAuth, async (req, res) => {
     try {
-      const { squadId, sessionFocus } = req.query;
+      const { squadId, sessionFocus } = req.params;
       
       if (!squadId) {
         return res.status(400).json({ message: "squadId is required" });
@@ -2305,9 +2305,10 @@ CRITICAL RULES:
   });
 
   // Session Writer Helper - AI Insights endpoint
-  app.get("/api/feedback/session-helper/insights", requireAuth, async (req, res) => {
+  app.get("/api/feedback/session-helper/insights/:squadId/:sessionFocus?", requireAuth, async (req, res) => {
     try {
-      const { squadId, sessionFocus, forceRefresh } = req.query;
+      const { squadId, sessionFocus } = req.params;
+      const { forceRefresh } = req.query;
       
       if (!squadId) {
         return res.status(400).json({ message: "squadId is required" });
