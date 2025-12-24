@@ -16,6 +16,7 @@ import {
   updateCoachingRateSchema,
   insertSessionTemplateSchema,
   insertDrillSchema,
+  insertSessionFeedbackSchema,
 } from "@shared/schema";
 import { sendInvitationEmail } from "./emailService";
 import { randomBytes } from "crypto";
@@ -1415,6 +1416,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error generating invoice data:", error);
       res.status(500).json({ message: error.message || "Failed to generate invoice data" });
+    }
+  });
+
+  // ============================================================================
+  // Session Feedback routes (Feedback Feature - No impact on existing functionality)
+  // ============================================================================
+
+  // Get feedback for a specific session
+  app.get("/api/feedback/session/:sessionId", requireAuth, async (req, res) => {
+    try {
+      const feedback = await storage.getFeedbackBySession(req.params.sessionId);
+      if (!feedback) {
+        return res.status(404).json({ message: "Feedback not found" });
+      }
+      res.json(feedback);
+    } catch (error: any) {
+      console.error("Error fetching feedback:", error);
+      res.status(500).json({ message: error.message || "Failed to fetch feedback" });
+    }
+  });
+
+  // Get all feedback (for analytics)
+  app.get("/api/feedback", requireAuth, async (req, res) => {
+    try {
+      const feedback = await storage.getAllFeedback();
+      res.json(feedback);
+    } catch (error) {
+      console.error("Error fetching all feedback:", error);
+      res.status(500).json({ message: "Failed to fetch feedback" });
+    }
+  });
+
+  // Create or update feedback for a session
+  app.post("/api/feedback", requireAuth, async (req: any, res) => {
+    try {
+      const validatedData = insertSessionFeedbackSchema.parse(req.body);
+      const feedback = await storage.createOrUpdateFeedback(validatedData);
+      res.json(feedback);
+    } catch (error: any) {
+      console.error("Error saving feedback:", error);
+      res.status(400).json({ message: error.message || "Failed to save feedback" });
+    }
+  });
+
+  // Delete feedback
+  app.delete("/api/feedback/:id", requireAuth, async (req, res) => {
+    try {
+      await storage.deleteFeedback(req.params.id);
+      res.json({ message: "Feedback deleted successfully" });
+    } catch (error: any) {
+      console.error("Error deleting feedback:", error);
+      if (error.message === "Feedback not found") {
+        return res.status(404).json({ message: error.message });
+      }
+      res.status(500).json({ message: "Failed to delete feedback" });
     }
   });
 

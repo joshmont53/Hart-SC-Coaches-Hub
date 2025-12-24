@@ -6,12 +6,14 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { ArrowLeft, Calendar, Clock, MapPin, Users, Target, Trash2, Save, Edit } from "lucide-react";
+import { ArrowLeft, Calendar, Clock, MapPin, Users, Target, Trash2, Save, Edit, MessageSquare } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { useState, useEffect } from "react";
 import type { SwimmingSession, Coach, Squad, Location, Swimmer, Attendance } from "@shared/schema";
+import { FeedbackForm } from "@/components/FeedbackForm";
 
 export default function SessionDetail() {
   const [, params] = useRoute("/sessions/:id");
@@ -33,6 +35,9 @@ export default function SessionDetail() {
   const { data: attendance } = useQuery<Attendance[]>({
     queryKey: ["/api/attendance", sessionId],
     enabled: !!sessionId,
+  });
+  const { data: currentCoach } = useQuery<Coach>({
+    queryKey: ["/api/coaches/me"],
   });
 
   useEffect(() => {
@@ -232,216 +237,246 @@ export default function SessionDetail() {
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-6 max-w-4xl space-y-6">
-        {/* Session Info */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-start justify-between gap-4 flex-wrap">
-              <div>
-                <CardTitle className="text-xl mb-2">{getSquadName(session.squadId)}</CardTitle>
-                <CardDescription>{getLocationName(session.poolId)}</CardDescription>
-              </div>
-              <Badge variant="secondary" className="text-sm">
-                {session.focus}
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="flex items-center gap-3 text-sm">
-                <Calendar className="w-5 h-5 text-muted-foreground" />
-                <div>
-                  <p className="text-muted-foreground text-xs">Date</p>
-                  <p className="font-medium">{format(parseISO(session.sessionDate), "MMMM d, yyyy")}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 text-sm">
-                <Clock className="w-5 h-5 text-muted-foreground" />
-                <div>
-                  <p className="text-muted-foreground text-xs">Time</p>
-                  <p className="font-medium">{session.startTime} - {session.endTime} ({session.duration}h)</p>
-                </div>
-              </div>
-            </div>
+      <div className="container mx-auto px-4 py-6 max-w-4xl">
+        <Tabs defaultValue="details" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="details" data-testid="tab-details">Details</TabsTrigger>
+            <TabsTrigger value="attendance" data-testid="tab-attendance">Attendance</TabsTrigger>
+            <TabsTrigger value="feedback" data-testid="tab-feedback">
+              <MessageSquare className="w-4 h-4 mr-2" />
+              Feedback
+            </TabsTrigger>
+          </TabsList>
 
-            <div className="grid md:grid-cols-2 gap-4 pt-2 border-t">
-              <div>
-                <p className="text-xs text-muted-foreground mb-2">Lead Coach</p>
-                <p className="font-medium">{getCoachName(session.leadCoachId)}</p>
-              </div>
-              {session.secondCoachId && (
-                <div>
-                  <p className="text-xs text-muted-foreground mb-2">Second Coach</p>
-                  <p className="font-medium">{getCoachName(session.secondCoachId)}</p>
+          <TabsContent value="details" className="space-y-6">
+            {/* Session Info */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-start justify-between gap-4 flex-wrap">
+                  <div>
+                    <CardTitle className="text-xl mb-2">{getSquadName(session.squadId)}</CardTitle>
+                    <CardDescription>{getLocationName(session.poolId)}</CardDescription>
+                  </div>
+                  <Badge variant="secondary" className="text-sm">
+                    {session.focus}
+                  </Badge>
                 </div>
-              )}
-              {session.helperId && (
-                <div>
-                  <p className="text-xs text-muted-foreground mb-2">Helper</p>
-                  <p className="font-medium">{getCoachName(session.helperId)}</p>
-                </div>
-              )}
-              <div>
-                <p className="text-xs text-muted-foreground mb-2">Set Writer</p>
-                <p className="font-medium">{getCoachName(session.setWriterId)}</p>
-              </div>
-            </div>
-
-            <div className="pt-2 border-t">
-              <div className="flex items-center gap-3">
-                <Target className="w-5 h-5 text-primary" />
-                <div>
-                  <p className="text-xs text-muted-foreground">Total Distance</p>
-                  <p className="text-2xl font-bold text-primary">{session.totalDistance}m</p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Stroke Breakdown */}
-        {strokeData.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Distance Breakdown</CardTitle>
-              <CardDescription>Stroke-by-stroke training distances</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Accordion type="multiple" className="w-full">
-                {strokeData.map((stroke, index) => {
-                  const total = stroke.swim + stroke.drill + stroke.kick + stroke.pull;
-                  return (
-                    <AccordionItem key={index} value={`stroke-${index}`}>
-                      <AccordionTrigger className="text-base font-medium">
-                        <div className="flex items-center justify-between w-full pr-4">
-                          <span>{stroke.name}</span>
-                          <span className="text-primary">{total}m</span>
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2">
-                          <div>
-                            <p className="text-xs text-muted-foreground">Swim</p>
-                            <p className="text-lg font-semibold">{stroke.swim}m</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground">Drill</p>
-                            <p className="text-lg font-semibold">{stroke.drill}m</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground">Kick</p>
-                            <p className="text-lg font-semibold">{stroke.kick}m</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground">Pull</p>
-                            <p className="text-lg font-semibold">{stroke.pull}m</p>
-                          </div>
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  );
-                })}
-              </Accordion>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Attendance */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between gap-4 flex-wrap">
-              <div>
-                <CardTitle>Attendance</CardTitle>
-                <CardDescription>
-                  {squadSwimmers.length} swimmers in {getSquadName(session.squadId)}
-                </CardDescription>
-              </div>
-              <Button
-                size="default"
-                onClick={handleSaveAttendance}
-                disabled={saveAttendanceMutation.isPending}
-                data-testid="button-save-attendance"
-              >
-                <Save className="w-4 h-4 mr-2" />
-                {saveAttendanceMutation.isPending ? "Saving..." : "Save Attendance"}
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {squadSwimmers.map((swimmer) => {
-                const existingAttendance = attendance?.find(a => a.swimmerId === swimmer.id);
-                const data = attendanceData[swimmer.id] ?? {
-                  status: existingAttendance?.status ?? "Present",
-                  notes: existingAttendance?.notes ?? null,
-                };
-                const isAbsent = data.status === "Absent";
-
-                return (
-                  <div
-                    key={swimmer.id}
-                    className="flex items-center justify-between gap-1.5 sm:gap-2 p-2 sm:p-3 rounded-lg border"
-                  >
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm sm:text-base font-medium truncate">
-                          {swimmer.firstName} {swimmer.lastName}
-                        </p>
-                        <p className="text-[10px] sm:text-xs text-muted-foreground hidden sm:block">ASA: {swimmer.asaNumber}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-                      <Select
-                        value={data.status}
-                        onValueChange={(value) => {
-                          setAttendanceData(prev => ({
-                            ...prev,
-                            [swimmer.id]: {
-                              status: value,
-                              notes: value === "Absent" ? null : (prev[swimmer.id]?.notes ?? null),
-                            },
-                          }));
-                        }}
-                      >
-                        <SelectTrigger className="w-[95px] sm:w-[140px] h-8 text-xs sm:text-sm" data-testid={`select-status-${swimmer.id}`}>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Present">Present</SelectItem>
-                          <SelectItem value="First Half Only">First Half Only</SelectItem>
-                          <SelectItem value="Second Half Only">Second Half Only</SelectItem>
-                          <SelectItem value="Absent">Absent</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Select
-                        value={data.notes ?? "none"}
-                        onValueChange={(value) => {
-                          setAttendanceData(prev => ({
-                            ...prev,
-                            [swimmer.id]: {
-                              status: prev[swimmer.id]?.status ?? "Present",
-                              notes: value === "none" ? null : value,
-                            },
-                          }));
-                        }}
-                        disabled={isAbsent}
-                      >
-                        <SelectTrigger className="w-[75px] sm:w-[100px] h-8 text-xs sm:text-sm" data-testid={`select-notes-${swimmer.id}`}>
-                          <SelectValue placeholder="—" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">—</SelectItem>
-                          <SelectItem value="Late">Late</SelectItem>
-                          <SelectItem value="Very Late">Very Late</SelectItem>
-                        </SelectContent>
-                      </Select>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="flex items-center gap-3 text-sm">
+                    <Calendar className="w-5 h-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-muted-foreground text-xs">Date</p>
+                      <p className="font-medium">{format(parseISO(session.sessionDate), "MMMM d, yyyy")}</p>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
+                  <div className="flex items-center gap-3 text-sm">
+                    <Clock className="w-5 h-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-muted-foreground text-xs">Time</p>
+                      <p className="font-medium">{session.startTime} - {session.endTime} ({session.duration}h)</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4 pt-2 border-t">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-2">Lead Coach</p>
+                    <p className="font-medium">{getCoachName(session.leadCoachId)}</p>
+                  </div>
+                  {session.secondCoachId && (
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-2">Second Coach</p>
+                      <p className="font-medium">{getCoachName(session.secondCoachId)}</p>
+                    </div>
+                  )}
+                  {session.helperId && (
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-2">Helper</p>
+                      <p className="font-medium">{getCoachName(session.helperId)}</p>
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-2">Set Writer</p>
+                    <p className="font-medium">{getCoachName(session.setWriterId)}</p>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t">
+                  <div className="flex items-center gap-3">
+                    <Target className="w-5 h-5 text-primary" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Total Distance</p>
+                      <p className="text-2xl font-bold text-primary">{session.totalDistance}m</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Stroke Breakdown */}
+            {strokeData.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Distance Breakdown</CardTitle>
+                  <CardDescription>Stroke-by-stroke training distances</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Accordion type="multiple" className="w-full">
+                    {strokeData.map((stroke, index) => {
+                      const total = stroke.swim + stroke.drill + stroke.kick + stroke.pull;
+                      return (
+                        <AccordionItem key={index} value={`stroke-${index}`}>
+                          <AccordionTrigger className="text-base font-medium">
+                            <div className="flex items-center justify-between w-full pr-4">
+                              <span>{stroke.name}</span>
+                              <span className="text-primary">{total}m</span>
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2">
+                              <div>
+                                <p className="text-xs text-muted-foreground">Swim</p>
+                                <p className="text-lg font-semibold">{stroke.swim}m</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-muted-foreground">Drill</p>
+                                <p className="text-lg font-semibold">{stroke.drill}m</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-muted-foreground">Kick</p>
+                                <p className="text-lg font-semibold">{stroke.kick}m</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-muted-foreground">Pull</p>
+                                <p className="text-lg font-semibold">{stroke.pull}m</p>
+                              </div>
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                      );
+                    })}
+                  </Accordion>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          <TabsContent value="attendance" className="space-y-6">
+            {/* Attendance */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between gap-4 flex-wrap">
+                  <div>
+                    <CardTitle>Attendance</CardTitle>
+                    <CardDescription>
+                      {squadSwimmers.length} swimmers in {getSquadName(session.squadId)}
+                    </CardDescription>
+                  </div>
+                  <Button
+                    size="default"
+                    onClick={handleSaveAttendance}
+                    disabled={saveAttendanceMutation.isPending}
+                    data-testid="button-save-attendance"
+                  >
+                    <Save className="w-4 h-4 mr-2" />
+                    {saveAttendanceMutation.isPending ? "Saving..." : "Save Attendance"}
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {squadSwimmers.map((swimmer) => {
+                    const existingAttendance = attendance?.find(a => a.swimmerId === swimmer.id);
+                    const data = attendanceData[swimmer.id] ?? {
+                      status: existingAttendance?.status ?? "Present",
+                      notes: existingAttendance?.notes ?? null,
+                    };
+                    const isAbsent = data.status === "Absent";
+
+                    return (
+                      <div
+                        key={swimmer.id}
+                        className="flex items-center justify-between gap-1.5 sm:gap-2 p-2 sm:p-3 rounded-lg border"
+                      >
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm sm:text-base font-medium truncate">
+                              {swimmer.firstName} {swimmer.lastName}
+                            </p>
+                            <p className="text-[10px] sm:text-xs text-muted-foreground hidden sm:block">ASA: {swimmer.asaNumber}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+                          <Select
+                            value={data.status}
+                            onValueChange={(value) => {
+                              setAttendanceData(prev => ({
+                                ...prev,
+                                [swimmer.id]: {
+                                  status: value,
+                                  notes: value === "Absent" ? null : (prev[swimmer.id]?.notes ?? null),
+                                },
+                              }));
+                            }}
+                          >
+                            <SelectTrigger className="w-[95px] sm:w-[140px] h-8 text-xs sm:text-sm" data-testid={`select-status-${swimmer.id}`}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Present">Present</SelectItem>
+                              <SelectItem value="First Half Only">First Half Only</SelectItem>
+                              <SelectItem value="Second Half Only">Second Half Only</SelectItem>
+                              <SelectItem value="Absent">Absent</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Select
+                            value={data.notes ?? "none"}
+                            onValueChange={(value) => {
+                              setAttendanceData(prev => ({
+                                ...prev,
+                                [swimmer.id]: {
+                                  status: prev[swimmer.id]?.status ?? "Present",
+                                  notes: value === "none" ? null : value,
+                                },
+                              }));
+                            }}
+                            disabled={isAbsent}
+                          >
+                            <SelectTrigger className="w-[75px] sm:w-[100px] h-8 text-xs sm:text-sm" data-testid={`select-notes-${swimmer.id}`}>
+                              <SelectValue placeholder="—" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">—</SelectItem>
+                              <SelectItem value="Late">Late</SelectItem>
+                              <SelectItem value="Very Late">Very Late</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="feedback" className="space-y-6">
+            {/* Feedback Form */}
+            <Card>
+              <CardContent className="pt-6">
+                {currentCoach ? (
+                  <FeedbackForm sessionId={sessionId!} coachId={currentCoach.id} />
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p>You need to be linked to a coach profile to submit feedback.</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

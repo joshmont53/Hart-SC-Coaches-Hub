@@ -534,3 +534,54 @@ export const insertDrillSchema = createInsertSchema(drills).omit({
   recordStatus: true 
 });
 export type InsertDrill = z.infer<typeof insertDrillSchema>;
+
+// ============================================================================
+// Session Feedback - NEW TABLE (Feedback Feature - No impact on existing functionality)
+// ============================================================================
+
+// Session Feedback table - Stores coach feedback for swimming sessions (1 per session)
+export const sessionFeedback = pgTable("session_feedback", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: varchar("session_id").references(() => swimmingSessions.id, { onDelete: 'cascade' }).notNull().unique(), // One feedback per session
+  coachId: varchar("coach_id").references(() => coaches.id).notNull(), // Coach who submitted the feedback
+  
+  // 6 Rating Categories (1-10 scale)
+  engagement: integer("engagement").notNull(), // How actively swimmers participated
+  effortAndIntent: integer("effort_and_intent").notNull(), // How hard swimmers worked
+  enjoyment: integer("enjoyment").notNull(), // How much fun swimmers had
+  sessionClarity: integer("session_clarity").notNull(), // How clear instructions were
+  appropriatenessOfChallenge: integer("appropriateness_of_challenge").notNull(), // Whether difficulty was right
+  sessionFlow: integer("session_flow").notNull(), // How well session ran logistically
+  
+  notes: text("notes"), // Optional additional observations
+  isPrivate: boolean("is_private").notNull().default(false), // If true, only visible to submitter
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const sessionFeedbackRelations = relations(sessionFeedback, ({ one }) => ({
+  session: one(swimmingSessions, {
+    fields: [sessionFeedback.sessionId],
+    references: [swimmingSessions.id],
+  }),
+  coach: one(coaches, {
+    fields: [sessionFeedback.coachId],
+    references: [coaches.id],
+  }),
+}));
+
+export type SessionFeedback = typeof sessionFeedback.$inferSelect;
+export const insertSessionFeedbackSchema = createInsertSchema(sessionFeedback).omit({ 
+  id: true, 
+  createdAt: true, 
+  updatedAt: true 
+}).extend({
+  engagement: z.number().min(1).max(10),
+  effortAndIntent: z.number().min(1).max(10),
+  enjoyment: z.number().min(1).max(10),
+  sessionClarity: z.number().min(1).max(10),
+  appropriatenessOfChallenge: z.number().min(1).max(10),
+  sessionFlow: z.number().min(1).max(10),
+});
+export type InsertSessionFeedback = z.infer<typeof insertSessionFeedbackSchema>;

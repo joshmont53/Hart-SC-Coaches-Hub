@@ -14,6 +14,7 @@ import {
   coachingRates,
   sessionTemplates,
   drills,
+  sessionFeedback,
   type User,
   type UpsertUser,
   type Coach,
@@ -42,6 +43,8 @@ import {
   type InsertSessionTemplate,
   type Drill,
   type InsertDrill,
+  type SessionFeedback,
+  type InsertSessionFeedback,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, inArray } from "drizzle-orm";
@@ -144,6 +147,12 @@ export interface IStorage {
   createDrill(drill: InsertDrill): Promise<Drill>;
   updateDrill(id: string, drill: Partial<InsertDrill>): Promise<Drill>;
   deleteDrill(id: string): Promise<void>;
+  
+  // Session Feedback operations (Feedback Feature - No impact on existing functionality)
+  getFeedbackBySession(sessionId: string): Promise<SessionFeedback | undefined>;
+  getAllFeedback(): Promise<SessionFeedback[]>;
+  createOrUpdateFeedback(feedback: InsertSessionFeedback): Promise<SessionFeedback>;
+  deleteFeedback(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -717,6 +726,48 @@ export class DatabaseStorage implements IStorage {
       .returning();
     if (result.length === 0) {
       throw new Error("Drill not found");
+    }
+  }
+
+  // ============================================================================
+  // Session Feedback operations (Feedback Feature - No impact on existing functionality)
+  // ============================================================================
+
+  async getFeedbackBySession(sessionId: string): Promise<SessionFeedback | undefined> {
+    const [feedback] = await db.select().from(sessionFeedback).where(eq(sessionFeedback.sessionId, sessionId));
+    return feedback;
+  }
+
+  async getAllFeedback(): Promise<SessionFeedback[]> {
+    return await db.select().from(sessionFeedback);
+  }
+
+  async createOrUpdateFeedback(feedback: InsertSessionFeedback): Promise<SessionFeedback> {
+    // Check if feedback already exists for this session
+    const existing = await this.getFeedbackBySession(feedback.sessionId);
+    
+    if (existing) {
+      // Update existing feedback
+      const [updatedFeedback] = await db
+        .update(sessionFeedback)
+        .set({ ...feedback, updatedAt: new Date() })
+        .where(eq(sessionFeedback.id, existing.id))
+        .returning();
+      return updatedFeedback;
+    } else {
+      // Create new feedback
+      const [newFeedback] = await db.insert(sessionFeedback).values(feedback).returning();
+      return newFeedback;
+    }
+  }
+
+  async deleteFeedback(id: string): Promise<void> {
+    const result = await db
+      .delete(sessionFeedback)
+      .where(eq(sessionFeedback.id, id))
+      .returning();
+    if (result.length === 0) {
+      throw new Error("Feedback not found");
     }
   }
 }
