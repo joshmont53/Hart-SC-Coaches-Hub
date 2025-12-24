@@ -2473,10 +2473,10 @@ CRITICAL RULES:
         baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
       });
 
-      const systemPrompt = `You are a swimming coaching assistant providing actionable recommendations for planning training sessions.
-Your role is to analyze past feedback data and provide specific, practical advice.
-Write in a friendly, helpful tone. Use specific numbers to support your recommendations.
-Focus on what the coach can DO differently, not just what the data shows.`;
+      const systemPrompt = `You are an expert swimming coaching advisor who provides specific, actionable recommendations.
+Your role is to analyze feedback data and suggest concrete actions the coach can take.
+Every recommendation must include: (1) the insight with a number, (2) a specific action to take, and (3) why it will help.
+Write conversationally. Never just describe the data - always recommend what to DO about it.`;
 
       const focusTipsContext = sessionFocus 
         ? `The coach is planning a "${sessionFocus}" session.` 
@@ -2488,27 +2488,37 @@ ${JSON.stringify(payload, null, 2)}
 
 ${focusTipsContext}
 
-Generate exactly 3 sections of recommendations in valid JSON format:
+Generate recommendations in valid JSON format. Each recommendation MUST follow this pattern:
+"[Insight with number] — [specific action to try] [why it helps]"
+
+Examples of GOOD recommendations:
+- "Technique scores are strong (avg 4.2) — build on this by adding progressive complexity to drills, keeping swimmers challenged while confident"
+- "Engagement has dipped to 3.1 — try incorporating butterfly drills which historically score 4.5+ for engagement across sessions"
+- "Energy levels peak in shorter sets — consider 25m sprint intervals with active recovery to maintain intensity without fatigue"
+
+Examples of BAD recommendations (don't do this):
+- "Engagement is low at 3.1" (no action)
+- "Consider varying the training" (too vague)
+- "Swimmers responded well to drills" (no specific recommendation)
 
 {
   "whatsWorking": [
-    "2-3 specific things that are going well with this squad based on the data, mentioning actual numbers"
+    "2-3 things going well, each with a specific way to build on the success"
   ],
   "areasToAddress": [
-    "2-3 specific areas for improvement, with actionable suggestions based on the lowest scoring categories"
+    "2-3 areas needing improvement, each with a concrete drill/approach to try and why"
   ],
   "focusTips": [
-    "2-3 specific tips for ${sessionFocus || 'upcoming sessions'} based on what the data suggests works well"
+    "2-3 specific tips for ${sessionFocus || 'this session'}, suggesting particular exercises or formats that would work well based on the data"
   ]
 }
 
-RULES:
-1. Each recommendation should be 20-40 words
-2. Include specific numbers from the data (e.g., "averaging 7.8")
-3. Make recommendations actionable (e.g., "Consider adding..." not just "X is low")
-4. Reference the discipline data to suggest training approaches
-5. For areasToAddress, always suggest a concrete solution
-6. Return ONLY valid JSON, no markdown or explanation`;
+CRITICAL RULES:
+1. Every recommendation MUST include a specific action (e.g., "try X", "consider adding Y", "use Z format")
+2. Reference the discipline data to suggest specific training types that historically work well
+3. Connect recommendations to the data (e.g., "since kick work scores 4.3, incorporate more kick sets")
+4. Keep each recommendation 25-45 words
+5. Return ONLY valid JSON, no markdown or explanation`;
 
       console.log("[SessionHelper] Calling OpenAI with model gpt-4o-mini...");
       const response = await openai.chat.completions.create({
