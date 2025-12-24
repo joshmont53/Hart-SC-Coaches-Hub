@@ -1758,6 +1758,145 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Session Attributes Analytics endpoint
+  app.get("/api/feedback/analytics/attributes", async (req, res) => {
+    try {
+      const { attribute, category, squadId, coachId } = req.query;
+      
+      // Validate required parameters
+      if (!attribute || !category) {
+        return res.status(400).json({ message: "attribute and category are required" });
+      }
+      
+      const validAttributes = ['dayOfWeek', 'timeOfDay', 'duration', 'focus', 'squad', 'staffing'];
+      const validCategories = ['engagement', 'effortAndIntent', 'enjoyment', 'sessionClarity', 'appropriatenessOfChallenge', 'sessionFlow'];
+      
+      if (!validAttributes.includes(attribute as string)) {
+        return res.status(400).json({ message: `Invalid attribute. Must be one of: ${validAttributes.join(', ')}` });
+      }
+      
+      if (!validCategories.includes(category as string)) {
+        return res.status(400).json({ message: `Invalid category. Must be one of: ${validCategories.join(', ')}` });
+      }
+
+      // Fetch all feedback with their sessions
+      const allFeedback = await storage.getAllSessionFeedback();
+      const allSessions = await storage.getSessions();
+      const allSquads = await storage.getSquads();
+      
+      // Create lookup maps
+      const sessionMap = new Map(allSessions.map(s => [s.id, s]));
+      const squadMap = new Map(allSquads.filter(s => s.recordStatus === 'active').map(s => [s.id, s.squadName]));
+      
+      // Filter feedback based on squad/coach filters
+      let filteredFeedback = allFeedback.filter(f => {
+        const session = sessionMap.get(f.sessionId);
+        if (!session) return false;
+        if (squadId && session.squadId !== squadId) return false;
+        if (coachId) {
+          const isInvolved = session.leadCoachId === coachId || 
+                            session.secondCoachId === coachId || 
+                            session.helperId === coachId;
+          if (!isInvolved) return false;
+        }
+        return true;
+      });
+
+      // Helper to get attribute value for a session
+      const getAttributeValue = (session: any): string => {
+        switch (attribute) {
+          case 'dayOfWeek': {
+            const date = new Date(session.sessionDate);
+            const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            return days[date.getDay()];
+          }
+          case 'timeOfDay': {
+            const hour = parseInt(session.startTime.split(':')[0]);
+            if (hour < 12) return 'Morning';
+            if (hour < 17) return 'Afternoon';
+            return 'Evening';
+          }
+          case 'duration': {
+            const mins = parseFloat(session.duration);
+            if (mins <= 60) return '≤60 min';
+            if (mins <= 90) return '60-90 min';
+            return '>90 min';
+          }
+          case 'focus': {
+            return session.focus || 'Unknown';
+          }
+          case 'squad': {
+            return squadMap.get(session.squadId) || 'Unknown';
+          }
+          case 'staffing': {
+            let count = 1; // Lead coach always present
+            if (session.secondCoachId) count++;
+            if (session.helperId) count++;
+            return `${count} coach${count > 1 ? 'es' : ''}`;
+          }
+          default:
+            return 'Unknown';
+        }
+      };
+
+      // Group and aggregate data
+      const aggregated: Record<string, { total: number; count: number }> = {};
+      
+      filteredFeedback.forEach(feedback => {
+        const session = sessionMap.get(feedback.sessionId);
+        if (!session) return;
+        
+        const attrValue = getAttributeValue(session);
+        const categoryValue = (feedback as any)[category as string] as number;
+        
+        if (!aggregated[attrValue]) {
+          aggregated[attrValue] = { total: 0, count: 0 };
+        }
+        aggregated[attrValue].total += categoryValue;
+        aggregated[attrValue].count++;
+      });
+
+      // Convert to array and sort by attribute order
+      const getAttributeOrder = (attr: string, value: string): number => {
+        if (attr === 'dayOfWeek') {
+          const order = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+          return order.indexOf(value);
+        }
+        if (attr === 'timeOfDay') {
+          const order = ['Morning', 'Afternoon', 'Evening'];
+          return order.indexOf(value);
+        }
+        if (attr === 'duration') {
+          const order = ['≤60 min', '60-90 min', '>90 min'];
+          return order.indexOf(value);
+        }
+        if (attr === 'staffing') {
+          const order = ['1 coach', '2 coaches', '3 coaches'];
+          return order.indexOf(value);
+        }
+        return 0;
+      };
+
+      const chartData = Object.entries(aggregated)
+        .map(([name, data]) => ({
+          name,
+          rating: data.count > 0 ? Math.round((data.total / data.count) * 10) / 10 : 0,
+          count: data.count,
+        }))
+        .sort((a, b) => getAttributeOrder(attribute as string, a.name) - getAttributeOrder(attribute as string, b.name));
+
+      res.json({
+        attribute,
+        category,
+        chartData,
+        totalEntries: filteredFeedback.length,
+      });
+    } catch (error: any) {
+      console.error("Error fetching attribute analytics:", error);
+      res.status(500).json({ message: error.message || "Failed to fetch attribute analytics" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
