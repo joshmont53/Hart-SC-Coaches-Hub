@@ -2122,10 +2122,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
       });
 
-      const systemPrompt = `You are an elite swimming performance analyst helping coaches improve their training sessions.
-Analyze the provided JSON data and generate 4-6 specific, evidence-backed insights.
-Every insight MUST cite exact numbers from the data - never invent statistics.
-Focus on actionable recommendations that coaches can implement immediately.
+      const systemPrompt = `You are an elite swimming performance analyst helping coaches identify patterns in their training feedback.
+Analyze the provided data and generate 3-5 specific, evidence-backed observations.
+Every observation MUST cite exact numbers from the data - never invent statistics.
+Write in natural language - never use abbreviations like "avgDistance" or "avgEngagement". Instead write "average distance" or "average engagement".
 Use markdown formatting with bold headers for each section.`;
 
       const userPrompt = `Context:
@@ -2138,19 +2138,22 @@ Analytics Data:
 ${JSON.stringify(payload, null, 2)}
 
 Instructions:
-1. Generate insights in these sections:
-   - **Discipline Patterns**: How do different training types (drill, kick, swim) affect feedback scores?
-   - **Stroke Sentiment**: Which strokes do swimmers enjoy most/least? Any concerning patterns?
-   - **Coach Impact**: Any notable differences between coaches? What's working well?
-   - **Recommendations**: 2-3 specific experiments the coaching team could try
+1. Generate observations in these sections only:
+   - **Discipline Patterns**: How do different training types (drill, kick, swim) correlate with feedback scores?
+   - **Stroke Sentiment**: Which strokes show the highest/lowest enjoyment or engagement? Note any patterns.
+   - **Coach Performance**: Any notable differences between coaches? Highlight standout performers.
 
-2. For each insight, reference concrete figures (e.g., "Sessions with >1500m of drill work show higher Engagement (7.8 vs 6.6 baseline)")
+2. For each observation, reference specific figures from the data (e.g., "Butterfly sessions average 7.0 enjoyment compared to 6.1 for Breaststroke")
 
-3. If sample size is <10 for any metric, note this limitation
+3. If sample size is small (<10 sessions), briefly note this limitation
 
-4. Highlight any concerning trends (ratings below 6.5) or positive outliers (above 8.0)
+4. Flag concerning patterns (ratings below 6.5) or positive trends (above 8.0)
 
-5. Keep total response under 400 words, using bullet points for clarity`;
+5. IMPORTANT FORMATTING RULES:
+   - Keep each bullet point to a maximum of 20 words
+   - Use simple, natural language - no technical abbreviations
+   - Total response should be under 250 words
+   - Do NOT include recommendations - just observations and patterns`;
 
       const response = await openai.chat.completions.create({
         model: 'gpt-5-mini',
