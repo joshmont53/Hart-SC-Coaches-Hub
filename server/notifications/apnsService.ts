@@ -1,4 +1,4 @@
-import * as https from 'https';
+import * as http2 from 'http2';
 import jwt from 'jsonwebtoken';
 import { storage } from '../storage';
 import type { SessionReminder } from './sessionChecker';
@@ -114,38 +114,53 @@ async function sendPushNotification(
     
     const authToken = generateAuthToken(config);
     
-    const options: https.RequestOptions = {
-      hostname: host,
-      port: 443,
-      path: `/3/device/${deviceToken}`,
-      method: 'POST',
-      headers: {
-        'authorization': `bearer ${authToken}`,
-        'apns-topic': config.bundleId,
-        'apns-push-type': 'alert',
-        'apns-priority': '10',
-        'content-type': 'application/json',
-      },
+    const client = http2.connect(`https://${host}`);
+    
+    client.on('error', (err) => {
+      console.error('[APNs] HTTP/2 connection error:', err.message);
+      resolve({ success: false, error: err.message });
+    });
+    
+    const headers = {
+      ':method': 'POST',
+      ':path': `/3/device/${deviceToken}`,
+      'authorization': `bearer ${authToken}`,
+      'apns-topic': config.bundleId,
+      'apns-push-type': 'alert',
+      'apns-priority': '10',
+      'content-type': 'application/json',
     };
     
-    const req = https.request(options, (res) => {
-      let body = '';
-      res.on('data', (chunk) => { body += chunk; });
-      res.on('end', () => {
-        if (res.statusCode === 200) {
-          resolve({ success: true, statusCode: 200 });
-        } else {
-          let errorReason = 'Unknown error';
-          try {
-            const parsed = JSON.parse(body);
-            errorReason = parsed.reason || errorReason;
-          } catch (e) {}
-          resolve({ success: false, error: errorReason, statusCode: res.statusCode });
-        }
-      });
+    const req = client.request(headers);
+    
+    let responseData = '';
+    let statusCode: number | undefined;
+    
+    req.on('response', (responseHeaders) => {
+      statusCode = responseHeaders[':status'] as number;
+    });
+    
+    req.on('data', (chunk) => {
+      responseData += chunk;
+    });
+    
+    req.on('end', () => {
+      client.close();
+      
+      if (statusCode === 200) {
+        resolve({ success: true, statusCode: 200 });
+      } else {
+        let errorReason = 'Unknown error';
+        try {
+          const parsed = JSON.parse(responseData);
+          errorReason = parsed.reason || errorReason;
+        } catch (e) {}
+        resolve({ success: false, error: errorReason, statusCode });
+      }
     });
     
     req.on('error', (error) => {
+      client.close();
       resolve({ success: false, error: error.message });
     });
     
