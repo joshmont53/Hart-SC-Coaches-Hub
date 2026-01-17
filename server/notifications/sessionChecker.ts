@@ -118,21 +118,43 @@ export async function findSessionsNeedingReminder1(): Promise<SessionReminder[]>
   const todayStr = now.toISOString().split('T')[0];
   const sessions = await storage.getSessionsByDate(todayStr);
   
+  console.log(`[SessionChecker] Reminder1 check - now: ${now.toISOString()}, todayStr: ${todayStr}, sessions found: ${sessions.length}`);
+  
   for (const session of sessions) {
-    if (session.recordStatus === 'inactive') continue;
+    console.log(`[SessionChecker] Checking session ${session.id}: date=${session.sessionDate}, endTime=${session.endTime}, status=${session.recordStatus}`);
+    
+    if (session.recordStatus === 'inactive') {
+      console.log(`[SessionChecker] - Skipped: inactive`);
+      continue;
+    }
     
     const endTime = getSessionEndDateTime(session);
+    console.log(`[SessionChecker] - endTime parsed: ${endTime.toISOString()}, oneHourAgo: ${oneHourAgo.toISOString()}, twoHoursAgo: ${twoHoursAgo.toISOString()}`);
     
-    if (endTime > oneHourAgo || endTime < twoHoursAgo) continue;
+    if (endTime > oneHourAgo || endTime < twoHoursAgo) {
+      console.log(`[SessionChecker] - Skipped: outside 1-2 hour window (endTime > oneHourAgo: ${endTime > oneHourAgo}, endTime < twoHoursAgo: ${endTime < twoHoursAgo})`);
+      continue;
+    }
     
     const details = await getSessionDetails(session);
-    if (!details) continue;
+    if (!details) {
+      console.log(`[SessionChecker] - Skipped: no coach/squad details`);
+      continue;
+    }
     
     const missingItems = await getMissingItems(session.id);
-    if (missingItems.length === 0) continue;
+    if (missingItems.length === 0) {
+      console.log(`[SessionChecker] - Skipped: all items complete`);
+      continue;
+    }
     
     const alreadySent = await wasReminderAlreadySent(session.id, details.coachId, 1);
-    if (alreadySent) continue;
+    if (alreadySent) {
+      console.log(`[SessionChecker] - Skipped: reminder already sent`);
+      continue;
+    }
+    
+    console.log(`[SessionChecker] ✅ Session qualifies! Missing: ${missingItems.join(', ')}`);
     
     const dateStr = session.sessionDate;
     
