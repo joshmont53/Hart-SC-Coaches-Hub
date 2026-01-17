@@ -72,6 +72,21 @@ type View = 'month' | 'day';
 type MobileView = 'calendar' | 'list';
 type ManagementView = 'calendar' | 'coaches' | 'squads' | 'swimmers' | 'locations' | 'invitations' | 'competitions' | 'addSession' | 'invoices' | 'coachingRates' | 'sessionLibrary' | 'drillsLibrary' | 'feedbackAnalytics';
 
+// Global storage for pending session ID from notification deep link
+// This is set before CalendarApp mounts and read when it does
+let pendingDeepLinkSessionId: string | null = null;
+
+export function getPendingSessionId(): string | null {
+  const id = pendingDeepLinkSessionId;
+  pendingDeepLinkSessionId = null; // Clear after reading
+  return id;
+}
+
+export function setPendingSessionId(sessionId: string): void {
+  pendingDeepLinkSessionId = sessionId;
+  console.log('[DeepLink] Stored pending session ID:', sessionId);
+}
+
 // Landing page with loading screen logic - ONLY for "/" route
 function LandingPage() {
   const [redirectAfterDelay, setRedirectAfterDelay] = useState(false);
@@ -136,26 +151,29 @@ function CalendarApp() {
       }
     };
 
-    // Define handler for opening a specific session from notification tap
-    (window as any).openSession = (sessionId: string) => {
-      console.log('Opening session from notification:', sessionId);
-      setSelectedSessionId(sessionId);
-      setManagementView('calendar');
-    };
-
     return () => {
       delete (window as any).registerDeviceToken;
-      delete (window as any).openSession;
     };
   }, []);
 
-  // Check for sessionId in URL parameters (deep link from notification)
+  // Check for pending deep link session ID (from notification tap) on mount
   useEffect(() => {
+    // Check global pending session ID first (set by window.openSession before this component mounted)
+    const pendingId = getPendingSessionId();
+    if (pendingId) {
+      console.log('[DeepLink] Found pending session ID on mount:', pendingId);
+      setSelectedSessionId(pendingId);
+      setManagementView('calendar');
+      return;
+    }
+
+    // Also check URL parameters (backup method)
     const urlParams = new URLSearchParams(window.location.search);
     const sessionId = urlParams.get('sessionId');
     if (sessionId) {
-      console.log('Deep link to session:', sessionId);
+      console.log('[DeepLink] Found session ID in URL:', sessionId);
       setSelectedSessionId(sessionId);
+      setManagementView('calendar');
       // Clean up URL without reloading
       window.history.replaceState({}, '', window.location.pathname);
     }
@@ -722,6 +740,31 @@ function Router() {
 }
 
 export default function App() {
+  // Define global window.openSession handler at root level
+  // This ensures it exists before CalendarApp mounts
+  useEffect(() => {
+    (window as any).openSession = (sessionId: string) => {
+      console.log('[DeepLink] window.openSession called with:', sessionId);
+      setPendingSessionId(sessionId);
+      // If we're not on /app, navigate there with sessionId param as backup
+      if (!window.location.pathname.includes('/app')) {
+        window.location.href = `/app?sessionId=${sessionId}`;
+      }
+    };
+
+    // Also check URL params at root level for initial load
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionId = urlParams.get('sessionId');
+    if (sessionId) {
+      console.log('[DeepLink] Found session ID in URL at root:', sessionId);
+      setPendingSessionId(sessionId);
+    }
+
+    return () => {
+      delete (window as any).openSession;
+    };
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
