@@ -115,6 +115,32 @@ function CalendarApp() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showMySessionsOnly, setShowMySessionsOnly] = useState(false);
 
+  // iOS Push Notification Device Token Bridge
+  useEffect(() => {
+    // Define handler for receiving device token from Swift
+    (window as any).registerDeviceToken = async (token: string) => {
+      try {
+        const response = await fetch('/api/device-tokens', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ deviceToken: token, platform: 'ios' })
+        });
+        if (response.ok) {
+          console.log('Device token registered successfully');
+        } else {
+          console.error('Failed to register device token:', response.status);
+        }
+      } catch (error) {
+        console.error('Error registering device token:', error);
+      }
+    };
+
+    return () => {
+      delete (window as any).registerDeviceToken;
+    };
+  }, []);
+
   // Fetch all data from backend APIs
   const { data: backendSessions = [] } = useQuery<BackendSession[]>({ 
     queryKey: ['/api/sessions'],
