@@ -55,11 +55,30 @@ function generateAuthToken(config: APNsConfig): string {
   };
   
   // Handle various newline formats that might come from environment variables
-  let formattedKey = config.privateKey;
+  let formattedKey = config.privateKey.trim();
+  
   // Replace literal \n strings with actual newlines
   formattedKey = formattedKey.replace(/\\n/g, '\n');
-  // Also try replacing escaped backslash-n
   formattedKey = formattedKey.replace(/\r\n/g, '\n');
+  
+  // Handle case where key was pasted with spaces instead of newlines
+  // Reconstruct proper PEM format
+  if (formattedKey.includes('-----BEGIN PRIVATE KEY-----') && !formattedKey.includes('\n')) {
+    // Key is all on one line with spaces - need to reconstruct
+    const beginMarker = '-----BEGIN PRIVATE KEY-----';
+    const endMarker = '-----END PRIVATE KEY-----';
+    
+    const startIdx = formattedKey.indexOf(beginMarker) + beginMarker.length;
+    const endIdx = formattedKey.indexOf(endMarker);
+    const keyBody = formattedKey.substring(startIdx, endIdx).trim();
+    
+    // Split base64 content into 64-character lines
+    const base64Content = keyBody.replace(/\s+/g, '');
+    const lines = base64Content.match(/.{1,64}/g) || [];
+    
+    formattedKey = `${beginMarker}\n${lines.join('\n')}\n${endMarker}`;
+    console.log('[APNs] Reformatted private key to proper PEM format');
+  }
   
   // Ensure the key has proper PEM format
   if (!formattedKey.includes('-----BEGIN PRIVATE KEY-----')) {
