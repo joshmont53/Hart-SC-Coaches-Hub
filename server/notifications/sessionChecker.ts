@@ -63,9 +63,13 @@ function getSessionEndDateTime(session: SwimmingSession): Date {
 
 async function getSessionDetails(session: SwimmingSession): Promise<SessionWithDetails | null> {
   const squad = await storage.getSquad(session.squadId);
-  if (!squad || !squad.primaryCoachId) return null;
+  if (!squad) return null;
   
-  const coach = await storage.getCoach(squad.primaryCoachId);
+  // Use session's lead coach, not squad's primary coach
+  const leadCoachId = session.leadCoachId;
+  if (!leadCoachId) return null;
+  
+  const coach = await storage.getCoach(leadCoachId);
   if (!coach) return null;
   
   return {
