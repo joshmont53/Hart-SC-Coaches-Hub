@@ -2581,10 +2581,13 @@ CRITICAL RULES:
 
   // Register or update device token for push notifications
   app.post("/api/device-tokens", requireAuth, async (req: any, res) => {
+    console.log('[DeviceToken] Received registration request');
     try {
       const { deviceToken, platform = 'ios' } = req.body;
+      console.log('[DeviceToken] Token length:', deviceToken?.length, 'Platform:', platform);
 
       if (!deviceToken || typeof deviceToken !== 'string') {
+        console.log('[DeviceToken] Invalid token format');
         return res.status(400).json({ message: "Device token is required" });
       }
 
