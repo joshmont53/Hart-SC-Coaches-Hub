@@ -136,9 +136,29 @@ function CalendarApp() {
       }
     };
 
+    // Define handler for opening a specific session from notification tap
+    (window as any).openSession = (sessionId: string) => {
+      console.log('Opening session from notification:', sessionId);
+      setSelectedSessionId(sessionId);
+      setManagementView('calendar');
+    };
+
     return () => {
       delete (window as any).registerDeviceToken;
+      delete (window as any).openSession;
     };
+  }, []);
+
+  // Check for sessionId in URL parameters (deep link from notification)
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionId = urlParams.get('sessionId');
+    if (sessionId) {
+      console.log('Deep link to session:', sessionId);
+      setSelectedSessionId(sessionId);
+      // Clean up URL without reloading
+      window.history.replaceState({}, '', window.location.pathname);
+    }
   }, []);
 
   // Fetch all data from backend APIs
