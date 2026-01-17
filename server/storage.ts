@@ -96,6 +96,7 @@ export interface IStorage {
   // Session operations
   getSessions(): Promise<SwimmingSession[]>;
   getSession(id: string): Promise<SwimmingSession | undefined>;
+  getSessionsByDate(date: string): Promise<SwimmingSession[]>;
   getSessionWithAttendance(id: string): Promise<{ session: SwimmingSession; attendance: Attendance[] } | undefined>;
   createSession(session: InsertSwimmingSession): Promise<SwimmingSession>;
   updateSession(id: string, session: Partial<InsertSwimmingSession>): Promise<SwimmingSession>;
@@ -402,6 +403,12 @@ export class DatabaseStorage implements IStorage {
   async getSession(id: string): Promise<SwimmingSession | undefined> {
     const [session] = await db.select().from(swimmingSessions).where(and(eq(swimmingSessions.id, id), eq(swimmingSessions.recordStatus, 'active')));
     return session;
+  }
+
+  async getSessionsByDate(date: string): Promise<SwimmingSession[]> {
+    return await db.select().from(swimmingSessions).where(
+      and(eq(swimmingSessions.sessionDate, date), eq(swimmingSessions.recordStatus, 'active'))
+    );
   }
 
   async getSessionWithAttendance(id: string): Promise<{ session: SwimmingSession; attendance: Attendance[] } | undefined> {
