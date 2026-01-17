@@ -585,3 +585,64 @@ export const insertSessionFeedbackSchema = createInsertSchema(sessionFeedback).o
   sessionFlow: z.number().min(1).max(10),
 });
 export type InsertSessionFeedback = z.infer<typeof insertSessionFeedbackSchema>;
+
+// ============================================================================
+// Push Notifications - NEW TABLES (Phone Notifications Feature)
+// ============================================================================
+
+// Device Tokens table - Stores iOS device tokens for push notifications
+export const deviceTokens = pgTable("device_tokens", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  coachId: varchar("coach_id").references(() => coaches.id, { onDelete: 'cascade' }).notNull(),
+  deviceToken: varchar("device_token").notNull().unique(), // APNs device token
+  platform: varchar("platform").notNull().default("ios"), // "ios" | "android" (for future)
+  isActive: boolean("is_active").notNull().default(true), // Can be disabled if token becomes invalid
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const deviceTokensRelations = relations(deviceTokens, ({ one }) => ({
+  coach: one(coaches, {
+    fields: [deviceTokens.coachId],
+    references: [coaches.id],
+  }),
+}));
+
+export type DeviceToken = typeof deviceTokens.$inferSelect;
+export const insertDeviceTokenSchema = createInsertSchema(deviceTokens).omit({ 
+  id: true, 
+  createdAt: true, 
+  updatedAt: true,
+  isActive: true 
+});
+export type InsertDeviceToken = z.infer<typeof insertDeviceTokenSchema>;
+
+// Notification Log table - Tracks sent push notifications to prevent duplicates
+export const notificationLog = pgTable("notification_log", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: varchar("session_id").references(() => swimmingSessions.id, { onDelete: 'cascade' }).notNull(),
+  coachId: varchar("coach_id").references(() => coaches.id, { onDelete: 'cascade' }).notNull(),
+  notificationType: varchar("notification_type").notNull(), // "attendance_reminder" | "feedback_reminder" | "both_reminder"
+  reminderNumber: integer("reminder_number").notNull(), // 1 = first reminder (1hr after), 2 = second reminder (8:30am next day)
+  status: varchar("status").notNull().default("sent"), // "sent" | "failed" | "delivered"
+  messageContent: text("message_content"), // The actual message that was sent
+  sentAt: timestamp("sent_at").defaultNow(),
+});
+
+export const notificationLogRelations = relations(notificationLog, ({ one }) => ({
+  session: one(swimmingSessions, {
+    fields: [notificationLog.sessionId],
+    references: [swimmingSessions.id],
+  }),
+  coach: one(coaches, {
+    fields: [notificationLog.coachId],
+    references: [coaches.id],
+  }),
+}));
+
+export type NotificationLog = typeof notificationLog.$inferSelect;
+export const insertNotificationLogSchema = createInsertSchema(notificationLog).omit({ 
+  id: true, 
+  sentAt: true 
+});
+export type InsertNotificationLog = z.infer<typeof insertNotificationLogSchema>;
