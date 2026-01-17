@@ -1,5 +1,5 @@
 import * as https from 'https';
-import * as jwt from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
 import { storage } from '../storage';
 import type { SessionReminder } from './sessionChecker';
 
