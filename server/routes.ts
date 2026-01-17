@@ -2575,6 +2575,60 @@ CRITICAL RULES:
     }
   });
 
+  // ============================================================================
+  // Device Token Routes (Push Notifications Feature - No impact on existing functionality)
+  // ============================================================================
+
+  // Register or update device token for push notifications
+  app.post("/api/device-tokens", requireAuth, async (req: any, res) => {
+    try {
+      const { deviceToken, platform = 'ios' } = req.body;
+
+      if (!deviceToken || typeof deviceToken !== 'string') {
+        return res.status(400).json({ message: "Device token is required" });
+      }
+
+      // Get the coach linked to the current user
+      const userId = req.user?.id || req.user?.claims?.sub;
+      const coach = await storage.getCoachByUserId(userId);
+      
+      if (!coach) {
+        return res.status(404).json({ message: "Coach profile not found for this user" });
+      }
+
+      // Create or update the device token
+      const token = await storage.createOrUpdateDeviceToken(coach.id, deviceToken, platform);
+      
+      console.log(`✅ Device token registered for coach ${coach.firstName} ${coach.lastName}`);
+      res.status(201).json({ 
+        message: "Device token registered successfully",
+        tokenId: token.id 
+      });
+    } catch (error: any) {
+      console.error("Error registering device token:", error);
+      res.status(500).json({ message: "Failed to register device token" });
+    }
+  });
+
+  // Remove device token (for logout or uninstall)
+  app.delete("/api/device-tokens", requireAuth, async (req: any, res) => {
+    try {
+      const { deviceToken } = req.body;
+
+      if (!deviceToken || typeof deviceToken !== 'string') {
+        return res.status(400).json({ message: "Device token is required" });
+      }
+
+      await storage.deleteDeviceToken(deviceToken);
+      
+      console.log(`✅ Device token removed`);
+      res.json({ message: "Device token removed successfully" });
+    } catch (error: any) {
+      console.error("Error removing device token:", error);
+      res.status(500).json({ message: "Failed to remove device token" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

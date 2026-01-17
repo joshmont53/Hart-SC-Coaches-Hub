@@ -15,6 +15,8 @@ import {
   sessionTemplates,
   drills,
   sessionFeedback,
+  deviceTokens,
+  notificationLog,
   type User,
   type UpsertUser,
   type Coach,
@@ -45,6 +47,10 @@ import {
   type InsertDrill,
   type SessionFeedback,
   type InsertSessionFeedback,
+  type DeviceToken,
+  type InsertDeviceToken,
+  type NotificationLog,
+  type InsertNotificationLog,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, inArray } from "drizzle-orm";
@@ -153,6 +159,17 @@ export interface IStorage {
   getAllFeedback(): Promise<SessionFeedback[]>;
   createOrUpdateFeedback(feedback: InsertSessionFeedback): Promise<SessionFeedback>;
   deleteFeedback(id: string): Promise<void>;
+  
+  // Device Token operations (Push Notifications Feature - No impact on existing functionality)
+  getDeviceTokensByCoach(coachId: string): Promise<DeviceToken[]>;
+  getDeviceTokenByToken(token: string): Promise<DeviceToken | undefined>;
+  createOrUpdateDeviceToken(coachId: string, deviceToken: string, platform?: string): Promise<DeviceToken>;
+  deleteDeviceToken(deviceToken: string): Promise<void>;
+  deactivateDeviceToken(deviceToken: string): Promise<void>;
+  
+  // Notification Log operations (Push Notifications Feature - No impact on existing functionality)
+  getNotificationLog(sessionId: string, coachId: string, reminderNumber: number): Promise<NotificationLog | undefined>;
+  createNotificationLog(log: InsertNotificationLog): Promise<NotificationLog>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -769,6 +786,76 @@ export class DatabaseStorage implements IStorage {
     if (result.length === 0) {
       throw new Error("Feedback not found");
     }
+  }
+
+  // ============================================================================
+  // Device Token operations (Push Notifications Feature - No impact on existing functionality)
+  // ============================================================================
+
+  async getDeviceTokensByCoach(coachId: string): Promise<DeviceToken[]> {
+    return await db.select().from(deviceTokens).where(
+      and(eq(deviceTokens.coachId, coachId), eq(deviceTokens.isActive, true))
+    );
+  }
+
+  async getDeviceTokenByToken(token: string): Promise<DeviceToken | undefined> {
+    const [deviceToken] = await db.select().from(deviceTokens).where(eq(deviceTokens.deviceToken, token));
+    return deviceToken;
+  }
+
+  async createOrUpdateDeviceToken(coachId: string, token: string, platform: string = 'ios'): Promise<DeviceToken> {
+    const existing = await this.getDeviceTokenByToken(token);
+    
+    if (existing) {
+      const [updated] = await db
+        .update(deviceTokens)
+        .set({ 
+          coachId, 
+          platform, 
+          isActive: true,
+          updatedAt: new Date() 
+        })
+        .where(eq(deviceTokens.deviceToken, token))
+        .returning();
+      return updated;
+    } else {
+      const [newToken] = await db
+        .insert(deviceTokens)
+        .values({ coachId, deviceToken: token, platform })
+        .returning();
+      return newToken;
+    }
+  }
+
+  async deleteDeviceToken(token: string): Promise<void> {
+    await db.delete(deviceTokens).where(eq(deviceTokens.deviceToken, token));
+  }
+
+  async deactivateDeviceToken(token: string): Promise<void> {
+    await db
+      .update(deviceTokens)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(deviceTokens.deviceToken, token));
+  }
+
+  // ============================================================================
+  // Notification Log operations (Push Notifications Feature - No impact on existing functionality)
+  // ============================================================================
+
+  async getNotificationLog(sessionId: string, coachId: string, reminderNumber: number): Promise<NotificationLog | undefined> {
+    const [log] = await db.select().from(notificationLog).where(
+      and(
+        eq(notificationLog.sessionId, sessionId),
+        eq(notificationLog.coachId, coachId),
+        eq(notificationLog.reminderNumber, reminderNumber)
+      )
+    );
+    return log;
+  }
+
+  async createNotificationLog(log: InsertNotificationLog): Promise<NotificationLog> {
+    const [newLog] = await db.insert(notificationLog).values(log).returning();
+    return newLog;
   }
 }
 
