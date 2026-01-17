@@ -54,7 +54,18 @@ function generateAuthToken(config: APNsConfig): string {
     iat: now,
   };
   
-  const formattedKey = config.privateKey.replace(/\\n/g, '\n');
+  // Handle various newline formats that might come from environment variables
+  let formattedKey = config.privateKey;
+  // Replace literal \n strings with actual newlines
+  formattedKey = formattedKey.replace(/\\n/g, '\n');
+  // Also try replacing escaped backslash-n
+  formattedKey = formattedKey.replace(/\r\n/g, '\n');
+  
+  // Ensure the key has proper PEM format
+  if (!formattedKey.includes('-----BEGIN PRIVATE KEY-----')) {
+    console.error('[APNs] Private key does not appear to be in PEM format');
+    console.error('[APNs] Key starts with:', formattedKey.substring(0, 50));
+  }
   
   const token = jwt.sign(payload, formattedKey, {
     algorithm: 'ES256',
