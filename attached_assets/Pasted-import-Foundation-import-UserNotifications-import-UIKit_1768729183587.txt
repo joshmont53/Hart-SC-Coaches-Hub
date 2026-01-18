@@ -1,0 +1,76 @@
+import Foundation
+import UserNotifications
+import UIKit
+import Combine
+import WebKit
+
+class NotificationManager: NSObject, ObservableObject, UNUserNotificationCenterDelegate {
+    static let shared = NotificationManager()
+    
+    @Published var deviceToken: String?
+    @Published var permissionGranted = false
+    
+    weak var webView: WKWebView?
+    
+    override init() {
+        super.init()
+        UNUserNotificationCenter.current().delegate = self
+    }
+    
+    func requestPermission() {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+            DispatchQueue.main.async {
+                self.permissionGranted = granted
+                if granted {
+                    UIApplication.shared.registerForRemoteNotifications()
+                }
+            }
+        }
+    }
+    
+    func registerToken(_ token: Data) {
+        let tokenString = token.map { String(format: "%02.2hhx", $0) }.joined()
+        self.deviceToken = tokenString
+        print("Device Token: \(tokenString)")
+        sendTokenToWebView(tokenString, retryCount: 0)
+    }
+    
+    private func sendTokenToWebView(_ token: String, retryCount: Int) {
+        DispatchQueue.main.async {
+            guard let webView = self.webView else {
+                print("WebView nil, retry \(retryCount)")
+                if retryCount < 20 {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                        self.sendTokenToWebView(token, retryCount: retryCount + 1)
+                    }
+                }
+                return
+            }
+            
+            let js = "if(window.registerDeviceToken){window.registerDeviceToken('\(token)');'success'}else{'not_ready'}"
+            webView.evaluateJavaScript(js) { result, error in
+                if let error = error {
+                    print("JS error: \(error.localizedDescription)")
+                    if retryCount < 20 {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                            self.sendTokenToWebView(token, retryCount: retryCount + 1)
+                        }
+                    }
+                } else if let status = result as? String, status == "success" {
+                    print("Token registered successfully!")
+                } else {
+                    print("JS not ready, retry \(retryCount)")
+                    if retryCount < 20 {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                            self.sendTokenToWebView(token, retryCount: retryCount + 1)
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        completionHandler([.banner, .sound, .badge])
+    }
+}

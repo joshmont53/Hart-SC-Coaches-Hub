@@ -1,0 +1,48 @@
+import UIKit
+import UserNotifications
+
+class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
+    
+    // Store pending session ID to open after WebView loads
+    static var pendingSessionId: String?
+    
+    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        // Set self as notification delegate to handle taps
+        UNUserNotificationCenter.current().delegate = self
+        NotificationManager.shared.requestPermission()
+        return true
+    }
+    
+    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        NotificationManager.shared.registerToken(deviceToken)
+    }
+    
+    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        print("Failed to register for notifications: \(error.localizedDescription)")
+    }
+    
+    // Handle notification tap when app is in foreground
+    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        // Show the notification even when app is in foreground
+        completionHandler([.banner, .sound])
+    }
+    
+    // Handle notification tap - this is called when user taps the notification
+    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
+        let userInfo = response.notification.request.content.userInfo
+        
+        if let sessionId = userInfo["sessionId"] as? String {
+            print("Notification tapped - opening session: \(sessionId)")
+            AppDelegate.pendingSessionId = sessionId
+            
+            // Post notification so ContentView can handle it
+            NotificationCenter.default.post(
+                name: NSNotification.Name("OpenSession"),
+                object: nil,
+                userInfo: ["sessionId": sessionId]
+            )
+        }
+        
+        completionHandler()
+    }
+}
