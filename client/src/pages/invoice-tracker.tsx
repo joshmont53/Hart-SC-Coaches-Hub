@@ -320,16 +320,19 @@ export function InvoiceTracker({ onBack }: InvoiceTrackerProps) {
     <div className="h-full flex flex-col print:p-8 overflow-hidden">
       {/* Header - Hidden when printing */}
       <div className="print:hidden border-b bg-card p-4 space-y-4 flex-shrink-0">
-        <div className="flex items-center gap-3">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={onBack}
-            data-testid="button-back"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <h2 className="flex-1 min-w-0 text-lg font-semibold">Invoice Tracker</h2>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={onBack}
+              className="h-9 w-9 shrink-0"
+              data-testid="button-back"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <h2 className="text-base font-medium truncate">Invoice Tracker</h2>
+          </div>
           <Button 
             onClick={handleExport} 
             variant="outline" 

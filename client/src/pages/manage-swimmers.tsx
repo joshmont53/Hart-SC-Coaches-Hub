@@ -271,24 +271,23 @@ export function ManageSwimmers({ swimmers, squads, onBack }: ManageSwimmersProps
   return (
     <div className="flex flex-col h-full bg-background overflow-hidden" data-testid="view-manage-swimmers">
       <div className="flex-shrink-0 sticky top-0 z-10 bg-background">
-        <div className="max-w-2xl mx-auto px-4 py-4">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3">
+        <div className="max-w-2xl mx-auto px-4 py-3 border-b">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={onBack}
+                className="h-9 w-9 shrink-0"
                 data-testid="button-back"
               >
-                <ArrowLeft className="h-5 w-5" />
+                <ArrowLeft className="h-4 w-4" />
               </Button>
-              <div>
-                <h1 className="text-xl font-semibold">Swimmers</h1>
-              </div>
+              <h1 className="text-base font-medium truncate">Swimmers</h1>
             </div>
-            <Button onClick={() => setIsAddDialogOpen(true)} data-testid="button-add-swimmer">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Swimmer
+            <Button size="sm" onClick={() => setIsAddDialogOpen(true)} data-testid="button-add-swimmer">
+              <Plus className="h-4 w-4 mr-1" />
+              Add
             </Button>
           </div>
 

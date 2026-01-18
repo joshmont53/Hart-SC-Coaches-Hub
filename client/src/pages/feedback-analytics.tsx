@@ -353,16 +353,18 @@ export function FeedbackAnalytics({ onBack }: FeedbackAnalyticsProps) {
   return (
     <div className="h-full flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6 shrink-0">
-        <Button variant="ghost" onClick={onBack} data-testid="button-back-analytics">
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
-        </Button>
-        <div>
-          <h1 className="text-xl font-semibold" data-testid="text-analytics-title">Feedback Analytics</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Discover patterns and insights from session feedback
-          </p>
+      <div className="flex items-center gap-3 pb-3 border-b mb-6 shrink-0">
+        <div className="flex items-center gap-3 min-w-0">
+          <Button 
+            variant="ghost" 
+            size="icon"
+            onClick={onBack} 
+            className="h-9 w-9 shrink-0"
+            data-testid="button-back-analytics"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <h1 className="text-base font-medium truncate" data-testid="text-analytics-title">Feedback Analytics</h1>
         </div>
       </div>
 
