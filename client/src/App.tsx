@@ -179,6 +179,23 @@ function CalendarApp() {
     }
   }, []);
 
+  // Listen for openSessionEvent - handles case when window.openSession is called
+  // AFTER this component has already mounted (warm start from notification tap)
+  useEffect(() => {
+    const handleOpenSessionEvent = (event: CustomEvent<{ sessionId: string }>) => {
+      const { sessionId } = event.detail;
+      console.log('[DeepLink] Received openSessionEvent:', sessionId);
+      setSelectedSessionId(sessionId);
+      setManagementView('calendar');
+    };
+
+    window.addEventListener('openSessionEvent', handleOpenSessionEvent as EventListener);
+    
+    return () => {
+      window.removeEventListener('openSessionEvent', handleOpenSessionEvent as EventListener);
+    };
+  }, []);
+
   // Fetch all data from backend APIs
   const { data: backendSessions = [] } = useQuery<BackendSession[]>({ 
     queryKey: ['/api/sessions'],
@@ -745,7 +762,17 @@ export default function App() {
   useEffect(() => {
     (window as any).openSession = (sessionId: string) => {
       console.log('[DeepLink] window.openSession called with:', sessionId);
+      
+      // Store pending ID for cold start scenario (CalendarApp not mounted yet)
       setPendingSessionId(sessionId);
+      
+      // Dispatch custom event for warm scenario (CalendarApp already mounted)
+      // This allows CalendarApp to receive the session ID even after its initial useEffect ran
+      console.log('[DeepLink] Dispatching openSessionEvent');
+      window.dispatchEvent(new CustomEvent('openSessionEvent', { 
+        detail: { sessionId } 
+      }));
+      
       // If we're not on /app, navigate there with sessionId param as backup
       if (!window.location.pathname.includes('/app')) {
         window.location.href = `/app?sessionId=${sessionId}`;
