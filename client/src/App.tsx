@@ -46,7 +46,12 @@ import {
   PoundSterling,
   Target,
   BarChart3,
+  Shield,
+  Receipt,
 } from 'lucide-react';
+import { CollapsibleSidebar } from './components/CollapsibleSidebar';
+import { Badge } from './components/ui/badge';
+import { format } from 'date-fns';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from './components/ui/sheet';
 import { cn } from './lib/utils';
 import type { Session, Squad, Location, Coach, Swimmer } from './lib/typeAdapters';
@@ -128,6 +133,7 @@ function CalendarApp() {
   const [mobileView, setMobileView] = useState<MobileView>('calendar');
   const [managementView, setManagementView] = useState<ManagementView>('calendar');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showMySessionsOnly, setShowMySessionsOnly] = useState(false);
 
   // iOS Push Notification Device Token Bridge
@@ -225,6 +231,16 @@ function CalendarApp() {
   // Fetch all competition coaching assignments
   const { data: competitionCoaching = [] } = useQuery<CompetitionCoaching[]>({ 
     queryKey: ['/api/competitions/coaching/all'],
+  });
+
+  // Fetch session templates count for sidebar
+  const { data: sessionTemplates = [] } = useQuery<{ id: string }[]>({ 
+    queryKey: ['/api/session-templates'],
+  });
+
+  // Fetch drills count for sidebar
+  const { data: drills = [] } = useQuery<{ id: string }[]>({ 
+    queryKey: ['/api/drills'],
   });
 
   // Adapt backend data to frontend types
@@ -373,157 +389,441 @@ function CalendarApp() {
     createSessionMutation.mutate(session);
   };
 
+  const isActive = (view: string) => managementView === view;
+  
+  const todaysSessions = sessions.filter(s => 
+    format(new Date(s.date), 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
+  ).length;
+
+  const initials = currentCoach 
+    ? `${currentCoach.firstName[0]}${currentCoach.lastName[0]}`.toUpperCase()
+    : 'SC';
+
+  const isAdmin = user?.role === 'admin';
+
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
-      <div className="p-6 border-b" style={{ borderBottomColor: '#4B9A4A' }}>
-        <div className="flex items-center gap-2">
-          <span>Hart SC Coaches Hub</span>
-        </div>
-        {currentCoach && (
-          <div className="mt-3 text-sm text-muted-foreground">
-            {currentCoach.name}
+      {/* Profile Section */}
+      <div className="p-4 border-b" style={{ borderBottomColor: '#4B9A4A' }}>
+        <div className="flex items-center gap-3">
+          <div 
+            className="w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold text-sm shrink-0"
+            style={{ backgroundColor: '#4B9A4A' }}
+            data-testid="avatar-initials-mobile"
+          >
+            {initials}
           </div>
-        )}
+          {currentCoach && (
+            <div className="flex-1 min-w-0">
+              <div className="font-medium truncate" data-testid="text-coach-name-mobile">
+                {currentCoach.firstName} {currentCoach.lastName}
+              </div>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <Badge 
+                  variant="secondary" 
+                  className="text-xs px-1.5 py-0"
+                  style={{ backgroundColor: '#4B9A4A20', color: '#4B9A4A' }}
+                  data-testid="badge-coach-level-mobile"
+                >
+                  {currentCoach.level}
+                </Badge>
+              </div>
+              <div className="text-xs text-muted-foreground mt-1" data-testid="text-sessions-today-mobile">
+                {todaysSessions} session{todaysSessions !== 1 ? 's' : ''} today
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
-      <nav className="flex-1 p-4">
-        <div className="space-y-2">
-          {/* Group 1: Library and Invoices */}
-          <Button
-            variant="ghost"
-            className="w-full justify-start"
-            onClick={() => handleManagementClick('sessionLibrary')}
-            data-testid="button-session-library"
-          >
-            <FileText className="h-4 w-4 mr-2" />
-            Session Library
-          </Button>
-          <Button
-            variant="ghost"
-            className="w-full justify-start"
-            onClick={() => handleManagementClick('drillsLibrary')}
-            data-testid="button-drills-library"
-          >
-            <Target className="h-4 w-4 mr-2" />
-            Drills Library
-          </Button>
-          <Button
-            variant="ghost"
-            className="w-full justify-start"
-            onClick={() => handleManagementClick('invoices')}
-            data-testid="button-invoices"
-          >
-            <FileText className="h-4 w-4 mr-2" />
-            Invoice Tracker
-          </Button>
-          <Button
-            variant="ghost"
-            className="w-full justify-start"
-            onClick={() => handleManagementClick('feedbackAnalytics')}
-            data-testid="button-feedback-analytics"
-          >
-            <BarChart3 className="h-4 w-4 mr-2" />
-            Feedback Analytics
-          </Button>
-
-          {/* Separator */}
-          <div className="h-px bg-border my-2" />
-
-          {/* Group 2: Manage Resources */}
-          <Button
-            variant="ghost"
-            className="w-full justify-start"
-            onClick={() => handleManagementClick('swimmers')}
-            data-testid="button-manage-swimmers"
-          >
-            <Users className="h-4 w-4 mr-2" />
-            Manage Swimmers
-          </Button>
-          <Button
-            variant="ghost"
-            className="w-full justify-start"
-            onClick={() => handleManagementClick('squads')}
-            data-testid="button-manage-squads"
-          >
-            <Users className="h-4 w-4 mr-2" />
-            Manage Squads
-          </Button>
-          <Button
-            variant="ghost"
-            className="w-full justify-start"
-            onClick={() => handleManagementClick('coaches')}
-            data-testid="button-manage-coaches"
-          >
-            <UserCog className="h-4 w-4 mr-2" />
-            Manage Coaches
-          </Button>
-          <Button
-            variant="ghost"
-            className="w-full justify-start"
-            onClick={() => handleManagementClick('locations')}
-            data-testid="button-manage-locations"
-          >
-            <MapPin className="h-4 w-4 mr-2" />
-            Manage Locations
-          </Button>
-
-          {/* Group 3: Admin Only */}
-          {user?.role === 'admin' && (
-            <>
-              {/* Separator */}
-              <div className="h-px bg-border my-2" />
-
+      {/* Navigation */}
+      <nav className="flex-1 overflow-y-auto p-4">
+        <div className="space-y-6">
+          {/* SESSIONS Section */}
+          <div>
+            <div className="px-3 mb-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Sessions
+              </p>
+            </div>
+            <div className="space-y-1">
               <Button
                 variant="ghost"
-                className="w-full justify-start"
-                onClick={() => handleManagementClick('competitions')}
-                data-testid="button-manage-competitions"
+                className={cn(
+                  "w-full justify-start py-2.5 relative transition-all duration-200",
+                  isActive('calendar') && "bg-accent/50"
+                )}
+                onClick={() => handleManagementClick('calendar')}
+                data-testid="button-nav-calendar-mobile"
               >
-                <Trophy className="h-4 w-4 mr-2" />
-                Manage Competitions
+                {isActive('calendar') && (
+                  <div 
+                    className="absolute left-0 top-0 bottom-0 w-1 rounded-r"
+                    style={{ backgroundColor: '#4B9A4A' }}
+                  />
+                )}
+                <CalendarDays 
+                  className={cn(
+                    "h-4 w-4 mr-3 ml-2 transition-colors",
+                    isActive('calendar') ? "text-[#4B9A4A]" : "text-muted-foreground"
+                  )}
+                />
+                <span className="flex-1 text-left">Calendar</span>
+                {todaysSessions > 0 && (
+                  <Badge variant="secondary" className="ml-auto text-xs">
+                    {todaysSessions}
+                  </Badge>
+                )}
               </Button>
+              
               <Button
                 variant="ghost"
-                className="w-full justify-start"
-                onClick={() => handleManagementClick('invitations')}
-                data-testid="button-manage-invitations"
+                className={cn(
+                  "w-full justify-start py-2.5 relative transition-all duration-200",
+                  isActive('sessionLibrary') && "bg-accent/50"
+                )}
+                onClick={() => handleManagementClick('sessionLibrary')}
+                data-testid="button-session-library"
               >
-                <Mail className="h-4 w-4 mr-2" />
-                Coach Invitations
+                {isActive('sessionLibrary') && (
+                  <div 
+                    className="absolute left-0 top-0 bottom-0 w-1 rounded-r"
+                    style={{ backgroundColor: '#4B9A4A' }}
+                  />
+                )}
+                <FileText 
+                  className={cn(
+                    "h-4 w-4 mr-3 ml-2 transition-colors",
+                    isActive('sessionLibrary') ? "text-[#4B9A4A]" : "text-muted-foreground"
+                  )}
+                />
+                <span className="flex-1 text-left">Session Library</span>
+                <Badge variant="secondary" className="ml-auto text-xs">
+                  {sessionTemplates.length}
+                </Badge>
               </Button>
+              
               <Button
                 variant="ghost"
-                className="w-full justify-start"
-                onClick={() => handleManagementClick('coachingRates')}
-                data-testid="button-coaching-rates"
+                className={cn(
+                  "w-full justify-start py-2.5 relative transition-all duration-200",
+                  isActive('drillsLibrary') && "bg-accent/50"
+                )}
+                onClick={() => handleManagementClick('drillsLibrary')}
+                data-testid="button-drills-library"
               >
-                <PoundSterling className="h-4 w-4 mr-2" />
-                Coaching Rates
+                {isActive('drillsLibrary') && (
+                  <div 
+                    className="absolute left-0 top-0 bottom-0 w-1 rounded-r"
+                    style={{ backgroundColor: '#4B9A4A' }}
+                  />
+                )}
+                <Target 
+                  className={cn(
+                    "h-4 w-4 mr-3 ml-2 transition-colors",
+                    isActive('drillsLibrary') ? "text-[#4B9A4A]" : "text-muted-foreground"
+                  )}
+                />
+                <span className="flex-1 text-left">Drills Library</span>
+                <Badge variant="secondary" className="ml-auto text-xs">
+                  {drills.length}
+                </Badge>
               </Button>
-            </>
+            </div>
+          </div>
+
+          {/* MANAGEMENT Section - Admin Only */}
+          {isAdmin && (
+            <div>
+              <div className="px-3 mb-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Management
+                </p>
+              </div>
+              <div className="space-y-1">
+                <Button
+                  variant="ghost"
+                  className={cn(
+                    "w-full justify-start py-2.5 relative transition-all duration-200",
+                    isActive('coaches') && "bg-accent/50"
+                  )}
+                  onClick={() => handleManagementClick('coaches')}
+                  data-testid="button-manage-coaches"
+                >
+                  {isActive('coaches') && (
+                    <div 
+                      className="absolute left-0 top-0 bottom-0 w-1 rounded-r"
+                      style={{ backgroundColor: '#4B9A4A' }}
+                    />
+                  )}
+                  <UserCog 
+                    className={cn(
+                      "h-4 w-4 mr-3 ml-2 transition-colors",
+                      isActive('coaches') ? "text-[#4B9A4A]" : "text-muted-foreground"
+                    )}
+                  />
+                  <span className="flex-1 text-left">Coaches</span>
+                  <Badge variant="secondary" className="ml-auto text-xs">
+                    {coaches.length}
+                  </Badge>
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  className={cn(
+                    "w-full justify-start py-2.5 relative transition-all duration-200",
+                    isActive('squads') && "bg-accent/50"
+                  )}
+                  onClick={() => handleManagementClick('squads')}
+                  data-testid="button-manage-squads"
+                >
+                  {isActive('squads') && (
+                    <div 
+                      className="absolute left-0 top-0 bottom-0 w-1 rounded-r"
+                      style={{ backgroundColor: '#4B9A4A' }}
+                    />
+                  )}
+                  <Shield 
+                    className={cn(
+                      "h-4 w-4 mr-3 ml-2 transition-colors",
+                      isActive('squads') ? "text-[#4B9A4A]" : "text-muted-foreground"
+                    )}
+                  />
+                  <span className="flex-1 text-left">Squads</span>
+                  <Badge variant="secondary" className="ml-auto text-xs">
+                    {squads.length}
+                  </Badge>
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  className={cn(
+                    "w-full justify-start py-2.5 relative transition-all duration-200",
+                    isActive('swimmers') && "bg-accent/50"
+                  )}
+                  onClick={() => handleManagementClick('swimmers')}
+                  data-testid="button-manage-swimmers"
+                >
+                  {isActive('swimmers') && (
+                    <div 
+                      className="absolute left-0 top-0 bottom-0 w-1 rounded-r"
+                      style={{ backgroundColor: '#4B9A4A' }}
+                    />
+                  )}
+                  <Users 
+                    className={cn(
+                      "h-4 w-4 mr-3 ml-2 transition-colors",
+                      isActive('swimmers') ? "text-[#4B9A4A]" : "text-muted-foreground"
+                    )}
+                  />
+                  <span className="flex-1 text-left">Swimmers</span>
+                  <Badge variant="secondary" className="ml-auto text-xs">
+                    {swimmers.length}
+                  </Badge>
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  className={cn(
+                    "w-full justify-start py-2.5 relative transition-all duration-200",
+                    isActive('locations') && "bg-accent/50"
+                  )}
+                  onClick={() => handleManagementClick('locations')}
+                  data-testid="button-manage-locations"
+                >
+                  {isActive('locations') && (
+                    <div 
+                      className="absolute left-0 top-0 bottom-0 w-1 rounded-r"
+                      style={{ backgroundColor: '#4B9A4A' }}
+                    />
+                  )}
+                  <MapPin 
+                    className={cn(
+                      "h-4 w-4 mr-3 ml-2 transition-colors",
+                      isActive('locations') ? "text-[#4B9A4A]" : "text-muted-foreground"
+                    )}
+                  />
+                  <span className="flex-1 text-left">Locations</span>
+                  <Badge variant="secondary" className="ml-auto text-xs">
+                    {locations.length}
+                  </Badge>
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  className={cn(
+                    "w-full justify-start py-2.5 relative transition-all duration-200",
+                    isActive('competitions') && "bg-accent/50"
+                  )}
+                  onClick={() => handleManagementClick('competitions')}
+                  data-testid="button-manage-competitions"
+                >
+                  {isActive('competitions') && (
+                    <div 
+                      className="absolute left-0 top-0 bottom-0 w-1 rounded-r"
+                      style={{ backgroundColor: '#4B9A4A' }}
+                    />
+                  )}
+                  <Trophy 
+                    className={cn(
+                      "h-4 w-4 mr-3 ml-2 transition-colors",
+                      isActive('competitions') ? "text-[#4B9A4A]" : "text-muted-foreground"
+                    )}
+                  />
+                  <span className="flex-1 text-left">Competitions</span>
+                  <Badge variant="secondary" className="ml-auto text-xs">
+                    {competitions.length}
+                  </Badge>
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  className={cn(
+                    "w-full justify-start py-2.5 relative transition-all duration-200",
+                    isActive('invitations') && "bg-accent/50"
+                  )}
+                  onClick={() => handleManagementClick('invitations')}
+                  data-testid="button-manage-invitations"
+                >
+                  {isActive('invitations') && (
+                    <div 
+                      className="absolute left-0 top-0 bottom-0 w-1 rounded-r"
+                      style={{ backgroundColor: '#4B9A4A' }}
+                    />
+                  )}
+                  <Mail 
+                    className={cn(
+                      "h-4 w-4 mr-3 ml-2 transition-colors",
+                      isActive('invitations') ? "text-[#4B9A4A]" : "text-muted-foreground"
+                    )}
+                  />
+                  <span className="flex-1 text-left">Coach Invitations</span>
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  className={cn(
+                    "w-full justify-start py-2.5 relative transition-all duration-200",
+                    isActive('coachingRates') && "bg-accent/50"
+                  )}
+                  onClick={() => handleManagementClick('coachingRates')}
+                  data-testid="button-coaching-rates"
+                >
+                  {isActive('coachingRates') && (
+                    <div 
+                      className="absolute left-0 top-0 bottom-0 w-1 rounded-r"
+                      style={{ backgroundColor: '#4B9A4A' }}
+                    />
+                  )}
+                  <PoundSterling 
+                    className={cn(
+                      "h-4 w-4 mr-3 ml-2 transition-colors",
+                      isActive('coachingRates') ? "text-[#4B9A4A]" : "text-muted-foreground"
+                    )}
+                  />
+                  <span className="flex-1 text-left">Coaching Rates</span>
+                </Button>
+              </div>
+            </div>
           )}
+
+          {/* MY TOOLS Section */}
+          <div>
+            <div className="px-3 mb-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                My Tools
+              </p>
+            </div>
+            <div className="space-y-1">
+              <Button
+                variant="ghost"
+                className={cn(
+                  "w-full justify-start py-2.5 relative transition-all duration-200",
+                  isActive('invoices') && "bg-accent/50"
+                )}
+                onClick={() => handleManagementClick('invoices')}
+                data-testid="button-invoices"
+              >
+                {isActive('invoices') && (
+                  <div 
+                    className="absolute left-0 top-0 bottom-0 w-1 rounded-r"
+                    style={{ backgroundColor: '#4B9A4A' }}
+                  />
+                )}
+                <Receipt 
+                  className={cn(
+                    "h-4 w-4 mr-3 ml-2 transition-colors",
+                    isActive('invoices') ? "text-[#4B9A4A]" : "text-muted-foreground"
+                  )}
+                />
+                <span className="flex-1 text-left">Invoice Tracker</span>
+              </Button>
+              
+              <Button
+                variant="ghost"
+                className={cn(
+                  "w-full justify-start py-2.5 relative transition-all duration-200",
+                  isActive('feedbackAnalytics') && "bg-accent/50"
+                )}
+                onClick={() => handleManagementClick('feedbackAnalytics')}
+                data-testid="button-feedback-analytics"
+              >
+                {isActive('feedbackAnalytics') && (
+                  <div 
+                    className="absolute left-0 top-0 bottom-0 w-1 rounded-r"
+                    style={{ backgroundColor: '#4B9A4A' }}
+                  />
+                )}
+                <BarChart3 
+                  className={cn(
+                    "h-4 w-4 mr-3 ml-2 transition-colors",
+                    isActive('feedbackAnalytics') ? "text-[#4B9A4A]" : "text-muted-foreground"
+                  )}
+                />
+                <span className="flex-1 text-left">Feedback Analytics</span>
+              </Button>
+            </div>
+          </div>
         </div>
       </nav>
 
+      {/* Footer */}
       <div className="p-4 border-t">
         <Button
           variant="outline"
-          className="w-full justify-start"
+          className="w-full justify-start mb-3"
           onClick={handleLogout}
           data-testid="button-logout-sidebar"
         >
           <LogOut className="h-4 w-4 mr-2" />
           Log out
         </Button>
+        <div className="text-xs text-center text-muted-foreground" data-testid="text-version-mobile">
+          v2.1.0 • Hart SC
+        </div>
       </div>
     </div>
   );
 
   return (
     <div className="h-full flex overflow-hidden bg-background">
-      <aside className="hidden lg:block w-64 border-r bg-card overflow-hidden">
-        <SidebarContent />
-      </aside>
+      <CollapsibleSidebar
+        collapsed={sidebarCollapsed}
+        onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+        managementView={managementView}
+        onNavigate={handleManagementClick}
+        onLogout={handleLogout}
+        currentCoach={currentCoach}
+        sessions={sessions}
+        sessionTemplatesCount={sessionTemplates.length}
+        drillsCount={drills.length}
+        coaches={coaches}
+        squads={squads}
+        swimmers={swimmers}
+        locations={locations}
+        competitionsCount={competitions.length}
+        isAdmin={isAdmin}
+      />
 
       <div className="flex-1 flex flex-col overflow-hidden">
         <header className="bg-card p-4" style={{ borderBottom: '1px solid #4B9A4A' }}>
