@@ -545,9 +545,6 @@ function CalendarApp() {
                   <SidebarContent />
                 </SheetContent>
               </Sheet>
-              <div className="flex items-center gap-2">
-                <h1 className="hidden sm:inline" data-testid="text-app-title">Session Calendar</h1>
-              </div>
             </div>
 
             <div className="flex items-center gap-2 sm:gap-3">
