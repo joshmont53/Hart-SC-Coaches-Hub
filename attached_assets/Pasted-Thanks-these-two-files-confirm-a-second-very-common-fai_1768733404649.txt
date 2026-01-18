@@ -1,0 +1,180 @@
+Thanks — these two files confirm a second, very common failure mode on top of the “false JS success” issue I flagged earlier.
+
+You effectively have two separate problems that can each result in “tap notification → app opens → shows calendar, not the session”.
+
+Problem 1 (still the biggest): your JS call can “succeed” while doing nothing
+
+As before: evaluateJavaScript returns error == nil even when window.openSession doesn’t exist, so your Swift code believes it opened the session and never falls back.
+
+✅ Fix: make JS return a status and only treat "called" as success. (I’ll include a final patch below.)
+
+Problem 2: NotificationCenter post can be missed on cold start
+
+In AppDelegate.didReceive you do:
+
+AppDelegate.pendingSessionId = sessionId
+NotificationCenter.default.post(name: "OpenSession", ...)
+
+
+On a cold start, it’s very possible ContentView hasn’t subscribed to .onReceive(...) yet when that post happens. In that case:
+
+the post is missed (NotificationCenter is not queued)
+
+you do have pendingSessionId, so you rely on your later checks
+
+But in your current ContentView you also clear pendingSessionId in the .onReceive handler. If you ever handle an early “OpenSession” while the webView isn’t ready, you can lose it (depending on timing).
+
+✅ Fix: make the flow idempotent:
+
+never clear pendingSessionId until you’ve successfully navigated
+
+if WebView isn’t ready, keep pendingSessionId and try again when it is
+
+(Also: post the NotificationCenter event on the main queue, just to avoid edge timing issues.)
+
+Problem 3 (minor but real): sessionId type mismatch
+
+APNs payloads sometimes arrive as String, but depending on how you build payloads (or if something serializes unexpectedly), you might get NSNumber/Int.
+
+Right now you only handle:
+
+if let sessionId = userInfo["sessionId"] as? String { ... }
+
+
+If it arrives as an Int, your app will do nothing and open the calendar.
+
+✅ Fix: coerce robustly.
+
+The “once and for all” patch
+A) AppDelegate: robust extraction + main-thread post
+
+Replace your didReceive with:
+
+func userNotificationCenter(_ center: UNUserNotificationCenter,
+                            didReceive response: UNNotificationResponse,
+                            withCompletionHandler completionHandler: @escaping () -> Void) {
+
+    let userInfo = response.notification.request.content.userInfo
+
+    // Robust sessionId extraction (handles String, Int, NSNumber)
+    let sessionId: String? = {
+        if let s = userInfo["sessionId"] as? String { return s }
+        if let n = userInfo["sessionId"] as? NSNumber { return n.stringValue }
+        if let i = userInfo["sessionId"] as? Int { return String(i) }
+        return nil
+    }()
+
+    if let sessionId {
+        print("Notification tapped - opening session: \(sessionId)")
+        AppDelegate.pendingSessionId = sessionId
+
+        // Ensure delivery on main thread
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(
+                name: NSNotification.Name("OpenSession"),
+                object: nil,
+                userInfo: ["sessionId": sessionId]
+            )
+        }
+    } else {
+        print("Notification tapped - no sessionId in payload: \(userInfo)")
+    }
+
+    completionHandler()
+}
+
+B) ContentView: only clear pendingSessionId after success + JS status
+
+Update openSession so it returns a success signal and falls back correctly.
+
+Replace your openSession(_:) with:
+
+private func openSession(_ sessionId: String) {
+    guard let wv = webView else {
+        print("WebView not available yet - keeping pendingSessionId")
+        AppDelegate.pendingSessionId = sessionId
+        return
+    }
+
+    let escaped = sessionId.replacingOccurrences(of: "'", with: "\\'")
+    let js = """
+    (function() {
+        if (window.openSession) {
+            window.openSession('\(escaped)');
+            return 'called';
+        } else {
+            return 'not_found';
+        }
+    })();
+    """
+
+    wv.evaluateJavaScript(js) { result, error in
+        if let error = error {
+            print("JS injection failed: \(error)")
+            self.navigateWithURLParam(wv, sessionId)
+            return
+        }
+
+        let status = result as? String ?? "unknown"
+        print("openSession JS status: \(status)")
+
+        if status == "called" {
+            // Only clear once we truly invoked the function
+            AppDelegate.pendingSessionId = nil
+        } else {
+            self.navigateWithURLParam(wv, sessionId)
+        }
+    }
+}
+
+private func navigateWithURLParam(_ wv: WKWebView, _ sessionId: String) {
+    if let encoded = sessionId.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+       let url = URL(string: "\(appURL)/app?sessionId=\(encoded)") {
+        print("Navigating with URL param: \(url.absoluteString)")
+        wv.load(URLRequest(url: url))
+        // Clear here because we've taken an alternate navigation path
+        AppDelegate.pendingSessionId = nil
+    } else {
+        print("Failed to build URL with sessionId: \(sessionId)")
+    }
+}
+
+
+And in your .onReceive(OpenSession) handler, remove the line that clears pendingSessionId before you actually open:
+
+.onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("OpenSession"))) { notification in
+    if let sessionId = notification.userInfo?["sessionId"] as? String {
+        print("Received OpenSession notification for: \(sessionId)")
+        openSession(sessionId)
+    }
+}
+
+C) WebViewCoordinator.didFinish: same JS status check
+
+In didFinish, you currently call JS and assume success. Switch to the same “return status” approach and only clear pendingSessionId after success / fallback navigation.
+
+One more thing to sanity check (web side)
+
+Even with the fallback to .../app?sessionId=..., your web app must actually do something with that query param on initial load.
+
+If loading that URL in Safari just shows the calendar and ignores the param, then your iOS fallback will still appear “broken”.
+
+So do this quick check without TestFlight:
+
+On your iPhone, open Safari:
+
+https://hart-sc-coaches-hub.replit.app/app?sessionId=123
+
+If it doesn’t open that session, you’ll need a tiny frontend change:
+
+on app boot: read sessionId from URL params → route/open session.
+
+(If you want, paste the relevant Replit routing/session-opening code and I’ll tell you exactly where to add that.)
+
+How to test cheaply (no APNs + no Replit deploy)
+
+You can validate the tap → sessionId extraction → pendingSessionId → openSession plumbing using a local notification with the same userInfo.
+
+If you want, I can give you a 20-line snippet to fire a local notification carrying sessionId so you can tap it and test instantly.
+
+If you paste your Replit web code for window.openSession (or tell me where it’s defined), I’ll confirm whether it’s actually attached to window and whether it exists early enough — that’s the other half of why your current approach looks “random”.
