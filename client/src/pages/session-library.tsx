@@ -268,22 +268,20 @@ export function SessionLibrary({ onBack }: SessionLibraryProps) {
   }
 
   return (
-    <div className="h-full flex flex-col p-6 overflow-hidden">
+    <div className="h-full flex flex-col p-4 overflow-hidden">
       {/* Header */}
-      <div className="flex-shrink-0 mb-6">
-        <div className="flex items-center justify-between gap-3 pb-3 border-b mb-4">
-          <div className="flex items-center gap-3 min-w-0">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onBack}
-              className="h-9 w-9 shrink-0"
-              data-testid="button-back"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <h1 className="text-base font-medium truncate" data-testid="text-page-title">Session Library</h1>
-          </div>
+      <div className="flex-shrink-0 mb-4">
+        <div className="flex items-center gap-3 mb-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onBack}
+            className="h-9 w-9 shrink-0"
+            data-testid="button-back"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <h1 className="text-lg font-semibold" data-testid="text-page-title">Session Library</h1>
         </div>
 
         <div className="space-y-3">

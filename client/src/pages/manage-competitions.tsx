@@ -384,9 +384,9 @@ export function ManageCompetitions({ onBack }: ManageCompetitionsProps) {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Header - Fixed/Sticky */}
-      <div className="flex-shrink-0 sticky top-0 z-10 bg-background border-b pb-3 mb-6">
+      <div className="flex-shrink-0 sticky top-0 z-10 bg-background px-4 py-3 mb-4">
         <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-3">
             <Button
               variant="ghost"
               size="icon"
@@ -394,20 +394,19 @@ export function ManageCompetitions({ onBack }: ManageCompetitionsProps) {
               className="h-9 w-9 shrink-0"
               data-testid="button-back"
             >
-              <ArrowLeft className="h-4 w-4" />
+              <ArrowLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-base font-medium truncate">Competitions</h1>
+            <h1 className="text-lg font-semibold">Competitions</h1>
           </div>
           <Button
-            size="sm"
             onClick={() => {
               resetForm();
               setIsCreateDialogOpen(true);
             }}
             data-testid="button-create-competition"
           >
-            <Plus className="h-4 w-4 mr-1" />
-            Add
+            <Plus className="h-4 w-4 mr-2" />
+            Add Competition
           </Button>
         </div>
       </div>

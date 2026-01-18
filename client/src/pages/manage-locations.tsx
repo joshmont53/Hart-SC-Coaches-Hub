@@ -155,9 +155,9 @@ export function ManageLocations({ locations, onBack }: ManageLocationsProps) {
   return (
     <div className="flex flex-col h-full bg-background overflow-hidden" data-testid="view-manage-locations">
       <div className="flex-shrink-0 sticky top-0 z-10 bg-background">
-        <div className="max-w-2xl mx-auto px-4 py-3 border-b">
+        <div className="max-w-4xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
+            <div className="flex items-center gap-3">
               <Button
                 variant="ghost"
                 size="icon"
@@ -165,20 +165,20 @@ export function ManageLocations({ locations, onBack }: ManageLocationsProps) {
                 className="h-9 w-9 shrink-0"
                 data-testid="button-back"
               >
-                <ArrowLeft className="h-4 w-4" />
+                <ArrowLeft className="h-5 w-5" />
               </Button>
-              <h1 className="text-base font-medium truncate">Locations</h1>
+              <h1 className="text-lg font-semibold">Locations</h1>
             </div>
-            <Button size="sm" onClick={() => setIsAddDialogOpen(true)} data-testid="button-add-location">
-              <Plus className="h-4 w-4 mr-1" />
-              Add
+            <Button onClick={() => setIsAddDialogOpen(true)} data-testid="button-add-location">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Location
             </Button>
           </div>
         </div>
       </div>
 
       <div className="flex-1 overflow-auto overflow-x-hidden scroll-container">
-        <div className="max-w-2xl mx-auto px-4 py-6">
+        <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="space-y-3">
             {locations.length === 0 ? (
               <Card className="p-8 text-center">
