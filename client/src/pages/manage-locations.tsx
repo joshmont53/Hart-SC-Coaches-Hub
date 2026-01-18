@@ -155,30 +155,30 @@ export function ManageLocations({ locations, onBack }: ManageLocationsProps) {
   return (
     <div className="flex flex-col h-full bg-background overflow-hidden" data-testid="view-manage-locations">
       <div className="flex-shrink-0 sticky top-0 z-10 bg-background">
-        <div className="max-w-4xl mx-auto px-4 py-3">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onBack}
-                className="h-9 w-9 shrink-0"
-                data-testid="button-back"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <h1 className="text-lg font-semibold">Locations</h1>
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-center gap-3 mb-6 pb-3 border-b">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onBack}
+              className="h-9 w-9 shrink-0"
+              data-testid="button-back"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-base truncate">Locations</h1>
             </div>
-            <Button onClick={() => setIsAddDialogOpen(true)} data-testid="button-add-location">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Location
+            <Button size="sm" onClick={() => setIsAddDialogOpen(true)} className="shrink-0" data-testid="button-add-location">
+              <Plus className="h-4 w-4 mr-1.5" />
+              Add
             </Button>
           </div>
         </div>
       </div>
 
       <div className="flex-1 overflow-auto overflow-x-hidden scroll-container">
-        <div className="max-w-4xl mx-auto px-4 py-4">
+        <div className="max-w-4xl mx-auto">
           <div className="space-y-3">
             {locations.length === 0 ? (
               <Card className="p-8 text-center">

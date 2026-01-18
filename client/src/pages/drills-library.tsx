@@ -272,58 +272,58 @@ export function DrillsLibrary({ onBack }: DrillsLibraryProps) {
   };
 
   return (
-    <div className="h-full flex flex-col p-4 overflow-hidden">
-      {/* Header */}
-      <div className="flex-shrink-0 mb-4">
-        <div className="flex items-center gap-3 mb-4">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={onBack}
-            className="h-9 w-9 shrink-0"
-            data-testid="button-back"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <h2 className="text-lg font-semibold" data-testid="text-page-title">Drills Library</h2>
-        </div>
-
-        {/* Stroke Type Tabs */}
-        <Tabs 
-          value={selectedStroke} 
-          onValueChange={(v) => setSelectedStroke(v as StrokeType)} 
-          className="mb-4"
+    <div className="h-full flex flex-col">
+      {/* Compact Inline Header */}
+      <div className="flex items-center gap-3 mb-6 pb-3 border-b shrink-0">
+        <Button 
+          variant="ghost" 
+          size="icon"
+          onClick={onBack}
+          className="h-9 w-9 shrink-0"
+          data-testid="button-back"
         >
-          <TabsList className="grid w-full grid-cols-3 h-auto p-1 gap-1">
-            {strokeTypes.map((stroke) => (
-              <TabsTrigger 
-                key={stroke} 
-                value={stroke} 
-                className="text-sm py-2"
-                data-testid={`tab-${stroke.toLowerCase()}`}
-              >
-                {stroke}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
-
-        <div className="flex gap-2 items-center">
-          <Input
-            placeholder="Search drills..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="flex-1"
-            data-testid="input-search"
-          />
-          <Button 
-            onClick={handleCreateDrill}
-            data-testid="button-add-drill"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Drill
-          </Button>
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-base truncate" data-testid="text-page-title">Drills Library</h1>
         </div>
+      </div>
+
+      {/* Stroke Type Tabs */}
+      <Tabs 
+        value={selectedStroke} 
+        onValueChange={(v) => setSelectedStroke(v as StrokeType)} 
+        className="mb-6"
+      >
+        <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6 h-auto p-1 gap-2">
+          {strokeTypes.map((stroke) => (
+            <TabsTrigger 
+              key={stroke} 
+              value={stroke} 
+              className="text-xs sm:text-sm py-2"
+              data-testid={`tab-${stroke.toLowerCase()}`}
+            >
+              {stroke}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
+
+      <div className="flex gap-3 items-center mb-4">
+        <Input
+          placeholder="Search drills..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="flex-1"
+          data-testid="input-search"
+        />
+        <Button 
+          onClick={handleCreateDrill}
+          data-testid="button-add-drill"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Add Drill
+        </Button>
       </div>
 
       {/* Drills Grid */}

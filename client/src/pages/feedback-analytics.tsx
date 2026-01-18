@@ -352,8 +352,8 @@ export function FeedbackAnalytics({ onBack }: FeedbackAnalyticsProps) {
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3 mb-4 shrink-0">
+      {/* Compact Inline Header */}
+      <div className="flex items-center gap-3 mb-6 pb-3 border-b shrink-0">
         <Button 
           variant="ghost" 
           size="icon"
@@ -361,9 +361,11 @@ export function FeedbackAnalytics({ onBack }: FeedbackAnalyticsProps) {
           className="h-9 w-9 shrink-0"
           data-testid="button-back-analytics"
         >
-          <ArrowLeft className="h-5 w-5" />
+          <ArrowLeft className="h-4 w-4" />
         </Button>
-        <h1 className="text-lg font-semibold" data-testid="text-analytics-title">Feedback Analytics</h1>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-base truncate" data-testid="text-analytics-title">Feedback Analytics</h1>
+        </div>
       </div>
 
       {/* Filters Card */}

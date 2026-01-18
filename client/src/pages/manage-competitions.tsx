@@ -384,9 +384,9 @@ export function ManageCompetitions({ onBack }: ManageCompetitionsProps) {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Header - Fixed/Sticky */}
-      <div className="flex-shrink-0 sticky top-0 z-10 bg-background px-4 py-3 mb-4">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
+      <div className="flex-shrink-0 sticky top-0 z-10 bg-background">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-center gap-3 mb-6 pb-3 border-b">
             <Button
               variant="ghost"
               size="icon"
@@ -394,25 +394,30 @@ export function ManageCompetitions({ onBack }: ManageCompetitionsProps) {
               className="h-9 w-9 shrink-0"
               data-testid="button-back"
             >
-              <ArrowLeft className="h-5 w-5" />
+              <ArrowLeft className="h-4 w-4" />
             </Button>
-            <h1 className="text-lg font-semibold">Competitions</h1>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-base truncate">Competitions</h1>
+            </div>
+            <Button
+              size="sm"
+              onClick={() => {
+                resetForm();
+                setIsCreateDialogOpen(true);
+              }}
+              className="shrink-0"
+              data-testid="button-create-competition"
+            >
+              <Plus className="h-4 w-4 mr-1.5" />
+              Add
+            </Button>
           </div>
-          <Button
-            onClick={() => {
-              resetForm();
-              setIsCreateDialogOpen(true);
-            }}
-            data-testid="button-create-competition"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Competition
-          </Button>
         </div>
       </div>
 
       {/* Competitions List */}
-      <div className="flex-1 overflow-auto overflow-x-hidden scroll-container space-y-4">
+      <div className="flex-1 overflow-auto overflow-x-hidden scroll-container">
+        <div className="max-w-4xl mx-auto space-y-4">
         {isLoadingCompetitions ? (
           <Card>
             <CardContent className="p-6">
@@ -497,6 +502,7 @@ export function ManageCompetitions({ onBack }: ManageCompetitionsProps) {
             </Card>
           ))
         )}
+        </div>
       </div>
 
       {/* Create/Edit Competition Dialog */}
