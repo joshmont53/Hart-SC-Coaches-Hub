@@ -216,14 +216,14 @@ export function SessionWriterHelper({ isOpen, onClose, squadId, sessionFocus, sq
               </Card>
             )}
 
-            {/* AI Recommendations Section */}
+            {/* Detailed Recommendations Section */}
             {hasEnoughData && (
               <div className="space-y-3">
-                {/* AI Section Header */}
+                {/* Detailed Recommendations Section Header */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
                     <Sparkles className="h-3.5 w-3.5" style={{ color: '#4B9A4A' }} />
-                    <h4 className="text-xs font-medium">AI Recommendations</h4>
+                    <h4 className="text-xs font-medium">Detailed Recommendations</h4>
                   </div>
                   <Button 
                     variant="ghost" 
@@ -238,7 +238,7 @@ export function SessionWriterHelper({ isOpen, onClose, squadId, sessionFocus, sq
                   </Button>
                 </div>
 
-                {/* AI Loading State */}
+                {/* Loading State */}
                 {isAILoading && (
                   <div className="space-y-2">
                     <Skeleton className="h-20 w-full" />
@@ -247,7 +247,7 @@ export function SessionWriterHelper({ isOpen, onClose, squadId, sessionFocus, sq
                   </div>
                 )}
 
-                {/* AI Insights */}
+                {/* Detailed Insights */}
                 {displayInsights && (
                   <div className="space-y-3">
                     {/* What's Working */}

@@ -684,12 +684,12 @@ export function FeedbackAnalytics({ onBack }: FeedbackAnalyticsProps) {
               </Card>
             </div>
 
-            {/* AI Insights Section */}
+            {/* Detailed Insights Section */}
             <div>
               <div className="flex items-center justify-between gap-3 mb-4">
                 <div className="flex items-center gap-2">
                   <Sparkles className="h-4 w-4 text-purple-500" />
-                  <h2 className="text-sm font-medium">AI Insights</h2>
+                  <h2 className="text-sm font-medium">Detailed Insights</h2>
                 </div>
                 <Button
                   variant="ghost"
@@ -730,7 +730,7 @@ export function FeedbackAnalytics({ onBack }: FeedbackAnalyticsProps) {
                             day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' 
                           }) : ''}
                       </span>
-                      <span className="text-purple-500">Powered by AI</span>
+                      <span className="text-purple-500">Detailed Analysis</span>
                     </div>
                   </div>
                 ) : aiInsights?.message ? (
@@ -742,7 +742,7 @@ export function FeedbackAnalytics({ onBack }: FeedbackAnalyticsProps) {
                   <div className="text-center py-4">
                     <Sparkles className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
                     <p className="text-sm text-muted-foreground">
-                      AI insights will appear once you have at least 3 sessions with feedback.
+                      Detailed insights will appear once you have at least 3 sessions with feedback.
                     </p>
                   </div>
                 )}
