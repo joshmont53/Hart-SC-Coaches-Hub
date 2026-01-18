@@ -571,11 +571,6 @@ function CalendarApp() {
                   </Button>
                 </>
               )}
-              
-              <Button variant="outline" onClick={handleLogout} className="hidden lg:flex" data-testid="button-logout">
-                <LogOut className="h-4 w-4 mr-2" />
-                Log out
-              </Button>
             </div>
           </div>
           
