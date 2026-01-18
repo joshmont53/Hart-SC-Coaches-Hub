@@ -323,7 +323,7 @@ export function SessionLibrary({ onBack }: SessionLibraryProps) {
         </div>
 
       {/* Templates Grid */}
-      <div className="flex-1 overflow-auto overflow-x-hidden scroll-container">
+      <div className="flex-1 overflow-auto overflow-x-hidden scroll-container pt-4">
         {filteredTemplates.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 text-center">
             <FileText className="h-12 w-12 text-muted-foreground mb-4" />

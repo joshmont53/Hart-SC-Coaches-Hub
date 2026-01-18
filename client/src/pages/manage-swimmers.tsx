@@ -325,7 +325,7 @@ export function ManageSwimmers({ swimmers, squads, onBack }: ManageSwimmersProps
       </div>
 
       <div className="flex-1 overflow-auto overflow-x-hidden scroll-container">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-4xl mx-auto pt-4">
           {/* Select all control - only show if there are swimmers to select */}
           {filteredSwimmers.length > 0 && (
             <div className="mb-4 flex items-center gap-2">

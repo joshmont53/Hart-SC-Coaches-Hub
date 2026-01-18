@@ -201,32 +201,30 @@ export function ManageInvitations({ onBack }: ManageInvitationsProps) {
   return (
     <div className="flex flex-col h-full bg-background overflow-hidden" data-testid="view-manage-invitations">
       <div className="flex-shrink-0 sticky top-0 z-10 bg-background">
-        <div className="max-w-3xl mx-auto px-4 py-4">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onBack}
-                data-testid="button-back"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <div>
-                <h1 className="text-xl font-semibold">Coach Invitations</h1>
-                <p className="text-sm text-muted-foreground">Invite coaches to join the platform</p>
-              </div>
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-center gap-3 mb-6 pb-3 border-b">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onBack}
+              className="h-9 w-9 shrink-0"
+              data-testid="button-back"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-base truncate">Coach Invitations</h1>
             </div>
-            <Button onClick={() => setIsCreateDialogOpen(true)} data-testid="button-create-invitation">
-              <Plus className="h-4 w-4 mr-2" />
-              Create Invitation
+            <Button size="sm" onClick={() => setIsCreateDialogOpen(true)} className="shrink-0" data-testid="button-create-invitation">
+              <Plus className="h-4 w-4 mr-1.5" />
+              Add
             </Button>
           </div>
         </div>
       </div>
 
       <div className="flex-1 overflow-auto overflow-x-hidden scroll-container">
-        <div className="max-w-3xl mx-auto px-4 py-6">
+        <div className="max-w-4xl mx-auto pt-4">
           {isLoadingInvitations ? (
             <Card className="p-8 text-center">
               <p className="text-muted-foreground">Loading invitations...</p>

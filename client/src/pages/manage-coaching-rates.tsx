@@ -129,157 +129,157 @@ export function ManageCoachingRates({ onBack }: ManageCoachingRatesProps) {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="mb-6">
+    <div className="h-full flex flex-col overflow-hidden">
+      {/* Compact Inline Header */}
+      <div className="flex items-center gap-3 mb-6 pb-3 border-b shrink-0">
         <Button
           variant="ghost"
+          size="icon"
           onClick={onBack}
-          className="mb-4"
+          className="h-9 w-9 shrink-0"
           data-testid="button-back"
         >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
+          <ArrowLeft className="h-4 w-4" />
         </Button>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold">Manage Coaching Rates</h1>
-            <p className="text-muted-foreground mt-1">
-              Set hourly rates and session writing rates for each qualification level
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            {hasChanges && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleReset}
-                data-testid="button-reset"
-              >
-                Reset
-              </Button>
-            )}
+        <div className="flex-1 min-w-0">
+          <h1 className="text-base truncate">Coaching Rates</h1>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {hasChanges && (
             <Button
+              variant="outline"
               size="sm"
-              onClick={handleSave}
-              disabled={!hasChanges || updateMutation.isPending}
-              data-testid="button-save"
+              onClick={handleReset}
+              data-testid="button-reset"
             >
-              <Save className="h-4 w-4 mr-2" />
-              {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
+              Reset
             </Button>
-          </div>
+          )}
+          <Button
+            size="sm"
+            onClick={handleSave}
+            disabled={!hasChanges || updateMutation.isPending}
+            data-testid="button-save"
+          >
+            <Save className="h-4 w-4 mr-1.5" />
+            {updateMutation.isPending ? 'Saving...' : 'Save'}
+          </Button>
         </div>
       </div>
 
-      {/* Info Alert */}
-      <Alert className="mb-6">
-        <AlertCircle className="h-4 w-4" />
-        <AlertDescription>
-          Changes to coaching rates will affect future invoice calculations. Existing invoice data for past months will not be affected.
-        </AlertDescription>
-      </Alert>
+      {/* Scrollable Content */}
+      <div className="flex-1 overflow-auto overflow-x-hidden scroll-container">
+        <div className="max-w-4xl mx-auto">
+          {/* Info Alert */}
+          <Alert className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Changes to coaching rates will affect future invoice calculations. Existing invoice data for past months will not be affected.
+            </AlertDescription>
+          </Alert>
 
-      {/* Rates Cards */}
-      {isLoading ? (
-        <div className="space-y-4">
-          <Card>
-            <CardContent className="p-6">
-              <p className="text-muted-foreground">Loading rates...</p>
-            </CardContent>
-          </Card>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {rates
-            .sort((a, b) => {
-              const order = { 'No Qualification': 0, 'Level 1': 1, 'Level 2': 2, 'Level 3': 3 };
-              return (order[a.qualificationLevel as keyof typeof order] || 99) - 
-                     (order[b.qualificationLevel as keyof typeof order] || 99);
-            })
-            .map(rate => (
-            <Card key={rate.qualificationLevel} data-testid={`card-rate-${rate.qualificationLevel.toLowerCase().replace(/\s+/g, '-')}`}>
+          {/* Rates Cards */}
+          {isLoading ? (
+            <div className="space-y-4">
+              <Card>
+                <CardContent className="p-6">
+                  <p className="text-muted-foreground">Loading rates...</p>
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {rates
+                .sort((a, b) => {
+                  const order = { 'No Qualification': 0, 'Level 1': 1, 'Level 2': 2, 'Level 3': 3 };
+                  return (order[a.qualificationLevel as keyof typeof order] || 99) - 
+                         (order[b.qualificationLevel as keyof typeof order] || 99);
+                })
+                .map(rate => (
+                  <Card key={rate.qualificationLevel} data-testid={`card-rate-${rate.qualificationLevel.toLowerCase().replace(/\s+/g, '-')}`}>
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <CardTitle>
+                          {rate.qualificationLevel}
+                        </CardTitle>
+                        <Badge variant={getLevelColor(rate.qualificationLevel)}>
+                          {rate.qualificationLevel}
+                        </Badge>
+                      </div>
+                      <CardDescription>
+                        Set rates for coaches at this qualification level
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor={`hourly-${rate.qualificationLevel}`}>
+                          Hourly Rate (£)
+                        </Label>
+                        <Input
+                          id={`hourly-${rate.qualificationLevel}`}
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={editedRates[rate.qualificationLevel]?.hourlyRate || ''}
+                          onChange={(e) => handleRateChange(rate.qualificationLevel, 'hourlyRate', e.target.value)}
+                          placeholder="0.00"
+                          data-testid={`input-hourly-${rate.qualificationLevel.toLowerCase().replace(/\s+/g, '-')}`}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor={`writing-${rate.qualificationLevel}`}>
+                          Session Writing Rate (£)
+                        </Label>
+                        <Input
+                          id={`writing-${rate.qualificationLevel}`}
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={editedRates[rate.qualificationLevel]?.sessionWritingRate || ''}
+                          onChange={(e) => handleRateChange(rate.qualificationLevel, 'sessionWritingRate', e.target.value)}
+                          placeholder="0.00"
+                          data-testid={`input-writing-${rate.qualificationLevel.toLowerCase().replace(/\s+/g, '-')}`}
+                        />
+                      </div>
+
+                      <div className="pt-2 border-t text-sm text-muted-foreground">
+                        Last updated: {new Date(rate.updatedAt).toLocaleDateString()}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+            </div>
+          )}
+
+          {/* Summary */}
+          {rates.length > 0 && (
+            <Card className="mt-6">
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>
-                    {rate.qualificationLevel}
-                  </CardTitle>
-                  <Badge variant={getLevelColor(rate.qualificationLevel)}>
-                    {rate.qualificationLevel}
-                  </Badge>
-                </div>
-                <CardDescription>
-                  Set rates for coaches at this qualification level
-                </CardDescription>
+                <CardTitle>Rate Summary</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor={`hourly-${rate.qualificationLevel}`}>
-                    Hourly Rate (£)
-                  </Label>
-                  <Input
-                    id={`hourly-${rate.qualificationLevel}`}
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={editedRates[rate.qualificationLevel]?.hourlyRate || ''}
-                    onChange={(e) => handleRateChange(rate.qualificationLevel, 'hourlyRate', e.target.value)}
-                    placeholder="0.00"
-                    data-testid={`input-hourly-${rate.qualificationLevel.toLowerCase().replace(/\s+/g, '-')}`}
-                  />
-                </div>
+              <CardContent>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {rates.map(rate => {
+                    const edited = editedRates[rate.qualificationLevel];
+                    const hourlyRate = edited ? parseFloat(edited.hourlyRate) : 0;
+                    const writingRate = edited ? parseFloat(edited.sessionWritingRate) : 0;
 
-                <div className="space-y-2">
-                  <Label htmlFor={`writing-${rate.qualificationLevel}`}>
-                    Session Writing Rate (£)
-                  </Label>
-                  <Input
-                    id={`writing-${rate.qualificationLevel}`}
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={editedRates[rate.qualificationLevel]?.sessionWritingRate || ''}
-                    onChange={(e) => handleRateChange(rate.qualificationLevel, 'sessionWritingRate', e.target.value)}
-                    placeholder="0.00"
-                    data-testid={`input-writing-${rate.qualificationLevel.toLowerCase().replace(/\s+/g, '-')}`}
-                  />
-                </div>
-
-                <div className="pt-2 border-t text-sm text-muted-foreground">
-                  Last updated: {new Date(rate.updatedAt).toLocaleDateString()}
+                    return (
+                      <div key={rate.qualificationLevel} className="space-y-1">
+                        <p className="text-sm font-medium">{rate.qualificationLevel}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Hourly: £{hourlyRate.toFixed(2)} | Writing: £{writingRate.toFixed(2)}
+                        </p>
+                      </div>
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
-          ))}
+          )}
         </div>
-      )}
-
-      {/* Summary */}
-      {rates.length > 0 && (
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle>Rate Summary</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {rates.map(rate => {
-                const edited = editedRates[rate.qualificationLevel];
-                const hourlyRate = edited ? parseFloat(edited.hourlyRate) : 0;
-                const writingRate = edited ? parseFloat(edited.sessionWritingRate) : 0;
-
-                return (
-                  <div key={rate.qualificationLevel} className="space-y-1">
-                    <p className="text-sm font-medium">{rate.qualificationLevel}</p>
-                    <p className="text-xs text-muted-foreground">
-                      Hourly: £{hourlyRate.toFixed(2)} | Writing: £{writingRate.toFixed(2)}
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      </div>
     </div>
   );
 }
