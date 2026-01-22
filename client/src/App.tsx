@@ -993,7 +993,7 @@ function CalendarApp() {
             <FeedbackAnalytics onBack={handleBackToCalendar} />
           ) : managementView === 'home' ? (
             currentCoach ? (
-              <div className="p-4 overflow-y-auto">
+              <div className="px-3 py-4 overflow-y-auto">
                 <HomePage
                   coach={currentCoach}
                   sessions={sessions}
