@@ -811,7 +811,7 @@ export function HomePage({
                 return (
                   <div 
                     key={swimmer.id}
-                    className="flex items-center justify-between p-3 bg-muted/30 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+                    className="flex items-start justify-between p-3 bg-muted/30 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors gap-4"
                     onClick={() => {
                       onNavigateToSwimmerProfile(swimmer);
                       setShowAllSwimmers(false);
@@ -819,12 +819,12 @@ export function HomePage({
                     data-testid={`swimmer-attendance-${swimmer.id}`}
                   >
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm truncate flex items-center gap-1.5">
-                        <span className="truncate">{swimmer.firstName} {swimmer.lastName}</span>
+                      <div className="font-medium text-sm flex items-center gap-1.5">
+                        <span>{swimmer.firstName} {swimmer.lastName}</span>
                         {veryLateCount > 0 && (
                           <Badge 
                             variant="outline"
-                            className="text-[10px] px-1 py-0 h-4"
+                            className="text-[10px] px-1 py-0 h-4 shrink-0"
                             style={{
                               backgroundColor: '#ef444410',
                               color: '#ef4444',
@@ -837,7 +837,7 @@ export function HomePage({
                         {lateCount > 0 && veryLateCount === 0 && (
                           <Badge 
                             variant="outline"
-                            className="text-[10px] px-1 py-0 h-4"
+                            className="text-[10px] px-1 py-0 h-4 shrink-0"
                             style={{
                               backgroundColor: '#f59e0b10',
                               color: '#f59e0b',
@@ -848,33 +848,33 @@ export function HomePage({
                           </Badge>
                         )}
                       </div>
-                      <div className="text-xs text-muted-foreground flex items-center gap-2 mt-0.5">
-                        <span>{squad?.name}</span>
-                        <span>•</span>
-                        <span>{attended}/{total} sessions</span>
-                        {(lateCount > 0 || veryLateCount > 0) && (
-                          <>
-                            <span>•</span>
-                            <span className="text-orange-500">
-                              {lateCount > 0 && `${lateCount} late`}
-                              {lateCount > 0 && veryLateCount > 0 && ', '}
-                              {veryLateCount > 0 && `${veryLateCount} very late`}
-                            </span>
-                          </>
-                        )}
+                      <div className="text-xs text-muted-foreground mt-1">
+                        {squad?.name}
                       </div>
+                      {(lateCount > 0 || veryLateCount > 0) && (
+                        <div className="text-xs mt-1">
+                          <span className="text-orange-500">
+                            {lateCount > 0 && `${lateCount} late`}
+                            {lateCount > 0 && veryLateCount > 0 && ', '}
+                            {veryLateCount > 0 && `${veryLateCount} very late`}
+                          </span>
+                        </div>
+                      )}
                     </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-16 h-2 bg-muted rounded-full overflow-hidden">
-                        <div 
-                          className="h-full rounded-full"
-                          style={{ 
-                            width: `${percentage ?? 0}%`,
-                            backgroundColor: (percentage ?? 0) >= 80 ? '#4B9A4A' : (percentage ?? 0) >= 60 ? '#f59e0b' : '#ef4444'
-                          }}
-                        />
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      <div className="flex items-center gap-2">
+                        <div className="w-16 h-2 bg-muted rounded-full overflow-hidden">
+                          <div 
+                            className="h-full rounded-full"
+                            style={{ 
+                              width: `${percentage ?? 0}%`,
+                              backgroundColor: (percentage ?? 0) >= 80 ? '#4B9A4A' : (percentage ?? 0) >= 60 ? '#f59e0b' : '#ef4444'
+                            }}
+                          />
+                        </div>
+                        <span className="text-sm font-semibold w-10 text-right">{percentage ?? 0}%</span>
                       </div>
-                      <span className="text-sm font-semibold w-10 text-right">{percentage ?? 0}%</span>
+                      <span className="text-xs text-muted-foreground">{attended}/{total} sessions</span>
                     </div>
                   </div>
                 );
