@@ -75,7 +75,7 @@ import type {
 
 type View = 'month' | 'day';
 type MobileView = 'calendar' | 'list';
-type ManagementView = 'calendar' | 'coaches' | 'squads' | 'swimmers' | 'locations' | 'invitations' | 'competitions' | 'addSession' | 'invoices' | 'coachingRates' | 'sessionLibrary' | 'drillsLibrary' | 'feedbackAnalytics';
+type ManagementView = 'home' | 'calendar' | 'coaches' | 'squads' | 'swimmers' | 'locations' | 'invitations' | 'competitions' | 'addSession' | 'invoices' | 'coachingRates' | 'sessionLibrary' | 'drillsLibrary' | 'feedbackAnalytics' | 'swimmerProfiles' | 'swimmerProfile';
 
 // Global storage for pending session ID from notification deep link
 // This is set before CalendarApp mounts and read when it does
@@ -129,6 +129,7 @@ function CalendarApp() {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [selectedCompetitionId, setSelectedCompetitionId] = useState<string | null>(null);
+  const [selectedSwimmerId, setSelectedSwimmerId] = useState<string | null>(null);
   const [view, setView] = useState<View>('month');
   const [mobileView, setMobileView] = useState<MobileView>('calendar');
   const [managementView, setManagementView] = useState<ManagementView>('calendar');
@@ -336,6 +337,20 @@ function CalendarApp() {
   
   const handleBackToCalendar = () => {
     setManagementView('calendar');
+  };
+
+  const handleBackToHome = () => {
+    setManagementView('home');
+  };
+
+  const handleNavigateToSwimmerProfile = (swimmer: Swimmer) => {
+    setSelectedSwimmerId(swimmer.id);
+    setManagementView('swimmerProfile');
+  };
+
+  const handleBackFromSwimmerProfile = () => {
+    setSelectedSwimmerId(null);
+    setManagementView('swimmerProfiles');
   };
 
   const handleSessionClick = (session: Session) => {
