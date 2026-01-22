@@ -103,6 +103,7 @@ export interface IStorage {
   deleteSession(id: string): Promise<void>;
   
   // Attendance operations
+  getAllAttendance(): Promise<Attendance[]>;
   getAttendanceBySession(sessionId: string): Promise<Attendance[]>;
   createAttendance(attendance: InsertAttendance): Promise<Attendance>;
   deleteAttendanceBySession(sessionId: string): Promise<void>;
@@ -456,6 +457,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Attendance operations
+  async getAllAttendance(): Promise<Attendance[]> {
+    return await db.select().from(attendance).where(eq(attendance.recordStatus, 'active'));
+  }
+
   async getAttendanceBySession(sessionId: string): Promise<Attendance[]> {
     return await db.select().from(attendance).where(and(eq(attendance.sessionId, sessionId), eq(attendance.recordStatus, 'active')));
   }

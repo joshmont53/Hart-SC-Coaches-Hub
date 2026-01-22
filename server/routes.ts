@@ -717,6 +717,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Attendance routes
+  app.get("/api/attendance", requireAuth, async (req, res) => {
+    try {
+      const attendanceRecords = await storage.getAllAttendance();
+      res.json(attendanceRecords);
+    } catch (error) {
+      console.error("Error fetching all attendance:", error);
+      res.status(500).json({ message: "Failed to fetch all attendance" });
+    }
+  });
+
   app.get("/api/attendance/:sessionId", requireAuth, async (req, res) => {
     try {
       const attendanceRecords = await storage.getAttendanceBySession(req.params.sessionId);

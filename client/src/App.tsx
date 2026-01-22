@@ -27,6 +27,7 @@ import { SessionLibrary } from '@/pages/session-library';
 import { DrillsLibrary } from '@/pages/drills-library';
 import { FeedbackAnalytics } from '@/pages/feedback-analytics';
 import { CompetitionDetailModal } from '@/components/CompetitionDetailModal';
+import { HomePage } from '@/components/HomePage';
 import { Button } from './components/ui/button';
 import { Switch as ToggleSwitch } from './components/ui/switch';
 import { Label } from './components/ui/label';
@@ -72,6 +73,8 @@ import type {
   Swimmer as BackendSwimmer,
   Competition,
   CompetitionCoaching,
+  Attendance,
+  SessionFeedback,
 } from '@shared/schema';
 
 type View = 'month' | 'day';
@@ -243,6 +246,16 @@ function CalendarApp() {
   // Fetch drills count for sidebar
   const { data: drills = [] } = useQuery<{ id: string }[]>({ 
     queryKey: ['/api/drills'],
+  });
+
+  // Fetch attendance for home dashboard
+  const { data: allAttendance = [] } = useQuery<Attendance[]>({ 
+    queryKey: ['/api/attendance'],
+  });
+
+  // Fetch session feedback for home dashboard
+  const { data: sessionFeedback = [] } = useQuery<SessionFeedback[]>({ 
+    queryKey: ['/api/feedback'],
   });
 
   // Adapt backend data to frontend types
@@ -979,10 +992,31 @@ function CalendarApp() {
           ) : managementView === 'feedbackAnalytics' ? (
             <FeedbackAnalytics onBack={handleBackToCalendar} />
           ) : managementView === 'home' ? (
-            <div className="flex flex-col items-center justify-center h-full text-muted-foreground" data-testid="view-home-placeholder">
-              <p className="text-lg">Home Dashboard</p>
-              <p className="text-sm">Coming soon...</p>
-            </div>
+            currentCoach ? (
+              <div className="p-4 overflow-y-auto">
+                <HomePage
+                  coach={currentCoach}
+                  sessions={sessions}
+                  squads={squads}
+                  swimmers={swimmers}
+                  locations={locations}
+                  competitions={competitions}
+                  competitionCoaching={competitionCoaching}
+                  attendance={allAttendance}
+                  sessionFeedback={sessionFeedback}
+                  onNavigateToSession={(session) => {
+                    setSelectedSessionId(session.id);
+                    setManagementView('calendar');
+                  }}
+                  onNavigateToCalendar={() => setManagementView('calendar')}
+                  onNavigateToSwimmerProfile={handleNavigateToSwimmerProfile}
+                />
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                <p className="text-lg">Loading...</p>
+              </div>
+            )
           ) : view === 'month' ? (
             <>
               <div className={mobileView === 'calendar' ? 'block' : 'hidden lg:block'}>
