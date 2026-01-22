@@ -38,28 +38,13 @@ export function SwimmerProfiles({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSquad, setSelectedSquad] = useState<string>('all');
 
-  // Find squads where coach is involved
-  const coachSquads = useMemo(() => {
-    const coachSessions = sessions.filter(session => 
-      session.leadCoachId === coach.id || 
-      session.secondCoachId === coach.id || 
-      session.helperId === coach.id
-    );
-    const squadIds = Array.from(new Set(coachSessions.map(s => s.squadId)));
-    return squads.filter(s => squadIds.includes(s.id));
-  }, [sessions, squads, coach.id]);
-
   // Filter swimmers by squad and search term
   const filteredSwimmers = useMemo(() => {
     let filtered = swimmers;
 
-    // Filter by squad
+    // Filter by squad if selected
     if (selectedSquad !== 'all') {
       filtered = filtered.filter(s => s.squadId === selectedSquad);
-    } else {
-      // Only show swimmers from coach's squads
-      const squadIds = coachSquads.map(s => s.id);
-      filtered = filtered.filter(s => squadIds.includes(s.squadId));
     }
 
     // Filter by search term
@@ -75,7 +60,7 @@ export function SwimmerProfiles({
     return filtered.sort((a, b) => 
       `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`)
     );
-  }, [swimmers, coachSquads, selectedSquad, searchTerm]);
+  }, [swimmers, selectedSquad, searchTerm]);
 
   // Calculate attendance for each swimmer using real data
   const swimmersWithStats = useMemo(() => {
@@ -138,7 +123,7 @@ export function SwimmerProfiles({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Squads</SelectItem>
-              {coachSquads.map(squad => (
+              {squads.map(squad => (
                 <SelectItem key={squad.id} value={squad.id}>
                   {squad.name}
                 </SelectItem>
