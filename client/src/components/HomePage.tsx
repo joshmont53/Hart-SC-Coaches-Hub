@@ -68,6 +68,7 @@ export function HomePage({
   const [distanceSquadFilter, setDistanceSquadFilter] = useState<string>('');
   const [attendanceSquadFilter, setAttendanceSquadFilter] = useState<string | string[]>('primary');
   const [showAllSwimmers, setShowAllSwimmers] = useState(false);
+  const [showAllIncompleteSessions, setShowAllIncompleteSessions] = useState(false);
 
   const primarySquads = useMemo(() => {
     return squads.filter(squad => squad.primaryCoachId === coach.id);
@@ -124,7 +125,7 @@ export function HomePage({
     );
   }, [sessions, coach.id]);
 
-  const incompleteSessions = useMemo(() => {
+  const allIncompleteSessions = useMemo(() => {
     return coachSessions.filter(session => {
       const sessionDate = new Date(session.date);
       const isPastOrToday = isPast(sessionDate) || isToday(sessionDate);
@@ -134,7 +135,9 @@ export function HomePage({
       const missingAttendance = isPastOrToday && sessionAttendance.length === 0;
       
       return isPastOrToday && isLead && (!hasFeedback || missingAttendance);
-    }).slice(0, 3).map(session => {
+    })
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .map(session => {
       const hasFeedback = sessionFeedback.some(f => f.sessionId === session.id);
       const sessionAttendance = attendance.filter(a => a.sessionId === session.id);
       const missingAttendance = sessionAttendance.length === 0;
@@ -146,6 +149,10 @@ export function HomePage({
       };
     });
   }, [coachSessions, coach.id, sessionFeedback, attendance]);
+
+  const displayedIncompleteSessions = useMemo(() => {
+    return allIncompleteSessions.slice(0, 3);
+  }, [allIncompleteSessions]);
 
   const thisWeekUpcomingSessions = useMemo(() => {
     const now = new Date();
@@ -287,9 +294,9 @@ export function HomePage({
     return {
       totalSessions,
       thisWeekSessions: thisWeekUpcomingSessions.length,
-      incompleteTasks: incompleteSessions.length
+      incompleteTasks: allIncompleteSessions.length
     };
-  }, [coachSessions, thisWeekUpcomingSessions, incompleteSessions]);
+  }, [coachSessions, thisWeekUpcomingSessions, allIncompleteSessions]);
 
   return (
     <>
@@ -301,27 +308,41 @@ export function HomePage({
           </p>
         </div>
 
-        {incompleteSessions.length > 0 && (
-          <Card className="border-orange-200 bg-orange-50/50" data-testid="card-action-required">
+        {allIncompleteSessions.length > 0 && (
+          <Card 
+            className={`border-orange-200 bg-orange-50/50 ${allIncompleteSessions.length > 3 ? 'cursor-pointer hover:shadow-md transition-shadow' : ''}`}
+            onClick={allIncompleteSessions.length > 3 ? () => setShowAllIncompleteSessions(true) : undefined}
+            data-testid="card-action-required"
+          >
             <CardHeader className="pb-2">
-              <div className="flex items-center gap-2">
-                <AlertCircle className="h-5 w-5 text-orange-600" />
-                <CardTitle className="text-lg">Action Required</CardTitle>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="h-5 w-5 text-orange-600" />
+                  <CardTitle className="text-lg">Action Required</CardTitle>
+                </div>
+                {allIncompleteSessions.length > 3 && (
+                  <Badge variant="outline" className="text-xs border-orange-300 text-orange-600">
+                    +{allIncompleteSessions.length - 3} more
+                  </Badge>
+                )}
               </div>
             </CardHeader>
             <CardContent>
               <p className="text-xs text-muted-foreground mb-2">
-                {incompleteSessions.length} session{incompleteSessions.length !== 1 ? 's' : ''} need attention
+                {allIncompleteSessions.length} session{allIncompleteSessions.length !== 1 ? 's' : ''} need attention
               </p>
               <div className="space-y-1.5">
-                {incompleteSessions.map(({ session }) => {
+                {displayedIncompleteSessions.map(({ session }) => {
                   const squad = squads.find(s => s.id === session.squadId);
                   
                   return (
                     <div 
                       key={session.id}
                       className="flex items-center justify-between p-2 bg-white rounded-lg border border-orange-100 hover:border-orange-300 transition-colors cursor-pointer"
-                      onClick={() => onNavigateToSession(session)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onNavigateToSession(session);
+                      }}
                       data-testid={`action-session-${session.id}`}
                     >
                       <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -791,6 +812,68 @@ export function HomePage({
                         />
                       </div>
                       <span className="text-sm font-semibold w-10 text-right">{percentage}%</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showAllIncompleteSessions} onOpenChange={setShowAllIncompleteSessions}>
+        <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-orange-600" />
+              All Sessions Requiring Action
+            </DialogTitle>
+            <DialogDescription>
+              {allIncompleteSessions.length} session{allIncompleteSessions.length !== 1 ? 's' : ''} need your attention. Click on a session to complete it.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="overflow-y-auto flex-1 px-6 pb-6">
+            <div className="grid grid-cols-1 gap-2">
+              {allIncompleteSessions.map(({ session, missingFeedback, missingAttendance }) => {
+                const squad = squads.find(s => s.id === session.squadId);
+                
+                return (
+                  <div 
+                    key={session.id}
+                    className="flex items-center justify-between p-3 bg-orange-50 rounded-lg border border-orange-100 hover:border-orange-300 cursor-pointer transition-colors"
+                    onClick={() => {
+                      onNavigateToSession(session);
+                      setShowAllIncompleteSessions(false);
+                    }}
+                    data-testid={`modal-action-session-${session.id}`}
+                  >
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <CalendarDays className="h-4 w-4 text-orange-600 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm truncate">{squad?.name}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {format(new Date(session.date), 'EEE, MMM d')} • {session.startTime}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {missingAttendance && (
+                        <Badge 
+                          variant="outline" 
+                          className="text-[10px] border-orange-300 text-orange-600"
+                        >
+                          No attendance
+                        </Badge>
+                      )}
+                      {missingFeedback && (
+                        <Badge 
+                          variant="outline" 
+                          className="text-[10px] border-orange-300 text-orange-600"
+                        >
+                          No feedback
+                        </Badge>
+                      )}
+                      <Button size="sm" variant="outline" className="text-xs h-7">Complete</Button>
                     </div>
                   </div>
                 );
