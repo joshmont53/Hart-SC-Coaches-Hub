@@ -184,7 +184,7 @@ export function HomePage({
     const weekSessions = thisWeekSessionsForDistance;
     
     let totalDistance = 0;
-    let freestyle = 0, backstroke = 0, breaststroke = 0, butterfly = 0, individualMedley = 0;
+    let freestyle = 0, backstroke = 0, breaststroke = 0, butterfly = 0, no1 = 0;
     let swim = 0, kick = 0, drill = 0, pull = 0;
     
     weekSessions.forEach(session => {
@@ -195,7 +195,7 @@ export function HomePage({
         backstroke += dist.backstroke || 0;
         breaststroke += dist.breaststroke || 0;
         butterfly += dist.butterfly || 0;
-        individualMedley += dist.individualMedley || 0;
+        no1 += dist.no1 || 0;
         
         if (dist.frontCrawlBreakdown) {
           swim += dist.frontCrawlBreakdown.swim || 0;
@@ -221,18 +221,18 @@ export function HomePage({
           drill += dist.butterflyBreakdown.drill || 0;
           pull += dist.butterflyBreakdown.pull || 0;
         }
-        if (dist.individualMedleyBreakdown) {
-          swim += dist.individualMedleyBreakdown.swim || 0;
-          kick += dist.individualMedleyBreakdown.kick || 0;
-          drill += dist.individualMedleyBreakdown.drill || 0;
-          pull += dist.individualMedleyBreakdown.pull || 0;
+        if (dist.no1Breakdown) {
+          swim += dist.no1Breakdown.swim || 0;
+          kick += dist.no1Breakdown.kick || 0;
+          drill += dist.no1Breakdown.drill || 0;
+          pull += dist.no1Breakdown.pull || 0;
         }
       }
     });
     
     return {
       totalDistance,
-      strokes: { freestyle, backstroke, breaststroke, butterfly, individualMedley },
+      strokes: { freestyle, backstroke, breaststroke, butterfly, no1 },
       types: { swim, kick, drill, pull }
     };
   }, [thisWeekSessionsForDistance]);
@@ -670,7 +670,7 @@ export function HomePage({
                   {Object.entries(thisWeekSwimmerStats.strokes).map(([stroke, distance]) => (
                     <div key={stroke}>
                       <div className="flex items-center justify-between text-sm mb-1">
-                        <span className="capitalize">{stroke === 'individualMedley' ? 'IM' : stroke}</span>
+                        <span className="capitalize">{stroke === 'no1' ? 'No1' : stroke}</span>
                         <span className="font-medium">{(distance / 1000).toFixed(1)}km</span>
                       </div>
                       <div className="h-2 bg-white/20 rounded-full overflow-hidden">
