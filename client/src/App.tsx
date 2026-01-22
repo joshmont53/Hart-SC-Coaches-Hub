@@ -138,7 +138,7 @@ function CalendarApp() {
   const [selectedSwimmerId, setSelectedSwimmerId] = useState<string | null>(null);
   const [view, setView] = useState<View>('month');
   const [mobileView, setMobileView] = useState<MobileView>('calendar');
-  const [managementView, setManagementView] = useState<ManagementView>('calendar');
+  const [managementView, setManagementView] = useState<ManagementView>('home');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showMySessionsOnly, setShowMySessionsOnly] = useState(false);
@@ -996,27 +996,27 @@ function CalendarApp() {
               onCancel={handleCancelAddSession}
             />
           ) : managementView === 'coaches' ? (
-            <ManageCoaches coaches={coaches} onBack={handleBackToCalendar} />
+            <ManageCoaches coaches={coaches} onBack={handleBackToHome} />
           ) : managementView === 'squads' ? (
-            <ManageSquads squads={squads} coaches={coaches} onBack={handleBackToCalendar} />
+            <ManageSquads squads={squads} coaches={coaches} onBack={handleBackToHome} />
           ) : managementView === 'swimmers' ? (
-            <ManageSwimmers swimmers={swimmers} squads={squads} onBack={handleBackToCalendar} />
+            <ManageSwimmers swimmers={swimmers} squads={squads} onBack={handleBackToHome} />
           ) : managementView === 'locations' ? (
-            <ManageLocations locations={locations} onBack={handleBackToCalendar} />
+            <ManageLocations locations={locations} onBack={handleBackToHome} />
           ) : managementView === 'invitations' ? (
-            <ManageInvitations onBack={handleBackToCalendar} />
+            <ManageInvitations onBack={handleBackToHome} />
           ) : managementView === 'competitions' ? (
-            <ManageCompetitions onBack={handleBackToCalendar} />
+            <ManageCompetitions onBack={handleBackToHome} />
           ) : managementView === 'invoices' ? (
-            <InvoiceTracker onBack={handleBackToCalendar} />
+            <InvoiceTracker onBack={handleBackToHome} />
           ) : managementView === 'coachingRates' ? (
-            <ManageCoachingRates onBack={handleBackToCalendar} />
+            <ManageCoachingRates onBack={handleBackToHome} />
           ) : managementView === 'sessionLibrary' ? (
-            <SessionLibrary onBack={handleBackToCalendar} />
+            <SessionLibrary onBack={handleBackToHome} />
           ) : managementView === 'drillsLibrary' ? (
-            <DrillsLibrary onBack={handleBackToCalendar} />
+            <DrillsLibrary onBack={handleBackToHome} />
           ) : managementView === 'feedbackAnalytics' ? (
-            <FeedbackAnalytics onBack={handleBackToCalendar} />
+            <FeedbackAnalytics onBack={handleBackToHome} />
           ) : managementView === 'swimmerProfiles' ? (
             currentCoach ? (
               <SwimmerProfiles
