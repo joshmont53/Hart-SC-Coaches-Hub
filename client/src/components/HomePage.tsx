@@ -293,8 +293,8 @@ export function HomePage({
 
   return (
     <>
-      <div className="space-y-4" data-testid="home-page">
-        <div className="pt-4 pb-2">
+      <div className="space-y-3" data-testid="home-page">
+        <div className="pt-2">
           <h1 className="text-2xl font-bold" data-testid="text-welcome">Welcome back, {coach.firstName}!</h1>
           <p className="text-muted-foreground text-sm mt-0.5">
             Here's your coaching overview for {format(new Date(), 'EEEE, MMMM d')}
