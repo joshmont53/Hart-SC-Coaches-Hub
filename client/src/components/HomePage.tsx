@@ -18,7 +18,7 @@ import {
   Trophy,
   MapPin
 } from 'lucide-react';
-import { format, isToday, isPast, isFuture, startOfWeek, endOfWeek, isWithinInterval, addMonths, isBefore } from 'date-fns';
+import { format, isToday, isPast, isFuture, startOfWeek, endOfWeek, isWithinInterval, addMonths, isBefore, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import {
   Select,
   SelectContent,
@@ -237,25 +237,38 @@ export function HomePage({
     };
   }, [thisWeekSessionsForDistance]);
 
+  // Current month boundaries for attendance filtering
+  const currentMonthStart = startOfMonth(new Date());
+  const currentMonthEnd = endOfMonth(new Date());
+  const lastMonthStart = startOfMonth(subMonths(new Date(), 1));
+  const lastMonthEnd = endOfMonth(subMonths(new Date(), 1));
+  const currentMonthName = format(new Date(), 'MMMM');
+
   const swimmerAttendance = useMemo(() => {
     const squadSwimmers = swimmers.filter(s => attendanceSquadIds.includes(s.squadId));
     
+    // Get all sessions for the filtered squads in current month (past sessions only)
+    const currentMonthSessions = sessions.filter(s => {
+      const sessionDate = new Date(s.date);
+      return attendanceSquadIds.includes(s.squadId) &&
+             isPast(sessionDate) &&
+             isWithinInterval(sessionDate, { start: currentMonthStart, end: currentMonthEnd });
+    });
+    
     return squadSwimmers.map(swimmer => {
-      const squadSessions = coachSessions.filter(s => 
-        s.squadId === swimmer.squadId && 
-        isPast(new Date(s.date))
-      );
-      
+      // Get attendance records for this swimmer in current month sessions
       const swimmerAttendanceRecords = attendance.filter(a => 
         a.swimmerId === swimmer.id && 
-        squadSessions.some(s => s.id === a.sessionId)
+        currentMonthSessions.some(s => s.id === a.sessionId)
       );
+      
+      const total = swimmerAttendanceRecords.length;
       
       const attended = swimmerAttendanceRecords.filter(a => 
         a.status === 'Present' || a.status === '1st half only' || a.status === '2nd half only'
       ).length;
       
-      const percentage = squadSessions.length > 0 ? Math.round((attended / squadSessions.length) * 100) : 0;
+      const percentage = total > 0 ? Math.round((attended / total) * 100) : null;
       
       const lateCount = swimmerAttendanceRecords.filter(a => a.notes === 'Late').length;
       const veryLateCount = swimmerAttendanceRecords.filter(a => a.notes === 'Very Late').length;
@@ -264,18 +277,55 @@ export function HomePage({
         swimmer,
         percentage,
         attended,
-        total: squadSessions.length,
+        total,
         lateCount,
         veryLateCount
       };
-    }).sort((a, b) => b.percentage - a.percentage);
-  }, [attendanceSquadIds, swimmers, coachSessions, attendance]);
+    })
+    .filter(s => s.total > 0) // Exclude swimmers with no sessions (denominator = 0)
+    .sort((a, b) => (b.percentage ?? 0) - (a.percentage ?? 0));
+  }, [attendanceSquadIds, swimmers, sessions, attendance, currentMonthStart, currentMonthEnd]);
+
+  // Calculate last month's average for comparison
+  const lastMonthAverage = useMemo(() => {
+    const squadSwimmers = swimmers.filter(s => attendanceSquadIds.includes(s.squadId));
+    
+    const lastMonthSessions = sessions.filter(s => {
+      const sessionDate = new Date(s.date);
+      return attendanceSquadIds.includes(s.squadId) &&
+             isWithinInterval(sessionDate, { start: lastMonthStart, end: lastMonthEnd });
+    });
+    
+    const swimmerStats = squadSwimmers.map(swimmer => {
+      const swimmerAttendanceRecords = attendance.filter(a => 
+        a.swimmerId === swimmer.id && 
+        lastMonthSessions.some(s => s.id === a.sessionId)
+      );
+      
+      const total = swimmerAttendanceRecords.length;
+      const attended = swimmerAttendanceRecords.filter(a => 
+        a.status === 'Present' || a.status === '1st half only' || a.status === '2nd half only'
+      ).length;
+      
+      return { total, attended };
+    }).filter(s => s.total > 0);
+    
+    if (swimmerStats.length === 0) return null;
+    
+    const totalAttended = swimmerStats.reduce((acc, s) => acc + s.attended, 0);
+    const totalSessions = swimmerStats.reduce((acc, s) => acc + s.total, 0);
+    
+    return totalSessions > 0 ? Math.round((totalAttended / totalSessions) * 100) : null;
+  }, [attendanceSquadIds, swimmers, sessions, attendance, lastMonthStart, lastMonthEnd]);
   
   const top3Swimmers = swimmerAttendance.slice(0, 3);
   const bottom3Swimmers = swimmerAttendance.slice(-3).reverse();
   const avgAttendance = swimmerAttendance.length > 0 
-    ? Math.round(swimmerAttendance.reduce((acc, s) => acc + s.percentage, 0) / swimmerAttendance.length)
+    ? Math.round(swimmerAttendance.reduce((acc, s) => acc + (s.percentage ?? 0), 0) / swimmerAttendance.length)
     : 0;
+  
+  // Calculate trend compared to last month
+  const attendanceTrend = lastMonthAverage !== null ? avgAttendance - lastMonthAverage : null;
 
   const upcomingCompetitions = useMemo(() => {
     const now = new Date();
@@ -442,11 +492,23 @@ export function HomePage({
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-3">
                 <div>
-                  <p className="text-green-100 text-sm">Attendance Rate</p>
+                  <p className="text-green-100 text-sm">Attendance Rate ({currentMonthName})</p>
                   <p className="text-3xl font-bold mt-1" data-testid="text-avg-attendance">{avgAttendance}%</p>
-                  <p className="text-green-100 text-xs mt-1">Squad Average</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <p className="text-green-100 text-xs">Squad Average</p>
+                    {attendanceTrend !== null && (
+                      <span className={`text-xs flex items-center gap-0.5 ${attendanceTrend >= 0 ? 'text-green-200' : 'text-red-200'}`}>
+                        {attendanceTrend >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                        {attendanceTrend >= 0 ? '+' : ''}{attendanceTrend}% vs last month
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <TrendingUp className="h-10 w-10 text-green-200" />
+                {attendanceTrend === null || attendanceTrend >= 0 ? (
+                  <TrendingUp className="h-10 w-10 text-green-200" />
+                ) : (
+                  <TrendingDown className="h-10 w-10 text-red-200" />
+                )}
               </div>
               
               <div className="mb-3" onClick={(e) => e.stopPropagation()}>
@@ -807,12 +869,12 @@ export function HomePage({
                         <div 
                           className="h-full rounded-full"
                           style={{ 
-                            width: `${percentage}%`,
-                            backgroundColor: percentage >= 80 ? '#4B9A4A' : percentage >= 60 ? '#f59e0b' : '#ef4444'
+                            width: `${percentage ?? 0}%`,
+                            backgroundColor: (percentage ?? 0) >= 80 ? '#4B9A4A' : (percentage ?? 0) >= 60 ? '#f59e0b' : '#ef4444'
                           }}
                         />
                       </div>
-                      <span className="text-sm font-semibold w-10 text-right">{percentage}%</span>
+                      <span className="text-sm font-semibold w-10 text-right">{percentage ?? 0}%</span>
                     </div>
                   </div>
                 );
