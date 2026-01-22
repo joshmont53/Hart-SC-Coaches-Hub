@@ -89,9 +89,9 @@ export function SwimmerProfiles({
       // Get attendance records for this swimmer
       const swimmerAttendance = attendance.filter(a => a.swimmerId === swimmer.id);
       
-      // Count attended sessions (status = 'present', 'late', or 'very_late')
+      // Count attended sessions (status is "Present" - case insensitive)
       const attended = swimmerAttendance.filter(a => 
-        a.status === 'present' || a.status === 'late' || a.status === 'very_late'
+        a.status?.toLowerCase() === 'present'
       ).length;
       
       const total = squadSessions.length;

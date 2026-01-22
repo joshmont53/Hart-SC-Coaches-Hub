@@ -35,18 +35,24 @@ export function SwimmerProfilePage({ swimmer, sessions, squads, attendance, onBa
     // Get all past sessions for this swimmer's squad
     const squadSessions = sessions.filter(s => s.squadId === swimmer.squadId && isPast(new Date(s.date)));
     
-    // Count attended sessions (status = 'present', 'late', or 'very_late')
-    const attendedRecords = swimmerAttendance.filter(a => 
-      a.status === 'present' || a.status === 'late' || a.status === 'very_late'
-    );
+    // Helper to check if swimmer attended (status is "Present" - case insensitive)
+    const isAttended = (a: Attendance) => a.status?.toLowerCase() === 'present';
+    
+    // Helper to check lateness from notes field
+    const isLate = (a: Attendance) => a.notes?.toLowerCase().includes('late') && !a.notes?.toLowerCase().includes('very late');
+    const isVeryLate = (a: Attendance) => a.notes?.toLowerCase().includes('very late');
+    const isOnTime = (a: Attendance) => isAttended(a) && !isLate(a) && !isVeryLate(a);
+    
+    // Count attended sessions
+    const attendedRecords = swimmerAttendance.filter(isAttended);
     
     const totalSessions = squadSessions.length;
     const attended = attendedRecords.length;
     
-    // Punctuality stats
-    const lateCount = swimmerAttendance.filter(a => a.status === 'late').length;
-    const veryLateCount = swimmerAttendance.filter(a => a.status === 'very_late').length;
-    const onTimeCount = swimmerAttendance.filter(a => a.status === 'present').length;
+    // Punctuality stats (based on notes field)
+    const lateCount = swimmerAttendance.filter(a => isAttended(a) && isLate(a)).length;
+    const veryLateCount = swimmerAttendance.filter(a => isAttended(a) && isVeryLate(a)).length;
+    const onTimeCount = swimmerAttendance.filter(isOnTime).length;
     const onTimePercentage = attended > 0 ? Math.round((onTimeCount / attended) * 100) : 100;
     
     // This week sessions
@@ -55,8 +61,7 @@ export function SwimmerProfilePage({ swimmer, sessions, squads, attendance, onBa
     );
     const weekSessionIds = weekSessions.map(s => s.id);
     const weekAttended = swimmerAttendance.filter(a => 
-      weekSessionIds.includes(a.sessionId) &&
-      (a.status === 'present' || a.status === 'late' || a.status === 'very_late')
+      weekSessionIds.includes(a.sessionId) && isAttended(a)
     ).length;
     
     // This month sessions
@@ -65,8 +70,7 @@ export function SwimmerProfilePage({ swimmer, sessions, squads, attendance, onBa
     );
     const monthSessionIds = monthSessions.map(s => s.id);
     const monthAttended = swimmerAttendance.filter(a => 
-      monthSessionIds.includes(a.sessionId) &&
-      (a.status === 'present' || a.status === 'late' || a.status === 'very_late')
+      monthSessionIds.includes(a.sessionId) && isAttended(a)
     ).length;
     
     return {
@@ -102,10 +106,10 @@ export function SwimmerProfilePage({ swimmer, sessions, squads, attendance, onBa
       
       const daySessionIds = daySessions.map(s => s.id);
       
-      // Count attendance for this day
+      // Count attendance for this day (status is "Present" - case insensitive)
       const dayAttended = swimmerAttendance.filter(a => 
         daySessionIds.includes(a.sessionId) &&
-        (a.status === 'present' || a.status === 'late' || a.status === 'very_late')
+        a.status?.toLowerCase() === 'present'
       ).length;
       
       const percentage = daySessions.length > 0 ? Math.round((dayAttended / daySessions.length) * 100) : 0;
@@ -136,7 +140,7 @@ export function SwimmerProfilePage({ swimmer, sessions, squads, attendance, onBa
       
       const monthAttended = swimmerAttendance.filter(a => 
         monthSessionIds.includes(a.sessionId) &&
-        (a.status === 'present' || a.status === 'late' || a.status === 'very_late')
+        a.status?.toLowerCase() === 'present'
       ).length;
       
       const percentage = monthSessions.length > 0 ? Math.round((monthAttended / monthSessions.length) * 100) : 0;
