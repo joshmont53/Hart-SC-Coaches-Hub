@@ -340,14 +340,19 @@ export function HomePage({
   }, [competitions, competitionCoaching, coach.id]);
 
   const totalStats = useMemo(() => {
-    const totalSessions = coachSessions.filter(s => isPast(new Date(s.date))).length;
+    // Sessions led this month only
+    const sessionsThisMonth = coachSessions.filter(s => {
+      const sessionDate = new Date(s.date);
+      return isPast(sessionDate) && 
+             isWithinInterval(sessionDate, { start: currentMonthStart, end: currentMonthEnd });
+    }).length;
     
     return {
-      totalSessions,
+      sessionsThisMonth,
       thisWeekSessions: thisWeekUpcomingSessions.length,
       incompleteTasks: allIncompleteSessions.length
     };
-  }, [coachSessions, thisWeekUpcomingSessions, allIncompleteSessions]);
+  }, [coachSessions, thisWeekUpcomingSessions, allIncompleteSessions, currentMonthStart, currentMonthEnd]);
 
   return (
     <>
@@ -771,9 +776,9 @@ export function HomePage({
             <div className="grid grid-cols-3 gap-4">
               <div className="text-center p-3 bg-muted/30 rounded-lg">
                 <p className="text-2xl font-bold" style={{ color: '#4B9A4A' }} data-testid="text-sessions-led">
-                  {totalStats.totalSessions}
+                  {totalStats.sessionsThisMonth}
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">Sessions Led</p>
+                <p className="text-xs text-muted-foreground mt-1">Sessions Led ({currentMonthName})</p>
               </div>
               <div className="text-center p-3 bg-muted/30 rounded-lg">
                 <p className="text-2xl font-bold" style={{ color: '#4B9A4A' }} data-testid="text-coach-level">
@@ -783,9 +788,9 @@ export function HomePage({
               </div>
               <div className="text-center p-3 bg-muted/30 rounded-lg">
                 <p className="text-2xl font-bold" style={{ color: '#4B9A4A' }} data-testid="text-squads-count">
-                  {allCoachSquads.length}
+                  {primarySquads.length}
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">Squads</p>
+                <p className="text-xs text-muted-foreground mt-1">Squad Lead</p>
               </div>
             </div>
           </CardContent>
