@@ -315,16 +315,9 @@ export function HomePage({
             data-testid="card-action-required"
           >
             <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <AlertCircle className="h-5 w-5 text-orange-600" />
-                  <CardTitle className="text-lg">Action Required</CardTitle>
-                </div>
-                {allIncompleteSessions.length > 3 && (
-                  <Badge variant="outline" className="text-xs border-orange-300 text-orange-600">
-                    +{allIncompleteSessions.length - 3} more
-                  </Badge>
-                )}
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-5 w-5 text-orange-600" />
+                <CardTitle className="text-lg">Action Required</CardTitle>
               </div>
             </CardHeader>
             <CardContent>
@@ -358,6 +351,13 @@ export function HomePage({
                     </div>
                   );
                 })}
+                {allIncompleteSessions.length > 3 && (
+                  <div className="flex justify-center pt-1">
+                    <Badge variant="outline" className="text-xs border-orange-300 text-orange-600 cursor-pointer">
+                      +{allIncompleteSessions.length - 3} more
+                    </Badge>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -848,33 +848,33 @@ export function HomePage({
                     data-testid={`modal-action-session-${session.id}`}
                   >
                     <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <CalendarDays className="h-4 w-4 text-orange-600 flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-sm truncate">{squad?.name}</div>
+                      <CalendarDays className="h-4 w-4 text-orange-600 flex-shrink-0 self-start mt-0.5" />
+                      <div className="flex-1">
+                        <div className="font-medium text-sm">{squad?.name}</div>
                         <div className="text-xs text-muted-foreground">
                           {format(new Date(session.date), 'EEE, MMM d')} • {session.startTime}
                         </div>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          {missingAttendance && (
+                            <Badge 
+                              variant="outline" 
+                              className="text-[10px] border-orange-300 text-orange-600"
+                            >
+                              No attendance
+                            </Badge>
+                          )}
+                          {missingFeedback && (
+                            <Badge 
+                              variant="outline" 
+                              className="text-[10px] border-orange-300 text-orange-600"
+                            >
+                              No feedback
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {missingAttendance && (
-                        <Badge 
-                          variant="outline" 
-                          className="text-[10px] border-orange-300 text-orange-600"
-                        >
-                          No attendance
-                        </Badge>
-                      )}
-                      {missingFeedback && (
-                        <Badge 
-                          variant="outline" 
-                          className="text-[10px] border-orange-300 text-orange-600"
-                        >
-                          No feedback
-                        </Badge>
-                      )}
-                      <Button size="sm" variant="outline" className="text-xs h-7">Complete</Button>
-                    </div>
+                    <Button size="sm" variant="outline" className="text-xs h-7 ml-2 flex-shrink-0">Complete</Button>
                   </div>
                 );
               })}
