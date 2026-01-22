@@ -686,6 +686,44 @@ export function CollapsibleSidebar({
                   </TooltipContent>
                 )}
               </Tooltip>
+
+              {/* Swimmer Profiles */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className={cn(
+                      "w-full py-2.5 relative transition-all duration-200",
+                      collapsed ? "justify-center px-0" : "justify-start hover:scale-[1.02]",
+                      (isActive('swimmerProfiles') || isActive('swimmerProfile')) && "bg-accent/50"
+                    )}
+                    onClick={() => onNavigate('swimmerProfiles')}
+                    data-testid="button-nav-swimmer-profiles"
+                  >
+                    {(isActive('swimmerProfiles') || isActive('swimmerProfile')) && (
+                      <div 
+                        className="absolute left-0 top-0 bottom-0 w-1 rounded-r"
+                        style={{ backgroundColor: '#4B9A4A' }}
+                      />
+                    )}
+                    <UserCog 
+                      className={cn(
+                        "h-4 w-4 transition-colors",
+                        collapsed ? "" : "mr-3 ml-2",
+                        (isActive('swimmerProfiles') || isActive('swimmerProfile')) ? "text-[#4B9A4A]" : "text-muted-foreground"
+                      )}
+                    />
+                    {!collapsed && (
+                      <span className="flex-1 text-left">Swimmer Profiles</span>
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                {collapsed && (
+                  <TooltipContent side="right">
+                    Swimmer Profiles
+                  </TooltipContent>
+                )}
+              </Tooltip>
             </div>
           </div>
         </div>

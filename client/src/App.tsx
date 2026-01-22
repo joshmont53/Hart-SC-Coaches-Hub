@@ -28,6 +28,8 @@ import { DrillsLibrary } from '@/pages/drills-library';
 import { FeedbackAnalytics } from '@/pages/feedback-analytics';
 import { CompetitionDetailModal } from '@/components/CompetitionDetailModal';
 import { HomePage } from '@/components/HomePage';
+import { SwimmerProfiles } from '@/components/SwimmerProfiles';
+import { SwimmerProfilePage } from '@/components/SwimmerProfilePage';
 import { Button } from './components/ui/button';
 import { Switch as ToggleSwitch } from './components/ui/switch';
 import { Label } from './components/ui/label';
@@ -838,6 +840,30 @@ function CalendarApp() {
                 />
                 <span className="flex-1 text-left">Feedback Analytics</span>
               </Button>
+              
+              <Button
+                variant="ghost"
+                className={cn(
+                  "w-full justify-start py-2.5 relative transition-all duration-200 hover:scale-[1.02]",
+                  (isActive('swimmerProfiles') || isActive('swimmerProfile')) && "bg-accent/50"
+                )}
+                onClick={() => handleManagementClick('swimmerProfiles')}
+                data-testid="button-swimmer-profiles-mobile"
+              >
+                {(isActive('swimmerProfiles') || isActive('swimmerProfile')) && (
+                  <div 
+                    className="absolute left-0 top-0 bottom-0 w-1 rounded-r"
+                    style={{ backgroundColor: '#4B9A4A' }}
+                  />
+                )}
+                <UserCog 
+                  className={cn(
+                    "h-4 w-4 mr-3 ml-2 transition-colors",
+                    (isActive('swimmerProfiles') || isActive('swimmerProfile')) ? "text-[#4B9A4A]" : "text-muted-foreground"
+                  )}
+                />
+                <span className="flex-1 text-left">Swimmer Profiles</span>
+              </Button>
             </div>
           </div>
         </div>
@@ -991,6 +1017,26 @@ function CalendarApp() {
             <DrillsLibrary onBack={handleBackToCalendar} />
           ) : managementView === 'feedbackAnalytics' ? (
             <FeedbackAnalytics onBack={handleBackToCalendar} />
+          ) : managementView === 'swimmerProfiles' ? (
+            currentCoach ? (
+              <SwimmerProfiles
+                swimmers={swimmers}
+                sessions={sessions}
+                squads={squads}
+                coach={currentCoach}
+                attendance={allAttendance}
+                onSelectSwimmer={handleNavigateToSwimmerProfile}
+                onBack={handleBackToHome}
+              />
+            ) : null
+          ) : managementView === 'swimmerProfile' && selectedSwimmerId ? (
+            <SwimmerProfilePage
+              swimmer={swimmers.find(s => s.id === selectedSwimmerId)!}
+              sessions={sessions}
+              squads={squads}
+              attendance={allAttendance}
+              onBack={handleBackFromSwimmerProfile}
+            />
           ) : managementView === 'home' ? (
             currentCoach ? (
               <div className="px-2 pt-2 pb-4 overflow-y-auto">
