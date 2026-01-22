@@ -167,8 +167,7 @@ export function HomePage({
         return (isFuture(sessionDate) || isToday(sessionDate)) &&
                isWithinInterval(sessionDate, { start: weekStart, end: weekEnd });
       })
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-      .slice(0, 4);
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }, [coachSessions]);
   
   const thisWeekSessionsForDistance = useMemo(() => {
