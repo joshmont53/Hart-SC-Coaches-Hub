@@ -340,15 +340,21 @@ export function HomePage({
   }, [competitions, competitionCoaching, coach.id]);
 
   const totalStats = useMemo(() => {
-    // Sessions led this month only
-    const sessionsThisMonth = coachSessions.filter(s => {
+    // Sessions this month only
+    const thisMonthSessions = coachSessions.filter(s => {
       const sessionDate = new Date(s.date);
       return isPast(sessionDate) && 
              isWithinInterval(sessionDate, { start: currentMonthStart, end: currentMonthEnd });
-    }).length;
+    });
+    
+    const sessionsThisMonth = thisMonthSessions.length;
+    
+    // Unique squads coached this month (as lead, second, or helper)
+    const squadsCoached = new Set(thisMonthSessions.map(s => s.squadId)).size;
     
     return {
       sessionsThisMonth,
+      squadsCoached,
       thisWeekSessions: thisWeekUpcomingSessions.length,
       incompleteTasks: allIncompleteSessions.length
     };
@@ -769,28 +775,22 @@ export function HomePage({
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <Award className="h-4 w-4" style={{ color: '#4B9A4A' }} />
-              Your Coaching Profile
+              Your Coaching Profile ({currentMonthName})
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <div className="text-center p-3 bg-muted/30 rounded-lg">
                 <p className="text-2xl font-bold" style={{ color: '#4B9A4A' }} data-testid="text-sessions-led">
                   {totalStats.sessionsThisMonth}
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">Sessions Led ({currentMonthName})</p>
-              </div>
-              <div className="text-center p-3 bg-muted/30 rounded-lg">
-                <p className="text-2xl font-bold" style={{ color: '#4B9A4A' }} data-testid="text-coach-level">
-                  {coach.level}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">Level</p>
+                <p className="text-xs text-muted-foreground mt-1">Sessions Led</p>
               </div>
               <div className="text-center p-3 bg-muted/30 rounded-lg">
                 <p className="text-2xl font-bold" style={{ color: '#4B9A4A' }} data-testid="text-squads-count">
-                  {primarySquads.length}
+                  {totalStats.squadsCoached}
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">Squad Lead</p>
+                <p className="text-xs text-muted-foreground mt-1">Squads Coached</p>
               </div>
             </div>
           </CardContent>
