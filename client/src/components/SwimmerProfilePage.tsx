@@ -408,13 +408,13 @@ export function SwimmerProfilePage({ swimmer, sessions, squads, attendance, onBa
         <CardContent>
           <div className="flex items-end justify-between gap-2 h-48">
             {attendanceByMonth.map(({ name, percentage, total }) => (
-              <div key={name} className="flex-1 flex flex-col items-center gap-2">
+              <div key={name} className="flex-1 flex flex-col items-center gap-2 h-full">
                 <div className="text-xs text-muted-foreground text-center">
                   {percentage}%
                 </div>
-                <div className="w-full bg-muted rounded-t-lg relative flex-1 flex items-end">
+                <div className="w-full bg-muted rounded-t-lg relative flex-1">
                   <div 
-                    className="w-full rounded-t-lg transition-all duration-500"
+                    className="w-full rounded-t-lg transition-all duration-500 absolute bottom-0"
                     style={{ 
                       height: `${percentage}%`,
                       backgroundColor: '#4B9A4A'
