@@ -158,18 +158,16 @@ export function SwimmerProfilePage({ swimmer, sessions, squads, attendance, onBa
     const monthEnd = endOfMonth(now);
     const yearStart = startOfYear(now);
     
-    // Get sessions this swimmer attended
+    // Get sessions this swimmer attended (status = "Present" case insensitive)
     const attendedSessionIds = swimmerAttendance
-      .filter(a => a.status === 'present' || a.status === 'late' || a.status === 'very_late')
+      .filter(a => a.status?.toLowerCase() === 'present')
       .map(a => a.sessionId);
     
     const attendedSessions = sessions.filter(s => attendedSessionIds.includes(s.id));
     
-    // Calculate total distance from each session's distance breakdown
+    // Get total distance from session's distanceBreakdown
     const calculateSessionDistance = (session: Session): number => {
-      if (!session.distanceBreakdown) return 0;
-      // Use the total field which is already calculated
-      return session.distanceBreakdown.total || 0;
+      return session.distanceBreakdown?.total || 0;
     };
     
     // This week distance
