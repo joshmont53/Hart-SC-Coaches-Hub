@@ -117,41 +117,38 @@ export function CollapsibleSidebar({
         <div className="space-y-6">
           {/* HOME Section */}
           <div>
-            <div className="space-y-1">
-              {/* Home */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className={cn(
-                      "w-full py-2.5 relative transition-all duration-200",
-                      collapsed ? "justify-center px-0" : "justify-start",
-                      isActive('home') && "bg-accent/50"
-                    )}
-                    onClick={() => onNavigate('home')}
-                    data-testid="button-nav-home"
-                  >
-                    {isActive('home') && (
-                      <div 
-                        className="absolute left-0 top-0 bottom-0 w-1 rounded-r"
-                        style={{ backgroundColor: '#4B9A4A' }}
-                      />
-                    )}
-                    <Home 
-                      className={cn(
-                        "h-4 w-4 transition-colors",
-                        collapsed ? "" : "mr-3 ml-2",
-                        isActive('home') ? "text-[#4B9A4A]" : ""
-                      )}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className={cn(
+                    "w-full py-2.5 relative transition-all duration-200",
+                    collapsed ? "justify-center px-0" : "justify-start hover:scale-[1.02]",
+                    isActive('home') && "bg-accent/50"
+                  )}
+                  onClick={() => onNavigate('home')}
+                  data-testid="button-nav-home"
+                >
+                  {isActive('home') && (
+                    <div 
+                      className="absolute left-0 top-0 bottom-0 w-1 rounded-r"
+                      style={{ backgroundColor: '#4B9A4A' }}
                     />
-                    {!collapsed && <span>Home</span>}
-                  </Button>
-                </TooltipTrigger>
-                {collapsed && (
-                  <TooltipContent side="right">Home</TooltipContent>
-                )}
-              </Tooltip>
-            </div>
+                  )}
+                  <Home 
+                    className={cn(
+                      "h-4 w-4 transition-colors",
+                      collapsed ? "" : "mr-3 ml-2",
+                      isActive('home') ? "text-[#4B9A4A]" : "text-muted-foreground"
+                    )}
+                  />
+                  {!collapsed && <span className="flex-1 text-left">Home</span>}
+                </Button>
+              </TooltipTrigger>
+              {collapsed && (
+                <TooltipContent side="right">Home</TooltipContent>
+              )}
+            </Tooltip>
           </div>
 
           {/* SESSIONS Section */}
@@ -171,7 +168,7 @@ export function CollapsibleSidebar({
                     variant="ghost"
                     className={cn(
                       "w-full py-2.5 relative transition-all duration-200",
-                      collapsed ? "justify-center px-0" : "justify-start",
+                      collapsed ? "justify-center px-0" : "justify-start hover:scale-[1.02]",
                       isActive('calendar') && "bg-accent/50"
                     )}
                     onClick={() => onNavigate('calendar')}
@@ -216,7 +213,7 @@ export function CollapsibleSidebar({
                     variant="ghost"
                     className={cn(
                       "w-full py-2.5 relative transition-all duration-200",
-                      collapsed ? "justify-center px-0" : "justify-start",
+                      collapsed ? "justify-center px-0" : "justify-start hover:scale-[1.02]",
                       isActive('sessionLibrary') && "bg-accent/50"
                     )}
                     onClick={() => onNavigate('sessionLibrary')}
@@ -259,7 +256,7 @@ export function CollapsibleSidebar({
                     variant="ghost"
                     className={cn(
                       "w-full py-2.5 relative transition-all duration-200",
-                      collapsed ? "justify-center px-0" : "justify-start",
+                      collapsed ? "justify-center px-0" : "justify-start hover:scale-[1.02]",
                       isActive('drillsLibrary') && "bg-accent/50"
                     )}
                     onClick={() => onNavigate('drillsLibrary')}
@@ -316,7 +313,7 @@ export function CollapsibleSidebar({
                       variant="ghost"
                       className={cn(
                         "w-full py-2.5 relative transition-all duration-200",
-                        collapsed ? "justify-center px-0" : "justify-start",
+                        collapsed ? "justify-center px-0" : "justify-start hover:scale-[1.02]",
                         isActive('coaches') && "bg-accent/50"
                       )}
                       onClick={() => onNavigate('coaches')}
@@ -359,7 +356,7 @@ export function CollapsibleSidebar({
                       variant="ghost"
                       className={cn(
                         "w-full py-2.5 relative transition-all duration-200",
-                        collapsed ? "justify-center px-0" : "justify-start",
+                        collapsed ? "justify-center px-0" : "justify-start hover:scale-[1.02]",
                         isActive('squads') && "bg-accent/50"
                       )}
                       onClick={() => onNavigate('squads')}
@@ -402,7 +399,7 @@ export function CollapsibleSidebar({
                       variant="ghost"
                       className={cn(
                         "w-full py-2.5 relative transition-all duration-200",
-                        collapsed ? "justify-center px-0" : "justify-start",
+                        collapsed ? "justify-center px-0" : "justify-start hover:scale-[1.02]",
                         isActive('swimmers') && "bg-accent/50"
                       )}
                       onClick={() => onNavigate('swimmers')}
@@ -445,7 +442,7 @@ export function CollapsibleSidebar({
                       variant="ghost"
                       className={cn(
                         "w-full py-2.5 relative transition-all duration-200",
-                        collapsed ? "justify-center px-0" : "justify-start",
+                        collapsed ? "justify-center px-0" : "justify-start hover:scale-[1.02]",
                         isActive('locations') && "bg-accent/50"
                       )}
                       onClick={() => onNavigate('locations')}
@@ -488,7 +485,7 @@ export function CollapsibleSidebar({
                       variant="ghost"
                       className={cn(
                         "w-full py-2.5 relative transition-all duration-200",
-                        collapsed ? "justify-center px-0" : "justify-start",
+                        collapsed ? "justify-center px-0" : "justify-start hover:scale-[1.02]",
                         isActive('competitions') && "bg-accent/50"
                       )}
                       onClick={() => onNavigate('competitions')}
@@ -531,7 +528,7 @@ export function CollapsibleSidebar({
                       variant="ghost"
                       className={cn(
                         "w-full py-2.5 relative transition-all duration-200",
-                        collapsed ? "justify-center px-0" : "justify-start",
+                        collapsed ? "justify-center px-0" : "justify-start hover:scale-[1.02]",
                         isActive('invitations') && "bg-accent/50"
                       )}
                       onClick={() => onNavigate('invitations')}
@@ -569,7 +566,7 @@ export function CollapsibleSidebar({
                       variant="ghost"
                       className={cn(
                         "w-full py-2.5 relative transition-all duration-200",
-                        collapsed ? "justify-center px-0" : "justify-start",
+                        collapsed ? "justify-center px-0" : "justify-start hover:scale-[1.02]",
                         isActive('coachingRates') && "bg-accent/50"
                       )}
                       onClick={() => onNavigate('coachingRates')}
@@ -621,7 +618,7 @@ export function CollapsibleSidebar({
                     variant="ghost"
                     className={cn(
                       "w-full py-2.5 relative transition-all duration-200",
-                      collapsed ? "justify-center px-0" : "justify-start",
+                      collapsed ? "justify-center px-0" : "justify-start hover:scale-[1.02]",
                       isActive('invoices') && "bg-accent/50"
                     )}
                     onClick={() => onNavigate('invoices')}
@@ -659,7 +656,7 @@ export function CollapsibleSidebar({
                     variant="ghost"
                     className={cn(
                       "w-full py-2.5 relative transition-all duration-200",
-                      collapsed ? "justify-center px-0" : "justify-start",
+                      collapsed ? "justify-center px-0" : "justify-start hover:scale-[1.02]",
                       isActive('feedbackAnalytics') && "bg-accent/50"
                     )}
                     onClick={() => onNavigate('feedbackAnalytics')}
@@ -703,7 +700,7 @@ export function CollapsibleSidebar({
               variant="outline"
               className={cn(
                 "w-full mb-3",
-                collapsed ? "justify-center px-0" : "justify-start"
+                collapsed ? "justify-center px-0" : "justify-start hover:scale-[1.02]"
               )}
               onClick={onLogout}
               data-testid="button-logout-desktop"

@@ -457,31 +457,29 @@ function CalendarApp() {
         <div className="space-y-6">
           {/* HOME Section */}
           <div>
-            <div className="space-y-1">
-              <Button
-                variant="ghost"
-                className={cn(
-                  "w-full justify-start py-2.5 relative transition-all duration-200",
-                  isActive('home') && "bg-accent/50"
-                )}
-                onClick={() => handleManagementClick('home')}
-                data-testid="button-nav-home-mobile"
-              >
-                {isActive('home') && (
-                  <div 
-                    className="absolute left-0 top-0 bottom-0 w-1 rounded-r"
-                    style={{ backgroundColor: '#4B9A4A' }}
-                  />
-                )}
-                <Home 
-                  className={cn(
-                    "h-4 w-4 mr-3 ml-2 transition-colors",
-                    isActive('home') ? "text-[#4B9A4A]" : "text-muted-foreground"
-                  )}
+            <Button
+              variant="ghost"
+              className={cn(
+                "w-full justify-start py-2.5 relative transition-all duration-200 hover:scale-[1.02]",
+                isActive('home') && "bg-accent/50"
+              )}
+              onClick={() => handleManagementClick('home')}
+              data-testid="button-nav-home-mobile"
+            >
+              {isActive('home') && (
+                <div 
+                  className="absolute left-0 top-0 bottom-0 w-1 rounded-r"
+                  style={{ backgroundColor: '#4B9A4A' }}
                 />
-                <span className="flex-1 text-left">Home</span>
-              </Button>
-            </div>
+              )}
+              <Home 
+                className={cn(
+                  "h-4 w-4 mr-3 ml-2 transition-colors",
+                  isActive('home') ? "text-[#4B9A4A]" : "text-muted-foreground"
+                )}
+              />
+              <span className="flex-1 text-left">Home</span>
+            </Button>
           </div>
 
           {/* SESSIONS Section */}
@@ -495,7 +493,7 @@ function CalendarApp() {
               <Button
                 variant="ghost"
                 className={cn(
-                  "w-full justify-start py-2.5 relative transition-all duration-200",
+                  "w-full justify-start py-2.5 relative transition-all duration-200 hover:scale-[1.02]",
                   isActive('calendar') && "bg-accent/50"
                 )}
                 onClick={() => handleManagementClick('calendar')}
@@ -524,7 +522,7 @@ function CalendarApp() {
               <Button
                 variant="ghost"
                 className={cn(
-                  "w-full justify-start py-2.5 relative transition-all duration-200",
+                  "w-full justify-start py-2.5 relative transition-all duration-200 hover:scale-[1.02]",
                   isActive('sessionLibrary') && "bg-accent/50"
                 )}
                 onClick={() => handleManagementClick('sessionLibrary')}
@@ -551,7 +549,7 @@ function CalendarApp() {
               <Button
                 variant="ghost"
                 className={cn(
-                  "w-full justify-start py-2.5 relative transition-all duration-200",
+                  "w-full justify-start py-2.5 relative transition-all duration-200 hover:scale-[1.02]",
                   isActive('drillsLibrary') && "bg-accent/50"
                 )}
                 onClick={() => handleManagementClick('drillsLibrary')}
@@ -589,7 +587,7 @@ function CalendarApp() {
                 <Button
                   variant="ghost"
                   className={cn(
-                    "w-full justify-start py-2.5 relative transition-all duration-200",
+                    "w-full justify-start py-2.5 relative transition-all duration-200 hover:scale-[1.02]",
                     isActive('coaches') && "bg-accent/50"
                   )}
                   onClick={() => handleManagementClick('coaches')}
@@ -616,7 +614,7 @@ function CalendarApp() {
                 <Button
                   variant="ghost"
                   className={cn(
-                    "w-full justify-start py-2.5 relative transition-all duration-200",
+                    "w-full justify-start py-2.5 relative transition-all duration-200 hover:scale-[1.02]",
                     isActive('squads') && "bg-accent/50"
                   )}
                   onClick={() => handleManagementClick('squads')}
@@ -643,7 +641,7 @@ function CalendarApp() {
                 <Button
                   variant="ghost"
                   className={cn(
-                    "w-full justify-start py-2.5 relative transition-all duration-200",
+                    "w-full justify-start py-2.5 relative transition-all duration-200 hover:scale-[1.02]",
                     isActive('swimmers') && "bg-accent/50"
                   )}
                   onClick={() => handleManagementClick('swimmers')}
@@ -670,7 +668,7 @@ function CalendarApp() {
                 <Button
                   variant="ghost"
                   className={cn(
-                    "w-full justify-start py-2.5 relative transition-all duration-200",
+                    "w-full justify-start py-2.5 relative transition-all duration-200 hover:scale-[1.02]",
                     isActive('locations') && "bg-accent/50"
                   )}
                   onClick={() => handleManagementClick('locations')}
@@ -697,7 +695,7 @@ function CalendarApp() {
                 <Button
                   variant="ghost"
                   className={cn(
-                    "w-full justify-start py-2.5 relative transition-all duration-200",
+                    "w-full justify-start py-2.5 relative transition-all duration-200 hover:scale-[1.02]",
                     isActive('competitions') && "bg-accent/50"
                   )}
                   onClick={() => handleManagementClick('competitions')}
@@ -724,7 +722,7 @@ function CalendarApp() {
                 <Button
                   variant="ghost"
                   className={cn(
-                    "w-full justify-start py-2.5 relative transition-all duration-200",
+                    "w-full justify-start py-2.5 relative transition-all duration-200 hover:scale-[1.02]",
                     isActive('invitations') && "bg-accent/50"
                   )}
                   onClick={() => handleManagementClick('invitations')}
@@ -748,7 +746,7 @@ function CalendarApp() {
                 <Button
                   variant="ghost"
                   className={cn(
-                    "w-full justify-start py-2.5 relative transition-all duration-200",
+                    "w-full justify-start py-2.5 relative transition-all duration-200 hover:scale-[1.02]",
                     isActive('coachingRates') && "bg-accent/50"
                   )}
                   onClick={() => handleManagementClick('coachingRates')}
@@ -783,7 +781,7 @@ function CalendarApp() {
               <Button
                 variant="ghost"
                 className={cn(
-                  "w-full justify-start py-2.5 relative transition-all duration-200",
+                  "w-full justify-start py-2.5 relative transition-all duration-200 hover:scale-[1.02]",
                   isActive('invoices') && "bg-accent/50"
                 )}
                 onClick={() => handleManagementClick('invoices')}
@@ -807,7 +805,7 @@ function CalendarApp() {
               <Button
                 variant="ghost"
                 className={cn(
-                  "w-full justify-start py-2.5 relative transition-all duration-200",
+                  "w-full justify-start py-2.5 relative transition-all duration-200 hover:scale-[1.02]",
                   isActive('feedbackAnalytics') && "bg-accent/50"
                 )}
                 onClick={() => handleManagementClick('feedbackAnalytics')}
