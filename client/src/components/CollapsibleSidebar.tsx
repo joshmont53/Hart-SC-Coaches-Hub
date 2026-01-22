@@ -4,7 +4,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import { 
   CalendarDays, FileText, Target, Receipt, BarChart3, 
   UserCog, Users, Shield, MapPin, Trophy, LogOut, ChevronLeft, ChevronRight,
-  Mail, PoundSterling
+  Mail, PoundSterling, Home
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -115,6 +115,45 @@ export function CollapsibleSidebar({
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto p-4">
         <div className="space-y-6">
+          {/* HOME Section */}
+          <div>
+            <div className="space-y-1">
+              {/* Home */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className={cn(
+                      "w-full py-2.5 relative transition-all duration-200",
+                      collapsed ? "justify-center px-0" : "justify-start",
+                      isActive('home') && "bg-accent/50"
+                    )}
+                    onClick={() => onNavigate('home')}
+                    data-testid="button-nav-home"
+                  >
+                    {isActive('home') && (
+                      <div 
+                        className="absolute left-0 top-0 bottom-0 w-1 rounded-r"
+                        style={{ backgroundColor: '#4B9A4A' }}
+                      />
+                    )}
+                    <Home 
+                      className={cn(
+                        "h-4 w-4 transition-colors",
+                        collapsed ? "" : "mr-3 ml-2",
+                        isActive('home') ? "text-[#4B9A4A]" : ""
+                      )}
+                    />
+                    {!collapsed && <span>Home</span>}
+                  </Button>
+                </TooltipTrigger>
+                {collapsed && (
+                  <TooltipContent side="right">Home</TooltipContent>
+                )}
+              </Tooltip>
+            </div>
+          </div>
+
           {/* SESSIONS Section */}
           <div>
             {!collapsed && (

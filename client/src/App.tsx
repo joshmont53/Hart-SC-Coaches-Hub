@@ -48,6 +48,7 @@ import {
   BarChart3,
   Shield,
   Receipt,
+  Home,
 } from 'lucide-react';
 import { CollapsibleSidebar } from './components/CollapsibleSidebar';
 import { Badge } from './components/ui/badge';
@@ -454,6 +455,35 @@ function CalendarApp() {
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto p-4">
         <div className="space-y-6">
+          {/* HOME Section */}
+          <div>
+            <div className="space-y-1">
+              <Button
+                variant="ghost"
+                className={cn(
+                  "w-full justify-start py-2.5 relative transition-all duration-200",
+                  isActive('home') && "bg-accent/50"
+                )}
+                onClick={() => handleManagementClick('home')}
+                data-testid="button-nav-home-mobile"
+              >
+                {isActive('home') && (
+                  <div 
+                    className="absolute left-0 top-0 bottom-0 w-1 rounded-r"
+                    style={{ backgroundColor: '#4B9A4A' }}
+                  />
+                )}
+                <Home 
+                  className={cn(
+                    "h-4 w-4 mr-3 ml-2 transition-colors",
+                    isActive('home') ? "text-[#4B9A4A]" : "text-muted-foreground"
+                  )}
+                />
+                <span className="flex-1 text-left">Home</span>
+              </Button>
+            </div>
+          </div>
+
           {/* SESSIONS Section */}
           <div>
             <div className="px-3 mb-2">
@@ -950,6 +980,11 @@ function CalendarApp() {
             <DrillsLibrary onBack={handleBackToCalendar} />
           ) : managementView === 'feedbackAnalytics' ? (
             <FeedbackAnalytics onBack={handleBackToCalendar} />
+          ) : managementView === 'home' ? (
+            <div className="flex flex-col items-center justify-center h-full text-muted-foreground" data-testid="view-home-placeholder">
+              <p className="text-lg">Home Dashboard</p>
+              <p className="text-sm">Coming soon...</p>
+            </div>
           ) : view === 'month' ? (
             <>
               <div className={mobileView === 'calendar' ? 'block' : 'hidden lg:block'}>
