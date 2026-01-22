@@ -80,13 +80,7 @@ export function SwimmerProfiles({
   // Calculate attendance for each swimmer using real data
   const swimmersWithStats = useMemo(() => {
     return filteredSwimmers.map(swimmer => {
-      // Get all past sessions for this swimmer's squad
-      const squadSessions = sessions.filter(s => 
-        s.squadId === swimmer.squadId && 
-        isPast(new Date(s.date))
-      );
-      
-      // Get attendance records for this swimmer
+      // Get attendance records for this swimmer (sessions where coach recorded attendance)
       const swimmerAttendance = attendance.filter(a => a.swimmerId === swimmer.id);
       
       // Count attended sessions (status is "Present" - case insensitive)
@@ -94,7 +88,8 @@ export function SwimmerProfiles({
         a.status?.toLowerCase() === 'present'
       ).length;
       
-      const total = squadSessions.length;
+      // Total = all attendance records (sessions where coach completed register)
+      const total = swimmerAttendance.length;
       const percentage = total > 0 ? Math.round((attended / total) * 100) : 0;
       
       return {

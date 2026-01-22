@@ -32,9 +32,6 @@ export function SwimmerProfilePage({ swimmer, sessions, squads, attendance, onBa
     const monthStart = startOfMonth(now);
     const monthEnd = endOfMonth(now);
     
-    // Get all past sessions for this swimmer's squad
-    const squadSessions = sessions.filter(s => s.squadId === swimmer.squadId && isPast(new Date(s.date)));
-    
     // Helper to check if swimmer attended (status is "Present" - case insensitive)
     const isAttended = (a: Attendance) => a.status?.toLowerCase() === 'present';
     
@@ -43,11 +40,15 @@ export function SwimmerProfilePage({ swimmer, sessions, squads, attendance, onBa
     const isVeryLate = (a: Attendance) => a.notes?.toLowerCase().includes('very late');
     const isOnTime = (a: Attendance) => isAttended(a) && !isLate(a) && !isVeryLate(a);
     
-    // Count attended sessions
-    const attendedRecords = swimmerAttendance.filter(isAttended);
+    // Helper to get session date for an attendance record
+    const getSessionDate = (a: Attendance) => {
+      const session = sessions.find(s => s.id === a.sessionId);
+      return session ? new Date(session.date) : null;
+    };
     
-    const totalSessions = squadSessions.length;
-    const attended = attendedRecords.length;
+    // Total = all attendance records for this swimmer (sessions where coach recorded attendance)
+    const totalSessions = swimmerAttendance.length;
+    const attended = swimmerAttendance.filter(isAttended).length;
     
     // Punctuality stats (based on notes field)
     const lateCount = swimmerAttendance.filter(a => isAttended(a) && isLate(a)).length;
@@ -55,31 +56,29 @@ export function SwimmerProfilePage({ swimmer, sessions, squads, attendance, onBa
     const onTimeCount = swimmerAttendance.filter(isOnTime).length;
     const onTimePercentage = attended > 0 ? Math.round((onTimeCount / attended) * 100) : 100;
     
-    // This week sessions
-    const weekSessions = squadSessions.filter(s => 
-      isWithinInterval(new Date(s.date), { start: weekStart, end: weekEnd })
-    );
-    const weekSessionIds = weekSessions.map(s => s.id);
-    const weekAttended = swimmerAttendance.filter(a => 
-      weekSessionIds.includes(a.sessionId) && isAttended(a)
-    ).length;
+    // This week - filter attendance records where session date is within this week
+    const weekAttendance = swimmerAttendance.filter(a => {
+      const sessionDate = getSessionDate(a);
+      return sessionDate && isWithinInterval(sessionDate, { start: weekStart, end: weekEnd });
+    });
+    const weekTotal = weekAttendance.length;
+    const weekAttended = weekAttendance.filter(isAttended).length;
     
-    // This month sessions
-    const monthSessions = squadSessions.filter(s => 
-      isWithinInterval(new Date(s.date), { start: monthStart, end: monthEnd })
-    );
-    const monthSessionIds = monthSessions.map(s => s.id);
-    const monthAttended = swimmerAttendance.filter(a => 
-      monthSessionIds.includes(a.sessionId) && isAttended(a)
-    ).length;
+    // This month - filter attendance records where session date is within this month
+    const monthAttendance = swimmerAttendance.filter(a => {
+      const sessionDate = getSessionDate(a);
+      return sessionDate && isWithinInterval(sessionDate, { start: monthStart, end: monthEnd });
+    });
+    const monthTotal = monthAttendance.length;
+    const monthAttended = monthAttendance.filter(isAttended).length;
     
     return {
       overall: totalSessions > 0 ? Math.round((attended / totalSessions) * 100) : 0,
-      thisWeek: weekSessions.length > 0 ? Math.round((weekAttended / weekSessions.length) * 100) : 0,
-      thisMonth: monthSessions.length > 0 ? Math.round((monthAttended / monthSessions.length) * 100) : 0,
-      weekSessions: weekSessions.length,
+      thisWeek: weekTotal > 0 ? Math.round((weekAttended / weekTotal) * 100) : 0,
+      thisMonth: monthTotal > 0 ? Math.round((monthAttended / monthTotal) * 100) : 0,
+      weekSessions: weekTotal,
       weekAttended,
-      monthSessions: monthSessions.length,
+      monthSessions: monthTotal,
       monthAttended,
       attended,
       onTimeCount,
@@ -97,24 +96,21 @@ export function SwimmerProfilePage({ swimmer, sessions, squads, attendance, onBa
     const dayStats = days.map((day, index) => {
       const dayIndex = index === 6 ? 0 : index + 1; // Adjust for getDay (0 = Sunday)
       
-      // Get sessions for this day
-      const daySessions = sessions.filter(s => 
-        s.squadId === swimmer.squadId && 
-        getDay(new Date(s.date)) === dayIndex &&
-        isPast(new Date(s.date))
-      );
+      // Filter attendance records for this day of week
+      const dayAttendance = swimmerAttendance.filter(a => {
+        const session = sessions.find(s => s.id === a.sessionId);
+        return session && getDay(new Date(session.date)) === dayIndex;
+      });
       
-      const daySessionIds = daySessions.map(s => s.id);
-      
-      // Count attendance for this day (status is "Present" - case insensitive)
-      const dayAttended = swimmerAttendance.filter(a => 
-        daySessionIds.includes(a.sessionId) &&
+      // Count attended (status = "Present")
+      const dayAttended = dayAttendance.filter(a => 
         a.status?.toLowerCase() === 'present'
       ).length;
       
-      const percentage = daySessions.length > 0 ? Math.round((dayAttended / daySessions.length) * 100) : 0;
+      const total = dayAttendance.length;
+      const percentage = total > 0 ? Math.round((dayAttended / total) * 100) : 0;
       
-      return { day, percentage, total: daySessions.length };
+      return { day, percentage, total };
     });
     
     return dayStats;
@@ -130,25 +126,23 @@ export function SwimmerProfilePage({ swimmer, sessions, squads, attendance, onBa
       const monthStartDate = startOfMonth(date);
       const monthEndDate = endOfMonth(date);
       
-      const monthSessions = sessions.filter(s => 
-        s.squadId === swimmer.squadId &&
-        isWithinInterval(new Date(s.date), { start: monthStartDate, end: monthEndDate }) &&
-        isPast(new Date(s.date))
-      );
+      // Filter attendance records for this month
+      const monthAttendance = swimmerAttendance.filter(a => {
+        const session = sessions.find(s => s.id === a.sessionId);
+        return session && isWithinInterval(new Date(session.date), { start: monthStartDate, end: monthEndDate });
+      });
       
-      const monthSessionIds = monthSessions.map(s => s.id);
-      
-      const monthAttended = swimmerAttendance.filter(a => 
-        monthSessionIds.includes(a.sessionId) &&
+      const monthAttended = monthAttendance.filter(a => 
         a.status?.toLowerCase() === 'present'
       ).length;
       
-      const percentage = monthSessions.length > 0 ? Math.round((monthAttended / monthSessions.length) * 100) : 0;
+      const total = monthAttendance.length;
+      const percentage = total > 0 ? Math.round((monthAttended / total) * 100) : 0;
       
       months.push({
         name: format(date, 'MMM'),
         percentage,
-        total: monthSessions.length
+        total
       });
     }
     
