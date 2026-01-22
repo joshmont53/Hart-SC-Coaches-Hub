@@ -48,6 +48,7 @@ interface HomePageProps {
   sessionFeedback: SessionFeedback[];
   onNavigateToSession: (session: Session) => void;
   onNavigateToCalendar: () => void;
+  onAddSession: () => void;
   onNavigateToSwimmerProfile: (swimmer: Swimmer) => void;
 }
 
@@ -63,6 +64,7 @@ export function HomePage({
   sessionFeedback,
   onNavigateToSession,
   onNavigateToCalendar,
+  onAddSession,
   onNavigateToSwimmerProfile
 }: HomePageProps) {
   const [distanceSquadFilter, setDistanceSquadFilter] = useState<string>('');
@@ -375,7 +377,7 @@ export function HomePage({
                   size="sm" 
                   variant="ghost" 
                   className="h-7 w-7 p-0"
-                  onClick={onNavigateToCalendar}
+                  onClick={onAddSession}
                   title="Add session"
                   data-testid="button-add-session-home"
                 >

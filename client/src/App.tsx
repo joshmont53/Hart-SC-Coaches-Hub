@@ -1009,6 +1009,7 @@ function CalendarApp() {
                     setManagementView('calendar');
                   }}
                   onNavigateToCalendar={() => setManagementView('calendar')}
+                  onAddSession={handleAddSession}
                   onNavigateToSwimmerProfile={handleNavigateToSwimmerProfile}
                 />
               </div>
