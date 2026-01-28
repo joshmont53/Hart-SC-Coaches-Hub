@@ -716,6 +716,118 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // AI Assistant Context endpoint - gather rich context for personalized AI responses
+  app.get("/api/sessions/:id/ai-context", requireAuth, async (req, res) => {
+    try {
+      const sessionId = req.params.id;
+      
+      // Get the current session
+      const sessionData = await storage.getSessionWithAttendance(sessionId);
+      if (!sessionData) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+      
+      const { session } = sessionData;
+      
+      // Get the squad for this session
+      const squad = session.squadId ? await storage.getSquad(session.squadId) : null;
+      
+      // Get swimmers in this squad
+      const allSwimmers = await storage.getSwimmers();
+      const squadSwimmers = squad 
+        ? allSwimmers.filter(s => s.squadId === squad.id)
+        : [];
+      
+      // Calculate swimmer ages
+      const today = new Date();
+      const swimmerAges = squadSwimmers.map(swimmer => {
+        const dob = new Date(swimmer.dob);
+        let age = today.getFullYear() - dob.getFullYear();
+        const monthDiff = today.getMonth() - dob.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+          age--;
+        }
+        return age;
+      });
+      
+      const avgAge = swimmerAges.length > 0 
+        ? Math.round(swimmerAges.reduce((a, b) => a + b, 0) / swimmerAges.length * 10) / 10
+        : null;
+      const minAge = swimmerAges.length > 0 ? Math.min(...swimmerAges) : null;
+      const maxAge = swimmerAges.length > 0 ? Math.max(...swimmerAges) : null;
+      
+      // Get recent sessions for this squad (last 10)
+      const allSessions = await storage.getSessions();
+      const squadSessions = squad
+        ? allSessions
+            .filter(s => s.squadId === squad.id && s.id !== sessionId)
+            .sort((a, b) => new Date(b.sessionDate).getTime() - new Date(a.sessionDate).getTime())
+            .slice(0, 10)
+        : [];
+      
+      // Calculate average distances from recent sessions
+      const recentDistances = squadSessions
+        .filter(s => s.totalDistance > 0)
+        .map(s => s.totalDistance);
+      
+      const avgDistance = recentDistances.length > 0
+        ? Math.round(recentDistances.reduce((a, b) => a + b, 0) / recentDistances.length)
+        : null;
+      
+      // Get common focus areas from recent sessions
+      const focusCounts: Record<string, number> = {};
+      squadSessions.forEach(s => {
+        if (s.focus) {
+          focusCounts[s.focus] = (focusCounts[s.focus] || 0) + 1;
+        }
+      });
+      const commonFocuses = Object.entries(focusCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([focus]) => focus);
+      
+      // Get location info
+      const location = session.poolId ? await storage.getLocation(session.poolId) : null;
+      
+      // Build the context response
+      const aiContext = {
+        currentSession: {
+          id: session.id,
+          date: session.sessionDate,
+          focus: session.focus,
+          content: session.sessionContent,
+          totalDistance: session.totalDistance || null,
+        },
+        squad: squad ? {
+          id: squad.id,
+          name: squad.squadName,
+          swimmerCount: squadSwimmers.length,
+          ageRange: minAge && maxAge ? `${minAge}-${maxAge}` : null,
+          averageAge: avgAge,
+        } : null,
+        location: location ? {
+          name: location.poolName,
+          poolLength: location.poolType === '50m' ? 50 : 25,
+        } : null,
+        history: {
+          recentSessionCount: squadSessions.length,
+          averageDistance: avgDistance,
+          commonFocuses: commonFocuses,
+          recentSessions: squadSessions.slice(0, 5).map(s => ({
+            date: s.sessionDate,
+            focus: s.focus,
+            distance: s.totalDistance || null,
+          })),
+        },
+      };
+      
+      res.json(aiContext);
+    } catch (error) {
+      console.error("Error fetching AI context:", error);
+      res.status(500).json({ message: "Failed to fetch AI context" });
+    }
+  });
+
   // Attendance routes
   app.get("/api/attendance", requireAuth, async (req, res) => {
     try {
