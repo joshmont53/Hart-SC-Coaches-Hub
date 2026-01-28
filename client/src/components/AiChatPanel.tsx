@@ -1,9 +1,17 @@
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Sparkles, X, GripHorizontal } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Sparkles, X, Send, Copy, Check, Trash2, RotateCcw, GripHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Squad, SessionFocus } from '@/lib/typeAdapters';
 import { format } from 'date-fns';
+
+interface Message {
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: Date;
+}
 
 interface AiChatPanelProps {
   isOpen: boolean;
@@ -25,11 +33,31 @@ export function AiChatPanel({
   onClose,
   sessionId,
   sessionContext,
+  onInsertContent,
 }: AiChatPanelProps) {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [inputValue, setInputValue] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [mobileHeight, setMobileHeight] = useState(60);
   const [isDragging, setIsDragging] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, isLoading]);
+
+  // Focus input when panel opens
+  useEffect(() => {
+    if (isOpen) {
+      setTimeout(() => inputRef.current?.focus(), 100);
+    }
+  }, [isOpen]);
+
+  // Handle drag for mobile resizing
   const handleDragStart = (e: React.TouchEvent | React.MouseEvent) => {
     setIsDragging(true);
     e.preventDefault();
@@ -82,6 +110,92 @@ export function AiChatPanel({
     };
   }, [isDragging]);
 
+  const handleSendMessage = async () => {
+    if (!inputValue.trim() || isLoading) return;
+
+    const userMessage: Message = {
+      role: 'user',
+      content: inputValue,
+      timestamp: new Date(),
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setInputValue('');
+    setIsLoading(true);
+
+    // Mock AI response - Phase 6 will replace with real GPT integration
+    setTimeout(() => {
+      const aiResponse = generateMockResponse(inputValue, sessionContext);
+      const assistantMessage: Message = {
+        role: 'assistant',
+        content: aiResponse,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, assistantMessage]);
+      setIsLoading(false);
+    }, 1000 + Math.random() * 1000);
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
+  const handleCopy = (content: string, index: number) => {
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(content).then(() => {
+        setCopiedIndex(index);
+        setTimeout(() => setCopiedIndex(null), 2000);
+      }).catch(() => {
+        fallbackCopy(content, index);
+      });
+    } else {
+      fallbackCopy(content, index);
+    }
+  };
+
+  const fallbackCopy = (content: string, index: number) => {
+    const textArea = document.createElement('textarea');
+    textArea.value = content;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-999999px';
+    textArea.style.top = '-999999px';
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    try {
+      document.execCommand('copy');
+      setCopiedIndex(index);
+      setTimeout(() => setCopiedIndex(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy text:', err);
+    }
+    textArea.remove();
+  };
+
+  const handleClearChat = () => {
+    if (confirm('Clear all chat history for this session?')) {
+      setMessages([]);
+    }
+  };
+
+  const handleStartFresh = () => {
+    if (messages.length > 0) {
+      if (confirm('Start a new conversation? Previous chat will be cleared.')) {
+        setMessages([]);
+      }
+    }
+  };
+
+  const quickActions = [
+    { label: 'Suggest warm-up', prompt: 'Suggest a warm-up set for this session' },
+    { label: 'Main set ideas', prompt: 'Give me main set ideas based on the session focus' },
+    { label: 'Add variety', prompt: 'How can I add variety to this session?' },
+    { label: 'Calculate distance', prompt: 'Help me calculate the total distance' },
+  ];
+
   if (!isOpen) return null;
 
   return (
@@ -130,6 +244,18 @@ export function AiChatPanel({
               <h3 className="font-semibold text-sm lg:text-base">Assistant</h3>
             </div>
             <div className="flex items-center gap-1 lg:gap-2">
+              {messages.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleClearChat}
+                  title="Clear chat"
+                  className="h-7 w-7 lg:h-8 lg:w-8 p-0"
+                  data-testid="button-clear-chat"
+                >
+                  <Trash2 className="h-3.5 w-3.5 lg:h-4 lg:w-4" />
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="sm"
@@ -141,6 +267,24 @@ export function AiChatPanel({
               </Button>
             </div>
           </div>
+          
+          {messages.length > 0 && (
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="text-xs">
+                {messages.length} message{messages.length !== 1 ? 's' : ''}
+              </Badge>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleStartFresh}
+                className="h-6 text-xs px-2"
+                data-testid="button-start-fresh"
+              >
+                <RotateCcw className="h-3 w-3 mr-1" />
+                Start fresh
+              </Button>
+            </div>
+          )}
 
           {/* Session Context Summary */}
           <div className="mt-2 lg:mt-3 p-2 bg-muted/50 rounded text-xs space-y-0.5">
@@ -152,34 +296,134 @@ export function AiChatPanel({
           </div>
         </div>
 
-        {/* Messages placeholder */}
-        <div className="flex-1 overflow-y-auto p-3 lg:p-4 min-h-0">
-          <div className="text-center py-4 lg:py-8">
-            <Sparkles className="h-10 w-10 lg:h-12 lg:w-12 mx-auto mb-3 lg:mb-4 text-muted-foreground" />
-            <h4 className="font-medium mb-2 text-sm lg:text-base">How can I help with this session?</h4>
-            <p className="text-xs lg:text-sm text-muted-foreground mb-3 lg:mb-4">
-              Ask me for set ideas, distance calculations, or session structure advice.
-            </p>
-            <p className="text-xs text-muted-foreground italic">
-              (Full chat functionality coming in later phases)
-            </p>
-          </div>
+        {/* Messages area */}
+        <div className="flex-1 overflow-y-auto p-3 lg:p-4 space-y-3 lg:space-y-4 min-h-0">
+          {messages.length === 0 ? (
+            <div className="text-center py-4 lg:py-8">
+              <Sparkles className="h-10 w-10 lg:h-12 lg:w-12 mx-auto mb-3 lg:mb-4 text-muted-foreground" />
+              <h4 className="font-medium mb-2 text-sm lg:text-base">How can I help with this session?</h4>
+              <p className="text-xs lg:text-sm text-muted-foreground mb-3 lg:mb-4">
+                Ask me for set ideas, distance calculations, or session structure advice.
+              </p>
+              
+              {/* Quick Actions */}
+              <div className="grid grid-cols-2 gap-2 mt-3 lg:mt-4">
+                {quickActions.map((action, idx) => (
+                  <Button
+                    key={idx}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setInputValue(action.prompt);
+                      inputRef.current?.focus();
+                    }}
+                    className="text-xs h-auto py-2 whitespace-normal"
+                    data-testid={`button-quick-action-${idx}`}
+                  >
+                    {action.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            messages.map((message, idx) => (
+              <div
+                key={idx}
+                className={cn(
+                  "flex gap-2",
+                  message.role === 'user' ? 'justify-end' : 'justify-start'
+                )}
+                data-testid={`message-${message.role}-${idx}`}
+              >
+                <div
+                  className={cn(
+                    "max-w-[85%] rounded-lg p-3 text-sm",
+                    message.role === 'user'
+                      ? 'text-white'
+                      : 'bg-muted'
+                  )}
+                  style={message.role === 'user' ? { backgroundColor: '#4B9A4A' } : undefined}
+                >
+                  <div className="whitespace-pre-wrap">{message.content}</div>
+                  
+                  {message.role === 'assistant' && (
+                    <div className="flex gap-1 mt-2 pt-2 border-t border-border/50">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleCopy(message.content, idx)}
+                        className="h-7 px-2 text-xs"
+                        data-testid={`button-copy-${idx}`}
+                      >
+                        {copiedIndex === idx ? (
+                          <>
+                            <Check className="h-3 w-3 mr-1" />
+                            Copied
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-3 w-3 mr-1" />
+                            Copy
+                          </>
+                        )}
+                      </Button>
+                      {onInsertContent && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onInsertContent(message.content)}
+                          className="h-7 px-2 text-xs"
+                          style={{ color: '#4B9A4A' }}
+                          data-testid={`button-insert-${idx}`}
+                        >
+                          Insert
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+          
+          {/* Loading/typing indicator */}
+          {isLoading && (
+            <div className="flex gap-2" data-testid="loading-indicator">
+              <div className="bg-muted rounded-lg p-3 text-sm">
+                <div className="flex gap-1">
+                  <div className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <div className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <div className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <div ref={messagesEndRef} />
         </div>
 
-        {/* Input placeholder */}
+        {/* Input area */}
         <div className="border-t p-3 lg:p-4 flex-shrink-0">
           <div className="flex gap-2">
-            <div className="flex-1 h-9 bg-muted/50 rounded-md flex items-center px-3 text-sm text-muted-foreground">
-              Ask me anything...
-            </div>
+            <Input
+              ref={inputRef}
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Ask me anything..."
+              disabled={isLoading}
+              className="flex-1 text-sm"
+              data-testid="input-chat-message"
+            />
             <Button
-              disabled
+              onClick={handleSendMessage}
+              disabled={!inputValue.trim() || isLoading}
               size="sm"
               style={{ backgroundColor: '#4B9A4A' }}
-              className="text-white px-3 opacity-50"
+              className="text-white px-3"
               data-testid="button-send-message"
             >
-              Send
+              <Send className="h-4 w-4" />
             </Button>
           </div>
           <p className="text-xs text-muted-foreground mt-2 hidden lg:block">
@@ -189,4 +433,67 @@ export function AiChatPanel({
       </div>
     </>
   );
+}
+
+// Mock AI response generator (will be replaced with GPT integration in Phase 6)
+function generateMockResponse(userInput: string, context: AiChatPanelProps['sessionContext']): string {
+  const input = userInput.toLowerCase();
+  const squadName = context.squad?.name || 'your squad';
+  const sessionFocus = context.sessionFocus || 'general';
+  
+  if (input.includes('warm') || input.includes('warm-up') || input.includes('warmup')) {
+    return `Here's a warm-up suggestion for ${squadName}:
+
+Warm-up (400m):
+• 200m FC easy (build every 50m)
+• 4 x 50m on 1:00 (25m kick, 25m drill)
+• 100m choice (focus on technique)
+
+This gets the heart rate up gradually and prepares them for the main set.`;
+  }
+  
+  if (input.includes('main set') || input.includes('main')) {
+    return `For a ${sessionFocus} focused session, try this main set:
+
+Main Set (1600m):
+• 8 x 200m FC on 3:00
+  - Hold 80% effort throughout
+  - Focus on consistent splits
+  - Rest 15s between each
+
+Adjust intervals based on your squad's pace.`;
+  }
+  
+  if (input.includes('variety') || input.includes('mix')) {
+    return `To add variety, consider:
+
+• Mixed stroke ladder (50, 100, 150, 200, 150, 100, 50)
+• Equipment rotation (fins → paddles → snorkel → swim)
+• Partner relay sets
+• Timed challenges vs distance repeats
+• IM order changes
+
+This keeps swimmers engaged and challenges different energy systems.`;
+  }
+  
+  if (input.includes('distance') || input.includes('calculate')) {
+    return `I can help calculate distances! 
+
+Current format examples:
+• 4 x 200m = 800m
+• 8 x 50m = 400m
+
+Share your set structure and I'll calculate the total distance for you.`;
+  }
+  
+  // Default response
+  return `I understand you're asking about: "${userInput}"
+
+For ${squadName}, I recommend considering:
+• Session focus: ${sessionFocus}
+• Age-appropriate distances and intervals
+• Progressive difficulty throughout the session
+• Recovery time between sets
+
+Would you like me to suggest specific sets or help with session structure?`;
 }
