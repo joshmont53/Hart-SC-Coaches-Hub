@@ -716,6 +716,120 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // AI Assistant Chat endpoint - generate personalized AI responses
+  app.post("/api/sessions/:id/ai-chat", requireAuth, async (req, res) => {
+    try {
+      const sessionId = req.params.id;
+      const { message, history } = req.body;
+      
+      if (!message || typeof message !== 'string') {
+        return res.status(400).json({ message: "Message is required" });
+      }
+      
+      // Import the AI assistant module dynamically to avoid circular deps
+      const { generateAssistantResponse } = await import('./aiAssistant');
+      
+      // First, get the context (reusing the same logic)
+      const sessionData = await storage.getSessionWithAttendance(sessionId);
+      if (!sessionData) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+      
+      const { session } = sessionData;
+      const squad = session.squadId ? await storage.getSquad(session.squadId) : null;
+      
+      const allSwimmers = await storage.getSwimmers();
+      const squadSwimmers = squad 
+        ? allSwimmers.filter(s => s.squadId === squad.id)
+        : [];
+      
+      const today = new Date();
+      const swimmerAges = squadSwimmers.map(swimmer => {
+        const dob = new Date(swimmer.dob);
+        let age = today.getFullYear() - dob.getFullYear();
+        const monthDiff = today.getMonth() - dob.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+          age--;
+        }
+        return age;
+      });
+      
+      const avgAge = swimmerAges.length > 0 
+        ? Math.round(swimmerAges.reduce((a, b) => a + b, 0) / swimmerAges.length * 10) / 10
+        : null;
+      const minAge = swimmerAges.length > 0 ? Math.min(...swimmerAges) : null;
+      const maxAge = swimmerAges.length > 0 ? Math.max(...swimmerAges) : null;
+      
+      const allSessions = await storage.getSessions();
+      const squadSessions = squad
+        ? allSessions
+            .filter(s => s.squadId === squad.id && s.id !== sessionId)
+            .sort((a, b) => new Date(b.sessionDate).getTime() - new Date(a.sessionDate).getTime())
+            .slice(0, 10)
+        : [];
+      
+      const recentDistances = squadSessions
+        .filter(s => s.totalDistance > 0)
+        .map(s => s.totalDistance);
+      
+      const avgDistance = recentDistances.length > 0
+        ? Math.round(recentDistances.reduce((a, b) => a + b, 0) / recentDistances.length)
+        : null;
+      
+      const focusCounts: Record<string, number> = {};
+      squadSessions.forEach(s => {
+        if (s.focus) {
+          focusCounts[s.focus] = (focusCounts[s.focus] || 0) + 1;
+        }
+      });
+      const commonFocuses = Object.entries(focusCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([focus]) => focus);
+      
+      const location = session.poolId ? await storage.getLocation(session.poolId) : null;
+      
+      const aiContext = {
+        currentSession: {
+          id: session.id,
+          date: session.sessionDate,
+          focus: session.focus,
+          content: session.sessionContent,
+          totalDistance: session.totalDistance || null,
+        },
+        squad: squad ? {
+          id: squad.id,
+          name: squad.squadName,
+          swimmerCount: squadSwimmers.length,
+          ageRange: minAge && maxAge ? `${minAge}-${maxAge}` : null,
+          averageAge: avgAge,
+        } : null,
+        location: location ? {
+          name: location.poolName,
+          poolLength: location.poolType === '50m' ? 50 : 25,
+        } : null,
+        history: {
+          recentSessionCount: squadSessions.length,
+          averageDistance: avgDistance,
+          commonFocuses: commonFocuses,
+          recentSessions: squadSessions.slice(0, 5).map(s => ({
+            date: s.sessionDate,
+            focus: s.focus,
+            distance: s.totalDistance || null,
+          })),
+        },
+      };
+      
+      // Generate AI response
+      const aiResponse = await generateAssistantResponse(message, aiContext, history || []);
+      
+      res.json({ response: aiResponse });
+    } catch (error) {
+      console.error("Error in AI chat:", error);
+      res.status(500).json({ message: "Failed to generate AI response" });
+    }
+  });
+
   // AI Assistant Context endpoint - gather rich context for personalized AI responses
   app.get("/api/sessions/:id/ai-context", requireAuth, async (req, res) => {
     try {

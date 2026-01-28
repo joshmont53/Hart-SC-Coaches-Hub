@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Sparkles, X, Send, Copy, Check, Trash2, RotateCcw, GripHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { apiRequest } from '@/lib/queryClient';
 import type { Squad, SessionFocus } from '@/lib/typeAdapters';
 import { format } from 'date-fns';
 
@@ -146,21 +147,43 @@ export function AiChatPanel({
       timestamp: new Date(),
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
     setInputValue('');
     setIsLoading(true);
 
-    // Mock AI response - Phase 6 will replace with real GPT integration
-    setTimeout(() => {
-      const aiResponse = generateMockResponse(inputValue, sessionContext);
+    try {
+      // Build conversation history for context (exclude timestamps for API)
+      const history = messages.map(m => ({
+        role: m.role,
+        content: m.content,
+      }));
+
+      // Call the real AI API
+      const response = await apiRequest('POST', `/api/sessions/${sessionId}/ai-chat`, {
+        message: inputValue,
+        history,
+      });
+      const data = await response.json();
+
       const assistantMessage: Message = {
         role: 'assistant',
-        content: aiResponse,
+        content: data.response,
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, assistantMessage]);
+    } catch (error) {
+      console.error('AI chat error:', error);
+      // Show error message in chat
+      const errorMessage: Message = {
+        role: 'assistant',
+        content: 'Sorry, I encountered an error. Please try again.',
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
       setIsLoading(false);
-    }, 1000 + Math.random() * 1000);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -462,67 +485,4 @@ export function AiChatPanel({
       </div>
     </>
   );
-}
-
-// Mock AI response generator (will be replaced with GPT integration in Phase 6)
-function generateMockResponse(userInput: string, context: AiChatPanelProps['sessionContext']): string {
-  const input = userInput.toLowerCase();
-  const squadName = context.squad?.name || 'your squad';
-  const sessionFocus = context.sessionFocus || 'general';
-  
-  if (input.includes('warm') || input.includes('warm-up') || input.includes('warmup')) {
-    return `Here's a warm-up suggestion for ${squadName}:
-
-Warm-up (400m):
-• 200m FC easy (build every 50m)
-• 4 x 50m on 1:00 (25m kick, 25m drill)
-• 100m choice (focus on technique)
-
-This gets the heart rate up gradually and prepares them for the main set.`;
-  }
-  
-  if (input.includes('main set') || input.includes('main')) {
-    return `For a ${sessionFocus} focused session, try this main set:
-
-Main Set (1600m):
-• 8 x 200m FC on 3:00
-  - Hold 80% effort throughout
-  - Focus on consistent splits
-  - Rest 15s between each
-
-Adjust intervals based on your squad's pace.`;
-  }
-  
-  if (input.includes('variety') || input.includes('mix')) {
-    return `To add variety, consider:
-
-• Mixed stroke ladder (50, 100, 150, 200, 150, 100, 50)
-• Equipment rotation (fins → paddles → snorkel → swim)
-• Partner relay sets
-• Timed challenges vs distance repeats
-• IM order changes
-
-This keeps swimmers engaged and challenges different energy systems.`;
-  }
-  
-  if (input.includes('distance') || input.includes('calculate')) {
-    return `I can help calculate distances! 
-
-Current format examples:
-• 4 x 200m = 800m
-• 8 x 50m = 400m
-
-Share your set structure and I'll calculate the total distance for you.`;
-  }
-  
-  // Default response
-  return `I understand you're asking about: "${userInput}"
-
-For ${squadName}, I recommend considering:
-• Session focus: ${sessionFocus}
-• Age-appropriate distances and intervals
-• Progressive difficulty throughout the session
-• Recovery time between sets
-
-Would you like me to suggest specific sets or help with session structure?`;
 }
