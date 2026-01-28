@@ -45,6 +45,33 @@ export function AiChatPanel({
   const inputRef = useRef<HTMLInputElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
+  // Load chat history from localStorage on mount
+  useEffect(() => {
+    const savedChat = localStorage.getItem(`session-chat-${sessionId}`);
+    if (savedChat) {
+      try {
+        const parsed = JSON.parse(savedChat);
+        setMessages(parsed.messages || []);
+      } catch (e) {
+        console.error('Failed to load chat history', e);
+      }
+    }
+  }, [sessionId]);
+
+  // Save chat history to localStorage whenever messages change
+  useEffect(() => {
+    if (messages.length > 0) {
+      localStorage.setItem(
+        `session-chat-${sessionId}`,
+        JSON.stringify({
+          sessionId,
+          messages,
+          timestamp: new Date().toISOString(),
+        })
+      );
+    }
+  }, [messages, sessionId]);
+
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -178,6 +205,7 @@ export function AiChatPanel({
   const handleClearChat = () => {
     if (confirm('Clear all chat history for this session?')) {
       setMessages([]);
+      localStorage.removeItem(`session-chat-${sessionId}`);
     }
   };
 
@@ -185,6 +213,7 @@ export function AiChatPanel({
     if (messages.length > 0) {
       if (confirm('Start a new conversation? Previous chat will be cleared.')) {
         setMessages([]);
+        localStorage.removeItem(`session-chat-${sessionId}`);
       }
     }
   };
