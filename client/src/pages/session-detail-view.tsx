@@ -701,9 +701,38 @@ export function SessionDetail({
 
         {activeTab === 'session' && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between mb-4">
-              <h2>Session Content</h2>
-              {isEditingSession ? (
+            <div className="mb-4 space-y-2">
+              {/* Row 1: Session Content heading + Save/Edit button */}
+              <div className="flex items-center justify-between">
+                <h2>Session Content</h2>
+                {isEditingSession ? (
+                  <Button 
+                    size="sm" 
+                    onClick={handleSaveSession}
+                    data-testid="button-save-session"
+                  >
+                    <Save className="h-4 w-4 mr-2" />
+                    Save
+                  </Button>
+                ) : (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => {
+                      setIsEditingSession(true);
+                      setSidebarOpen(false);
+                    }}
+                    disabled={sidebarOpen}
+                    data-testid="button-edit-session"
+                  >
+                    <Pencil className="h-4 w-4 mr-2" />
+                    Edit
+                  </Button>
+                )}
+              </div>
+              
+              {/* Row 2: Helper, Assistant, Template buttons (only when editing) */}
+              {isEditingSession && (
                 <div className="flex gap-2 flex-wrap">
                   <Button 
                     variant="outline"
@@ -733,29 +762,7 @@ export function SessionDetail({
                     <FileText className="h-4 w-4 mr-2" />
                     Template
                   </Button>
-                  <Button 
-                    size="sm" 
-                    onClick={handleSaveSession}
-                    data-testid="button-save-session"
-                  >
-                    <Save className="h-4 w-4 mr-2" />
-                    Save
-                  </Button>
                 </div>
-              ) : (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => {
-                    setIsEditingSession(true);
-                    setSidebarOpen(false);
-                  }}
-                  disabled={sidebarOpen}
-                  data-testid="button-edit-session"
-                >
-                  <Pencil className="h-4 w-4 mr-2" />
-                  Edit
-                </Button>
               )}
             </div>
 
