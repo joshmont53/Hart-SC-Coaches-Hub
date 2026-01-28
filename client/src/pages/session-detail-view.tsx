@@ -20,13 +20,14 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, Pencil, Trash2, Calendar as CalendarIcon, Clock, MapPin, ChevronRight, Target, Save, Loader2, FileText, Play, Lightbulb } from 'lucide-react';
+import { ArrowLeft, Pencil, Trash2, Calendar as CalendarIcon, Clock, MapPin, ChevronRight, Target, Save, Loader2, FileText, Play, Lightbulb, Sparkles } from 'lucide-react';
 import { format, isValid } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { RichTextEditor } from '@/components/RichTextEditor';
 import { DrillsSidebar } from '@/components/DrillsSidebar';
 import { FeedbackForm } from '@/components/FeedbackForm';
 import { SessionWriterHelper } from '@/components/SessionWriterHelper';
+import { AiChatPanel } from '@/components/AiChatPanel';
 import type { Squad as SchemaSquad } from '@shared/schema';
 import type { Coach as BackendCoach } from '@shared/schema';
 
@@ -140,6 +141,7 @@ export function SessionDetail({
   const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false);
   const [templateSearch, setTemplateSearch] = useState('');
   const [isHelperOpen, setIsHelperOpen] = useState(false);
+  const [aiChatPanelOpen, setAiChatPanelOpen] = useState(false);
   
   const formatSessionDate = (date: Date | string): string => {
     if (!date) return '';
@@ -711,6 +713,17 @@ export function SessionDetail({
                   >
                     <Lightbulb className="h-4 w-4 mr-2" style={{ color: '#4B9A4A' }} />
                     Helper
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    size="sm" 
+                    onClick={() => setAiChatPanelOpen(!aiChatPanelOpen)}
+                    style={aiChatPanelOpen ? { backgroundColor: '#4B9A4A20', borderColor: '#4B9A4A' } : undefined}
+                    className="hidden lg:flex"
+                    data-testid="button-open-assistant"
+                  >
+                    <Sparkles className="h-4 w-4 mr-2" style={{ color: '#4B9A4A' }} />
+                    Assistant
                   </Button>
                   <Button 
                     variant="outline"
@@ -1427,6 +1440,31 @@ export function SessionDetail({
         sessionFocus={session?.focus}
         squads={backendSquads as SchemaSquad[]}
       />
+
+      {/* AI Assistant Panel - Desktop only for now */}
+      {aiChatPanelOpen && isEditingSession && squad && (
+        <div className="hidden lg:block">
+          <AiChatPanel
+            isOpen={aiChatPanelOpen}
+            onClose={() => setAiChatPanelOpen(false)}
+            sessionId={sessionId}
+            sessionContext={{
+              squad: squad,
+              sessionDate: session.date,
+              sessionDuration: undefined,
+              poolLength: location?.poolType === '50m' ? 50 : 25,
+              sessionFocus: session.focus,
+              currentContent: sessionContent,
+            }}
+            onInsertContent={(content) => {
+              const newContent = sessionContent 
+                ? `${sessionContent}\n\n${content}`
+                : content;
+              setSessionContent(newContent);
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }
