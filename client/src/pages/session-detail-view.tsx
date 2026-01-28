@@ -719,7 +719,6 @@ export function SessionDetail({
                     size="sm" 
                     onClick={() => setAiChatPanelOpen(!aiChatPanelOpen)}
                     style={aiChatPanelOpen ? { backgroundColor: '#4B9A4A20', borderColor: '#4B9A4A' } : undefined}
-                    className="hidden lg:flex"
                     data-testid="button-open-assistant"
                   >
                     <Sparkles className="h-4 w-4 mr-2" style={{ color: '#4B9A4A' }} />
@@ -1441,29 +1440,27 @@ export function SessionDetail({
         squads={backendSquads as SchemaSquad[]}
       />
 
-      {/* AI Assistant Panel - Desktop only for now */}
+      {/* AI Assistant Panel */}
       {aiChatPanelOpen && isEditingSession && squad && (
-        <div className="hidden lg:block">
-          <AiChatPanel
-            isOpen={aiChatPanelOpen}
-            onClose={() => setAiChatPanelOpen(false)}
-            sessionId={sessionId}
-            sessionContext={{
-              squad: squad,
-              sessionDate: session.date,
-              sessionDuration: undefined,
-              poolLength: location?.poolType === '50m' ? 50 : 25,
-              sessionFocus: session.focus,
-              currentContent: sessionContent,
-            }}
-            onInsertContent={(content) => {
-              const newContent = sessionContent 
-                ? `${sessionContent}\n\n${content}`
-                : content;
-              setSessionContent(newContent);
-            }}
-          />
-        </div>
+        <AiChatPanel
+          isOpen={aiChatPanelOpen}
+          onClose={() => setAiChatPanelOpen(false)}
+          sessionId={sessionId}
+          sessionContext={{
+            squad: squad,
+            sessionDate: session.date,
+            sessionDuration: undefined,
+            poolLength: location?.poolType === '50m' ? 50 : 25,
+            sessionFocus: session.focus,
+            currentContent: sessionContent,
+          }}
+          onInsertContent={(content) => {
+            const newContent = sessionContent 
+              ? `${sessionContent}\n\n${content}`
+              : content;
+            setSessionContent(newContent);
+          }}
+        />
       )}
     </div>
   );
