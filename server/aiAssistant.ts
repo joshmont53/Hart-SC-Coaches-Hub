@@ -67,10 +67,6 @@ export async function streamAssistantResponse(
   res.flushHeaders();
 
   try {
-    console.log('[AI Assistant] Generating response...');
-    console.log('[AI Assistant] System prompt length:', systemPrompt.length);
-    console.log('[AI Assistant] User message:', userMessage);
-    
     // Use non-streaming API call (more reliable)
     // GPT-5 uses reasoning tokens internally, so we need extra headroom
     const response = await openai.chat.completions.create({
@@ -78,11 +74,8 @@ export async function streamAssistantResponse(
       messages,
       max_completion_tokens: 8192,
     });
-
-    console.log('[AI Assistant] Full response:', JSON.stringify(response, null, 2));
     
     const fullContent = response.choices[0]?.message?.content || '';
-    console.log('[AI Assistant] Response received, length:', fullContent.length);
     
     if (!fullContent) {
       res.write(`data: ${JSON.stringify({ content: 'I apologize, but I was unable to generate a response. Please try again.', done: true })}\n\n`);
@@ -105,10 +98,8 @@ export async function streamAssistantResponse(
     // Send completion signal
     res.write(`data: ${JSON.stringify({ content: '', done: true, fullContent: sentContent })}\n\n`);
     res.end();
-    
-    console.log('[AI Assistant] Streaming complete');
   } catch (error) {
-    console.error('[AI Assistant] Error:', error);
+    console.error('[AI Assistant] Error generating response:', error);
     res.write(`data: ${JSON.stringify({ error: 'Failed to generate response', done: true })}\n\n`);
     res.end();
   }
