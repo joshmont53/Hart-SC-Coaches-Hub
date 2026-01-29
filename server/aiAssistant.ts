@@ -148,61 +148,76 @@ function buildSystemPrompt(context: AiContext): string {
   const parts: string[] = [
     `You are an experienced swimming coach assistant helping to plan training sessions.`,
     `You provide practical, age-appropriate advice for swimming training.`,
-    `Keep responses concise but helpful. Use bullet points and clear formatting.`,
-    `When suggesting sets, always include distances in meters.`,
+    ``,
+    `## Response Formatting Rules`,
+    `- Use clear, well-spaced formatting that is easy to read`,
+    `- DO NOT use dash bullet points like "- 200m freestyle" - instead use numbered lists or write in flowing prose`,
+    `- Use blank lines between sections for better readability`,
+    `- When listing sets, write each on its own line with clear spacing`,
+    `- Format distances clearly: "4 x 50m freestyle" not "- 4x50m freestyle"`,
+    `- Use bold (**text**) for section headers`,
+    `- ALWAYS end your response with a "Why this suggestion?" section that explains your reasoning based on the squad's recent training history, age group, session focus, or other context provided`,
   ];
 
   if (context.squad) {
-    parts.push(`\n## Current Squad Information`);
-    parts.push(`- Squad: ${context.squad.name}`);
-    parts.push(`- Number of swimmers: ${context.squad.swimmerCount}`);
+    parts.push(``);
+    parts.push(`## Current Squad Information`);
+    parts.push(`Squad: ${context.squad.name}`);
+    parts.push(`Number of swimmers: ${context.squad.swimmerCount}`);
     if (context.squad.ageRange) {
-      parts.push(`- Age range: ${context.squad.ageRange} years old`);
+      parts.push(`Age range: ${context.squad.ageRange} years old`);
     }
     if (context.squad.averageAge) {
-      parts.push(`- Average age: ${context.squad.averageAge} years`);
+      parts.push(`Average age: ${context.squad.averageAge} years`);
     }
   }
 
   if (context.location) {
-    parts.push(`\n## Pool Information`);
-    parts.push(`- Pool: ${context.location.name}`);
-    parts.push(`- Pool length: ${context.location.poolLength}m`);
+    parts.push(``);
+    parts.push(`## Pool Information`);
+    parts.push(`Pool: ${context.location.name}`);
+    parts.push(`Pool length: ${context.location.poolLength}m`);
   }
 
-  parts.push(`\n## Current Session`);
-  parts.push(`- Date: ${context.currentSession.date}`);
-  parts.push(`- Focus: ${context.currentSession.focus}`);
+  parts.push(``);
+  parts.push(`## Current Session`);
+  parts.push(`Date: ${context.currentSession.date}`);
+  parts.push(`Focus: ${context.currentSession.focus}`);
   if (context.currentSession.totalDistance) {
-    parts.push(`- Current distance: ${context.currentSession.totalDistance}m`);
+    parts.push(`Current distance: ${context.currentSession.totalDistance}m`);
   }
   if (context.currentSession.content) {
-    parts.push(`\n### Current Session Content:`);
+    parts.push(``);
+    parts.push(`### Current Session Content:`);
     parts.push(`\`\`\`\n${context.currentSession.content}\n\`\`\``);
   }
 
   if (context.history.recentSessionCount > 0) {
-    parts.push(`\n## Squad Training History`);
+    parts.push(``);
+    parts.push(`## Squad Training History`);
     if (context.history.averageDistance) {
-      parts.push(`- Average session distance: ${context.history.averageDistance}m`);
+      parts.push(`Average session distance: ${context.history.averageDistance}m`);
     }
     if (context.history.commonFocuses.length > 0) {
-      parts.push(`- Common focus areas: ${context.history.commonFocuses.join(', ')}`);
+      parts.push(`Common focus areas: ${context.history.commonFocuses.join(', ')}`);
     }
     if (context.history.recentSessions.length > 0) {
-      parts.push(`- Recent sessions:`);
+      parts.push(`Recent sessions:`);
       context.history.recentSessions.forEach(s => {
         const dist = s.distance ? ` (${s.distance}m)` : '';
-        parts.push(`  • ${s.date}: ${s.focus}${dist}`);
+        parts.push(`  ${s.date}: ${s.focus}${dist}`);
       });
     }
   }
 
-  parts.push(`\n## Guidelines`);
-  parts.push(`- Tailor suggestions to the swimmers' age and ability level`);
-  parts.push(`- Consider the session focus when making recommendations`);
-  parts.push(`- Base distance recommendations on the squad's typical session distances`);
-  parts.push(`- When calculating distances, use ${context.location?.poolLength || 25}m pool lengths`);
+  parts.push(``);
+  parts.push(`## Guidelines`);
+  parts.push(`Tailor suggestions to the swimmers' age and ability level`);
+  parts.push(`Consider the session focus when making recommendations`);
+  parts.push(`Base distance recommendations on the squad's typical session distances`);
+  parts.push(`When calculating distances, use ${context.location?.poolLength || 25}m pool lengths`);
+  parts.push(``);
+  parts.push(`Remember: End every response with a brief "Why this suggestion?" explanation referencing the specific context (recent sessions, squad age, focus areas, etc.) that informed your recommendation.`);
 
   return parts.join('\n');
 }
