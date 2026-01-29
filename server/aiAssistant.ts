@@ -72,10 +72,11 @@ export async function streamAssistantResponse(
     console.log('[AI Assistant] User message:', userMessage);
     
     // Use non-streaming API call (more reliable)
+    // GPT-5 uses reasoning tokens internally, so we need extra headroom
     const response = await openai.chat.completions.create({
       model: 'gpt-5',
       messages,
-      max_completion_tokens: 1024,
+      max_completion_tokens: 8192,
     });
 
     console.log('[AI Assistant] Full response:', JSON.stringify(response, null, 2));
@@ -133,7 +134,7 @@ export async function generateAssistantResponse(
     const response = await openai.chat.completions.create({
       model: 'gpt-5',
       messages,
-      max_completion_tokens: 1024,
+      max_completion_tokens: 8192,
     });
 
     return response.choices[0]?.message?.content || 'I apologize, but I was unable to generate a response. Please try again.';
