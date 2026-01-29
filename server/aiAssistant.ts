@@ -91,14 +91,15 @@ export async function streamAssistantResponse(
     }
 
     // Simulate streaming by sending words progressively
+    // Slower delay creates a more natural "thinking and typing" effect
     const words = fullContent.split(/(\s+)/); // Split keeping whitespace
     let sentContent = '';
     
     for (const word of words) {
       sentContent += word;
       res.write(`data: ${JSON.stringify({ content: word, done: false })}\n\n`);
-      // Small delay for visual streaming effect (10-30ms per word)
-      await new Promise(resolve => setTimeout(resolve, 15));
+      // Slower delay (35-40ms) for natural typing feel
+      await new Promise(resolve => setTimeout(resolve, 38));
     }
 
     // Send completion signal
@@ -151,10 +152,12 @@ function buildSystemPrompt(context: AiContext): string {
     ``,
     `## Response Formatting Rules`,
     `- Use clear, well-spaced formatting that is easy to read`,
-    `- DO NOT use dash bullet points like "- 200m freestyle" - instead use numbered lists or write in flowing prose`,
+    `- DO NOT use numbered lists like "1)", "2)", "3)" or "1.", "2.", "3."`,
+    `- DO NOT use dash bullet points like "- 200m freestyle"`,
+    `- Instead, use bold section headers and write sets in flowing prose or simple line breaks`,
     `- Use blank lines between sections for better readability`,
-    `- When listing sets, write each on its own line with clear spacing`,
-    `- Format distances clearly: "4 x 50m freestyle" not "- 4x50m freestyle"`,
+    `- When listing sets, write each on its own line with clear spacing, no numbers or bullets`,
+    `- Format distances clearly: "4 x 50m freestyle" on its own line`,
     `- Use bold (**text**) for section headers`,
     `- ALWAYS end your response with a "Why this suggestion?" section that explains your reasoning based on the squad's recent training history, age group, session focus, or other context provided`,
   ];
