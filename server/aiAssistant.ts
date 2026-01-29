@@ -42,7 +42,7 @@ export interface ChatMessage {
   content: string;
 }
 
-// Streaming response generator
+// Streaming response generator with simulated word-by-word display
 export async function streamAssistantResponse(
   userMessage: string,
   context: AiContext,
@@ -60,40 +60,49 @@ export async function streamAssistantResponse(
     { role: 'user', content: userMessage },
   ];
 
+  // Set up SSE headers
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
   try {
-    console.log('[AI Assistant] Starting streaming response...');
+    console.log('[AI Assistant] Generating response...');
     
-    const stream = await openai.chat.completions.create({
+    // Use non-streaming API call (more reliable)
+    const response = await openai.chat.completions.create({
       model: 'gpt-5',
       messages,
       max_completion_tokens: 1024,
-      stream: true,
     });
 
-    // Set up SSE headers
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    res.flushHeaders();
-
-    let fullContent = '';
+    const fullContent = response.choices[0]?.message?.content || '';
+    console.log('[AI Assistant] Response received, length:', fullContent.length);
     
-    for await (const chunk of stream) {
-      const content = chunk.choices[0]?.delta?.content || '';
-      if (content) {
-        fullContent += content;
-        // Send each chunk as SSE data
-        res.write(`data: ${JSON.stringify({ content, done: false })}\n\n`);
-      }
+    if (!fullContent) {
+      res.write(`data: ${JSON.stringify({ content: 'I apologize, but I was unable to generate a response. Please try again.', done: true })}\n\n`);
+      res.end();
+      return;
+    }
+
+    // Simulate streaming by sending words progressively
+    const words = fullContent.split(/(\s+)/); // Split keeping whitespace
+    let sentContent = '';
+    
+    for (const word of words) {
+      sentContent += word;
+      res.write(`data: ${JSON.stringify({ content: word, done: false })}\n\n`);
+      // Small delay for visual streaming effect (10-30ms per word)
+      await new Promise(resolve => setTimeout(resolve, 15));
     }
 
     // Send completion signal
-    res.write(`data: ${JSON.stringify({ content: '', done: true, fullContent })}\n\n`);
+    res.write(`data: ${JSON.stringify({ content: '', done: true, fullContent: sentContent })}\n\n`);
     res.end();
     
-    console.log('[AI Assistant] Streaming complete, total length:', fullContent.length);
+    console.log('[AI Assistant] Streaming complete');
   } catch (error) {
-    console.error('[AI Assistant] Streaming error:', error);
+    console.error('[AI Assistant] Error:', error);
     res.write(`data: ${JSON.stringify({ error: 'Failed to generate response', done: true })}\n\n`);
     res.end();
   }
