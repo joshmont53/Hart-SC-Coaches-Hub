@@ -68,6 +68,8 @@ export async function streamAssistantResponse(
 
   try {
     console.log('[AI Assistant] Generating response...');
+    console.log('[AI Assistant] System prompt length:', systemPrompt.length);
+    console.log('[AI Assistant] User message:', userMessage);
     
     // Use non-streaming API call (more reliable)
     const response = await openai.chat.completions.create({
@@ -76,6 +78,8 @@ export async function streamAssistantResponse(
       max_completion_tokens: 1024,
     });
 
+    console.log('[AI Assistant] Full response:', JSON.stringify(response, null, 2));
+    
     const fullContent = response.choices[0]?.message?.content || '';
     console.log('[AI Assistant] Response received, length:', fullContent.length);
     
