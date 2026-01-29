@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+import type { Response } from 'express';
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
@@ -41,6 +42,64 @@ export interface ChatMessage {
   content: string;
 }
 
+// Streaming response generator
+export async function streamAssistantResponse(
+  userMessage: string,
+  context: AiContext,
+  conversationHistory: ChatMessage[] = [],
+  res: Response
+): Promise<void> {
+  const systemPrompt = buildSystemPrompt(context);
+  
+  const messages: OpenAI.ChatCompletionMessageParam[] = [
+    { role: 'system', content: systemPrompt },
+    ...conversationHistory.map(msg => ({
+      role: msg.role as 'user' | 'assistant',
+      content: msg.content,
+    })),
+    { role: 'user', content: userMessage },
+  ];
+
+  try {
+    console.log('[AI Assistant] Starting streaming response...');
+    
+    const stream = await openai.chat.completions.create({
+      model: 'openai/gpt-4o-mini',
+      messages,
+      max_tokens: 800,
+      stream: true,
+    });
+
+    // Set up SSE headers
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+
+    let fullContent = '';
+    
+    for await (const chunk of stream) {
+      const content = chunk.choices[0]?.delta?.content || '';
+      if (content) {
+        fullContent += content;
+        // Send each chunk as SSE data
+        res.write(`data: ${JSON.stringify({ content, done: false })}\n\n`);
+      }
+    }
+
+    // Send completion signal
+    res.write(`data: ${JSON.stringify({ content: '', done: true, fullContent })}\n\n`);
+    res.end();
+    
+    console.log('[AI Assistant] Streaming complete, total length:', fullContent.length);
+  } catch (error) {
+    console.error('[AI Assistant] Streaming error:', error);
+    res.write(`data: ${JSON.stringify({ error: 'Failed to generate response', done: true })}\n\n`);
+    res.end();
+  }
+}
+
+// Non-streaming fallback
 export async function generateAssistantResponse(
   userMessage: string,
   context: AiContext,
@@ -59,9 +118,9 @@ export async function generateAssistantResponse(
 
   try {
     const response = await openai.chat.completions.create({
-      model: 'gpt-5',
+      model: 'openai/gpt-4o-mini',
       messages,
-      max_completion_tokens: 1024,
+      max_tokens: 800,
     });
 
     return response.choices[0]?.message?.content || 'I apologize, but I was unable to generate a response. Please try again.';

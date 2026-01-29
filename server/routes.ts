@@ -726,8 +726,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Message is required" });
       }
       
-      // Import the AI assistant module dynamically to avoid circular deps
-      const { generateAssistantResponse } = await import('./aiAssistant');
+      // AI assistant module imported below for streaming
       
       // First, get the context (reusing the same logic)
       const sessionData = await storage.getSessionWithAttendance(sessionId);
@@ -820,10 +819,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
       };
       
-      // Generate AI response
-      const aiResponse = await generateAssistantResponse(message, aiContext, history || []);
+      // Import streaming function
+      const { streamAssistantResponse } = await import('./aiAssistant');
       
-      res.json({ response: aiResponse });
+      // Generate streaming AI response
+      await streamAssistantResponse(message, aiContext, history || [], res);
     } catch (error) {
       console.error("Error in AI chat:", error);
       res.status(500).json({ message: "Failed to generate AI response" });

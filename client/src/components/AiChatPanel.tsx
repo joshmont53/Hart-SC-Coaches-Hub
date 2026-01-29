@@ -147,10 +147,17 @@ export function AiChatPanel({
       timestamp: new Date(),
     };
 
-    const updatedMessages = [...messages, userMessage];
-    setMessages(updatedMessages);
+    setMessages(prev => [...prev, userMessage]);
     setInputValue('');
     setIsLoading(true);
+
+    // Add placeholder for streaming response
+    const streamingMessage: Message = {
+      role: 'assistant',
+      content: '',
+      timestamp: new Date(),
+    };
+    setMessages(prev => [...prev, streamingMessage]);
 
     try {
       // Build conversation history for context (exclude timestamps for API)
@@ -159,28 +166,76 @@ export function AiChatPanel({
         content: m.content,
       }));
 
-      // Call the real AI API
-      const response = await apiRequest('POST', `/api/sessions/${sessionId}/ai-chat`, {
-        message: inputValue,
-        history,
+      // Call streaming API
+      const response = await fetch(`/api/sessions/${sessionId}/ai-chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ message: inputValue, history }),
       });
-      const data = await response.json();
 
-      const assistantMessage: Message = {
-        role: 'assistant',
-        content: data.response,
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, assistantMessage]);
+      if (!response.ok) {
+        throw new Error('Failed to get AI response');
+      }
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+
+      if (!reader) {
+        throw new Error('No response body');
+      }
+
+      let fullContent = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              if (data.error) {
+                throw new Error(data.error);
+              }
+              if (data.content) {
+                fullContent += data.content;
+                // Update the streaming message with new content
+                setMessages(prev => {
+                  const newMessages = [...prev];
+                  const lastIndex = newMessages.length - 1;
+                  if (lastIndex >= 0 && newMessages[lastIndex].role === 'assistant') {
+                    newMessages[lastIndex] = {
+                      ...newMessages[lastIndex],
+                      content: fullContent,
+                    };
+                  }
+                  return newMessages;
+                });
+              }
+            } catch {
+              // Skip invalid JSON lines
+            }
+          }
+        }
+      }
     } catch (error) {
       console.error('AI chat error:', error);
-      // Show error message in chat
-      const errorMessage: Message = {
-        role: 'assistant',
-        content: 'Sorry, I encountered an error. Please try again.',
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, errorMessage]);
+      // Update the streaming message with error
+      setMessages(prev => {
+        const newMessages = [...prev];
+        const lastIndex = newMessages.length - 1;
+        if (lastIndex >= 0 && newMessages[lastIndex].role === 'assistant') {
+          newMessages[lastIndex] = {
+            ...newMessages[lastIndex],
+            content: 'Sorry, I encountered an error. Please try again.',
+          };
+        }
+        return newMessages;
+      });
     } finally {
       setIsLoading(false);
     }
