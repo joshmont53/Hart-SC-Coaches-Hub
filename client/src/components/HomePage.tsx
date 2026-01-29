@@ -425,8 +425,8 @@ export function HomePage({
           </Card>
         )}
 
-        <div className="space-y-4">
-          <Card data-testid="card-upcoming-sessions">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <Card data-testid="card-upcoming-sessions" className="lg:col-span-1">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base flex items-center gap-2">
@@ -496,7 +496,7 @@ export function HomePage({
           </Card>
 
           <Card 
-            className="bg-gradient-to-br from-green-500 to-green-600 text-white border-0 cursor-pointer hover:shadow-lg transition-shadow"
+            className="bg-gradient-to-br from-green-500 to-green-600 text-white border-0 cursor-pointer hover:shadow-lg transition-shadow lg:col-span-1"
             onClick={() => setShowAllSwimmers(true)}
             data-testid="card-attendance-rate"
           >
@@ -605,7 +605,7 @@ export function HomePage({
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white border-0" data-testid="card-total-distance">
+          <Card className="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white border-0 lg:col-span-1" data-testid="card-total-distance">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-3">
                 <div>
