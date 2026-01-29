@@ -64,9 +64,9 @@ export async function streamAssistantResponse(
     console.log('[AI Assistant] Starting streaming response...');
     
     const stream = await openai.chat.completions.create({
-      model: 'openai/gpt-4o-mini',
+      model: 'gpt-5',
       messages,
-      max_tokens: 800,
+      max_completion_tokens: 1024,
       stream: true,
     });
 
@@ -118,9 +118,9 @@ export async function generateAssistantResponse(
 
   try {
     const response = await openai.chat.completions.create({
-      model: 'openai/gpt-4o-mini',
+      model: 'gpt-5',
       messages,
-      max_tokens: 800,
+      max_completion_tokens: 1024,
     });
 
     return response.choices[0]?.message?.content || 'I apologize, but I was unable to generate a response. Please try again.';
