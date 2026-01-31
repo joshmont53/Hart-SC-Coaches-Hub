@@ -823,8 +823,8 @@ export function SessionDetail({
                       <p className="text-muted-foreground">No session content yet. Click Edit to add session details.</p>
                     )}
                     
-                    {/* Distance Breakdown Toggle Button */}
-                    {session.distanceBreakdown && (
+                    {/* Distance Breakdown Toggle Button - show when content exists or calculating */}
+                    {(session.distanceBreakdown || isCalculatingDistances || sessionContent) && (
                       <button
                         onClick={() => {
                           setSidebarOpen(!sidebarOpen);
@@ -837,7 +837,11 @@ export function SessionDetail({
                         data-testid="button-toggle-sidebar"
                         title="Distance Breakdown"
                       >
-                        <Target className={cn("h-4 w-4 text-primary", sidebarOpen && "mr-1")} />
+                        {isCalculatingDistances ? (
+                          <Loader2 className={cn("h-4 w-4 text-primary animate-spin", sidebarOpen && "mr-1")} />
+                        ) : (
+                          <Target className={cn("h-4 w-4 text-primary", sidebarOpen && "mr-1")} />
+                        )}
                         {sidebarOpen && <span className="text-xs hidden md:inline">Distance</span>}
                         <ChevronRight
                           className={cn(
@@ -848,8 +852,8 @@ export function SessionDetail({
                       </button>
                     )}
                     
-                    {/* Drills Toggle Button */}
-                    {detectedDrills.length > 0 && (
+                    {/* Drills Toggle Button - show when content exists or calculating or drills detected */}
+                    {(detectedDrills.length > 0 || isCalculatingDrills || sessionContent) && (
                       <button
                         onClick={() => {
                           setDrillsSidebarOpen(!drillsSidebarOpen);
@@ -857,13 +861,17 @@ export function SessionDetail({
                         }}
                         className={cn(
                           "absolute border bg-card p-2 rounded-l-lg shadow-lg hover:bg-accent transition-all z-50 flex items-center gap-2",
-                          session.distanceBreakdown ? "top-16 md:top-20" : "top-4 md:top-6",
+                          (session.distanceBreakdown || isCalculatingDistances || sessionContent) ? "top-16 md:top-20" : "top-4 md:top-6",
                           drillsSidebarOpen ? "right-[280px] md:right-[30rem]" : "right-0"
                         )}
                         data-testid="button-toggle-drills-sidebar"
                         title="Session Drills"
                       >
-                        <Play className={cn("h-4 w-4 text-primary", drillsSidebarOpen && "mr-1")} />
+                        {isCalculatingDrills ? (
+                          <Loader2 className={cn("h-4 w-4 text-primary animate-spin", drillsSidebarOpen && "mr-1")} />
+                        ) : (
+                          <Play className={cn("h-4 w-4 text-primary", drillsSidebarOpen && "mr-1")} />
+                        )}
                         {drillsSidebarOpen && <span className="text-xs hidden md:inline">Drills</span>}
                         <ChevronRight
                           className={cn(
@@ -990,7 +998,7 @@ export function SessionDetail({
       )}
 
       {/* Distance breakdown sidebar - rendered outside scroll container for iOS Safari compatibility */}
-      {activeTab === 'session' && session.distanceBreakdown && !isEditingSession && (
+      {activeTab === 'session' && (session.distanceBreakdown || isCalculatingDistances || sessionContent) && !isEditingSession && (
         <div
           className={cn(
             "fixed inset-y-0 right-0 md:inset-y-auto md:top-[180px] md:bottom-4 md:right-4 border-l md:border md:rounded-lg bg-card overflow-y-auto transition-all duration-300 ease-in-out z-50",
@@ -1000,10 +1008,32 @@ export function SessionDetail({
           {sidebarOpen && (
             <div className="space-y-4">
               <div>
-                <h3>Distance Breakdown</h3>
-                <p className="text-sm text-muted-foreground">Stroke-by-stroke analysis</p>
+                <h3 className="flex items-center gap-2">
+                  {isCalculatingDistances && <Loader2 className="h-4 w-4 text-primary animate-spin" />}
+                  Distance Breakdown
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {isCalculatingDistances ? 'Calculating distances...' : 'Stroke-by-stroke analysis'}
+                </p>
               </div>
 
+              {isCalculatingDistances ? (
+                <div className="flex flex-col items-center justify-center h-48 text-center">
+                  <Loader2 className="h-12 w-12 text-primary animate-spin mb-4" />
+                  <h4 className="text-muted-foreground mb-2">Calculating distances...</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Analysing session content to calculate stroke distances
+                  </p>
+                </div>
+              ) : !session.distanceBreakdown ? (
+                <div className="flex flex-col items-center justify-center h-48 text-center">
+                  <Target className="h-12 w-12 text-muted-foreground mb-4" />
+                  <h4 className="text-muted-foreground mb-2">No distances calculated</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Distance breakdown will appear after saving session content
+                  </p>
+                </div>
+              ) : (
               <div className="space-y-3">
                 {session.distanceBreakdown.frontCrawl > 0 && session.distanceBreakdown.frontCrawlBreakdown && (
                   <div className="border rounded-lg p-3">
@@ -1167,6 +1197,7 @@ export function SessionDetail({
                   </div>
                 )}
               </div>
+            )}
             </div>
           )}
         </div>
@@ -1453,27 +1484,12 @@ export function SessionDetail({
         </DialogContent>
       </Dialog>
 
-      {isSaving && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
-          <Card className="p-8">
-            <div className="text-center space-y-4">
-              <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" />
-              <div>
-                <h3 className="text-lg font-semibold">Preparing session...</h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Calculating the session distance breakdowns and fetching drills, please wait...
-                </p>
-              </div>
-            </div>
-          </Card>
-        </div>
-      )}
-
       {/* Drills Sidebar */}
       <DrillsSidebar 
         open={drillsSidebarOpen}
         onOpenChange={setDrillsSidebarOpen}
         detectedDrills={detectedDrills}
+        isCalculating={isCalculatingDrills}
       />
 
       {/* Session Writer Helper */}

@@ -3,7 +3,7 @@ import type { Drill } from '@shared/schema';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from './ui/sheet';
 import { Badge } from './ui/badge';
 import { ScrollArea } from './ui/scroll-area';
-import { ChevronDown, ChevronUp, Play, FileText } from 'lucide-react';
+import { ChevronDown, ChevronUp, Play, FileText, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
@@ -11,9 +11,10 @@ interface DrillsSidebarProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   detectedDrills: Drill[];
+  isCalculating?: boolean;
 }
 
-export function DrillsSidebar({ open, onOpenChange, detectedDrills }: DrillsSidebarProps) {
+export function DrillsSidebar({ open, onOpenChange, detectedDrills, isCalculating = false }: DrillsSidebarProps) {
   const [expandedDrillId, setExpandedDrillId] = useState<string | null>(null);
 
   const getStrokeBadgeColor = (strokeType: string) => {
@@ -57,16 +58,31 @@ export function DrillsSidebar({ open, onOpenChange, detectedDrills }: DrillsSide
       <SheetContent side="right" className="w-full sm:w-[30rem] sm:max-w-[30rem] p-0 flex flex-col">
         <SheetHeader className="p-6 pb-4 border-b">
           <SheetTitle className="flex items-center gap-2">
-            <Play className="h-5 w-5 text-primary" />
+            {isCalculating ? (
+              <Loader2 className="h-5 w-5 text-primary animate-spin" />
+            ) : (
+              <Play className="h-5 w-5 text-primary" />
+            )}
             Session Drills
           </SheetTitle>
           <SheetDescription>
-            {detectedDrills.length} drill{detectedDrills.length !== 1 ? 's' : ''} detected in this session
+            {isCalculating 
+              ? 'Detecting drills in session content...'
+              : `${detectedDrills.length} drill${detectedDrills.length !== 1 ? 's' : ''} detected in this session`
+            }
           </SheetDescription>
         </SheetHeader>
 
         <ScrollArea className="flex-1">
-          {detectedDrills.length === 0 ? (
+          {isCalculating ? (
+            <div className="flex flex-col items-center justify-center h-64 text-center px-6">
+              <Loader2 className="h-12 w-12 text-primary animate-spin mb-4" />
+              <h3 className="text-muted-foreground mb-2">Detecting drills...</h3>
+              <p className="text-sm text-muted-foreground">
+                Analysing session content to identify drills from your library
+              </p>
+            </div>
+          ) : detectedDrills.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-64 text-center px-6">
               <FileText className="h-12 w-12 text-muted-foreground mb-4" />
               <h3 className="text-muted-foreground mb-2">No drills detected</h3>
