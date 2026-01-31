@@ -136,8 +136,10 @@ export function SessionDetail({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [drillsSidebarOpen, setDrillsSidebarOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  // Background calculation states - user can continue working while these are true
+  const [isCalculatingDistances, setIsCalculatingDistances] = useState(false);
+  const [isCalculatingDrills, setIsCalculatingDrills] = useState(false);
   const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false);
   const [templateSearch, setTemplateSearch] = useState('');
   const [isHelperOpen, setIsHelperOpen] = useState(false);
@@ -199,7 +201,31 @@ export function SessionDetail({
     },
   });
 
-  const updateContentMutation = useMutation({
+  // Step 1: Save content immediately (fast) - user can continue working
+  const saveContentMutation = useMutation({
+    mutationFn: async (content: string) => {
+      const plainText = stripHtmlTags(content);
+      return await apiRequest('PUT', `/api/sessions/${sessionId}`, { 
+        sessionContent: plainText,
+        sessionContentHtml: content,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/sessions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/sessions', sessionId] });
+      setIsEditingSession(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to save session content',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Step 2: Calculate distances in background (can take 30-60 seconds)
+  const calculateDistancesMutation = useMutation({
     mutationFn: async (content: string) => {
       const plainText = stripHtmlTags(content);
       
@@ -209,8 +235,6 @@ export function SessionDetail({
       const parseResult = await parseResultResponse.json();
       
       return await apiRequest('PUT', `/api/sessions/${sessionId}`, { 
-        sessionContent: plainText,
-        sessionContentHtml: content,
         totalFrontCrawlSwim: parseResult.totalFrontCrawlSwim || 0,
         totalFrontCrawlDrill: parseResult.totalFrontCrawlDrill || 0,
         totalFrontCrawlKick: parseResult.totalFrontCrawlKick || 0,
@@ -239,15 +263,22 @@ export function SessionDetail({
       });
     },
     onSuccess: () => {
+      setIsCalculatingDistances(false);
+      // Drills are calculated on the backend during the PUT request, so mark that done too
+      setIsCalculatingDrills(false);
       queryClient.invalidateQueries({ queryKey: ['/api/sessions'] });
-      setIsEditingSession(false);
-      setIsSaving(false);
+      queryClient.invalidateQueries({ queryKey: ['/api/sessions', sessionId] });
+      toast({
+        title: 'Calculations complete',
+        description: 'Distance breakdown and drills have been updated',
+      });
     },
     onError: (error: Error) => {
-      setIsSaving(false);
+      setIsCalculatingDistances(false);
+      setIsCalculatingDrills(false);
       toast({
-        title: 'Error',
-        description: error.message || 'Failed to update session',
+        title: 'Calculation error',
+        description: error.message || 'Failed to calculate distances. You can try saving again.',
         variant: 'destructive',
       });
     },
@@ -419,8 +450,15 @@ export function SessionDetail({
   };
 
   const handleSaveSession = () => {
-    setIsSaving(true);
-    updateContentMutation.mutate(sessionContent);
+    // Start background calculation states
+    setIsCalculatingDistances(true);
+    setIsCalculatingDrills(true);
+    
+    // Step 1: Save content immediately (user returns to view mode instantly)
+    saveContentMutation.mutate(sessionContent);
+    
+    // Step 2: Trigger background calculations (runs while user can continue working)
+    calculateDistancesMutation.mutate(sessionContent);
   };
 
   const handleOpenTemplateDialog = () => {
