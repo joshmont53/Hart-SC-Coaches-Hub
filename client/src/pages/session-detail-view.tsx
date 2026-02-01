@@ -201,7 +201,7 @@ export function SessionDetail({
     },
   });
 
-  // Step 1: Save content immediately (fast) - user can continue working
+  // Step 1: Save content immediately - also triggers drill detection on backend
   const saveContentMutation = useMutation({
     mutationFn: async (content: string) => {
       const plainText = stripHtmlTags(content);
@@ -211,11 +211,14 @@ export function SessionDetail({
       });
     },
     onSuccess: () => {
+      // Drill detection completes as part of this PUT request on the backend
+      setIsCalculatingDrills(false);
       queryClient.invalidateQueries({ queryKey: ['/api/sessions'] });
       queryClient.invalidateQueries({ queryKey: ['/api/sessions', sessionId] });
       setIsEditingSession(false);
     },
     onError: (error: Error) => {
+      setIsCalculatingDrills(false);
       toast({
         title: 'Error',
         description: error.message || 'Failed to save session content',
@@ -264,18 +267,15 @@ export function SessionDetail({
     },
     onSuccess: () => {
       setIsCalculatingDistances(false);
-      // Drills are calculated on the backend during the PUT request, so mark that done too
-      setIsCalculatingDrills(false);
       queryClient.invalidateQueries({ queryKey: ['/api/sessions'] });
       queryClient.invalidateQueries({ queryKey: ['/api/sessions', sessionId] });
       toast({
-        title: 'Calculations complete',
-        description: 'Distance breakdown and drills have been updated',
+        title: 'Distance calculation complete',
+        description: 'Session distances have been updated',
       });
     },
     onError: (error: Error) => {
       setIsCalculatingDistances(false);
-      setIsCalculatingDrills(false);
       toast({
         title: 'Calculation error',
         description: error.message || 'Failed to calculate distances. You can try saving again.',
