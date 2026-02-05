@@ -144,6 +144,7 @@ function CalendarApp() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showMySessionsOnly, setShowMySessionsOnly] = useState(false);
+  const [searchSheetOpen, setSearchSheetOpen] = useState(false);
 
   // iOS Push Notification Device Token Bridge
   useEffect(() => {
@@ -946,6 +947,16 @@ function CalendarApp() {
                     />
                   </div>
                   
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setSearchSheetOpen(true)}
+                    className="hidden lg:flex"
+                    data-testid="button-search-desktop"
+                  >
+                    <Search className="h-4 w-4" />
+                  </Button>
+                  
                   <Button onClick={handleAddSession} size="default" data-testid="button-add-session">
                     <Plus className="h-4 w-4 mr-2" />
                     Add Session
@@ -1142,6 +1153,26 @@ function CalendarApp() {
         open={!!selectedCompetitionId}
         onClose={handleCloseCompetitionModal}
       />
+
+      {/* Desktop Session Search Sheet */}
+      <Sheet open={searchSheetOpen} onOpenChange={setSearchSheetOpen}>
+        <SheetContent side="right" className="w-full sm:max-w-md p-0">
+          <SheetTitle className="sr-only">Search Sessions</SheetTitle>
+          <SheetDescription className="sr-only">Search through all sessions by squad, coach, location, focus, or content</SheetDescription>
+          <div className="h-full flex flex-col p-4">
+            <SessionSearch
+              sessions={sessions}
+              squads={squads}
+              coaches={coaches}
+              locations={locations}
+              onSessionClick={(session) => {
+                handleSessionClick(session);
+                setSearchSheetOpen(false);
+              }}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
