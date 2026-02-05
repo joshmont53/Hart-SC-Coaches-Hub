@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import * as XLSX from 'xlsx';
 import { 
   Upload, 
   FileText, 
@@ -549,17 +550,7 @@ function DocumentPreview({ document }: { document: Document }) {
   }
 
   if (document.type.includes('sheet') || document.type.includes('excel')) {
-    return (
-      <div className="text-center p-8" data-testid="preview-excel-placeholder">
-        <FileSpreadsheet className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-        <p className="text-muted-foreground mb-4">
-          Excel spreadsheet preview coming soon
-        </p>
-        <p className="text-sm text-muted-foreground">
-          Click Download to view the file in Microsoft Excel
-        </p>
-      </div>
-    );
+    return <ExcelPreview document={document} />;
   }
 
   return (
@@ -568,6 +559,102 @@ function DocumentPreview({ document }: { document: Document }) {
       <p className="text-muted-foreground">
         Preview not available for this file type
       </p>
+    </div>
+  );
+}
+
+function ExcelPreview({ document }: { document: Document }) {
+  const [activeSheet, setActiveSheet] = useState(0);
+  const [error, setError] = useState(false);
+
+  const workbookData = useMemo(() => {
+    try {
+      const base64Data = document.fileData.split(',')[1];
+      const binaryString = atob(base64Data);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      
+      const workbook = XLSX.read(bytes, { type: 'array' });
+      const sheets: { name: string; data: string[][] }[] = [];
+      
+      workbook.SheetNames.forEach((sheetName) => {
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json<string[]>(worksheet, { header: 1 });
+        sheets.push({
+          name: sheetName,
+          data: jsonData as string[][],
+        });
+      });
+      
+      return sheets;
+    } catch (e) {
+      console.error('Error parsing Excel file:', e);
+      setError(true);
+      return [];
+    }
+  }, [document.fileData]);
+
+  if (error || workbookData.length === 0) {
+    return (
+      <div className="text-center p-8" data-testid="preview-excel-error">
+        <FileSpreadsheet className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+        <p className="text-muted-foreground mb-4">
+          Unable to preview this Excel file
+        </p>
+        <p className="text-sm text-muted-foreground">
+          Click Download to view the file in Microsoft Excel
+        </p>
+      </div>
+    );
+  }
+
+  const currentSheet = workbookData[activeSheet];
+
+  return (
+    <div className="w-full h-full flex flex-col" data-testid="preview-excel">
+      {workbookData.length > 1 && (
+        <div className="flex gap-1 p-2 border-b bg-muted/30 overflow-x-auto shrink-0">
+          {workbookData.map((sheet, index) => (
+            <Button
+              key={sheet.name}
+              variant={activeSheet === index ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setActiveSheet(index)}
+              className="shrink-0"
+              data-testid={`button-sheet-${index}`}
+            >
+              {sheet.name}
+            </Button>
+          ))}
+        </div>
+      )}
+      
+      <div className="flex-1 overflow-auto">
+        {currentSheet.data.length === 0 ? (
+          <div className="text-center p-8 text-muted-foreground">
+            This sheet is empty
+          </div>
+        ) : (
+          <table className="w-full border-collapse text-sm" data-testid="table-excel-data">
+            <tbody>
+              {currentSheet.data.map((row, rowIndex) => (
+                <tr key={rowIndex} className={rowIndex === 0 ? "bg-muted/50 font-medium" : ""}>
+                  {row.map((cell, cellIndex) => (
+                    <td 
+                      key={cellIndex} 
+                      className="border border-border px-3 py-2 whitespace-nowrap"
+                    >
+                      {cell !== undefined && cell !== null ? String(cell) : ''}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
     </div>
   );
 }
