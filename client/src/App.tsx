@@ -30,6 +30,7 @@ import { CompetitionDetailModal } from '@/components/CompetitionDetailModal';
 import { HomePage } from '@/components/HomePage';
 import { SwimmerProfiles } from '@/components/SwimmerProfiles';
 import { SwimmerProfilePage } from '@/components/SwimmerProfilePage';
+import { SessionSearch } from '@/components/SessionSearch';
 import { Button } from './components/ui/button';
 import { Switch as ToggleSwitch } from './components/ui/switch';
 import { Label } from './components/ui/label';
@@ -52,6 +53,7 @@ import {
   Shield,
   Receipt,
   Home,
+  Search,
 } from 'lucide-react';
 import { CollapsibleSidebar } from './components/CollapsibleSidebar';
 import { Badge } from './components/ui/badge';
@@ -80,7 +82,7 @@ import type {
 } from '@shared/schema';
 
 type View = 'month' | 'day';
-type MobileView = 'calendar' | 'list';
+type MobileView = 'calendar' | 'list' | 'search';
 type ManagementView = 'home' | 'calendar' | 'coaches' | 'squads' | 'swimmers' | 'locations' | 'invitations' | 'competitions' | 'addSession' | 'invoices' | 'coachingRates' | 'sessionLibrary' | 'drillsLibrary' | 'feedbackAnalytics' | 'swimmerProfiles' | 'swimmerProfile';
 
 // Global storage for pending session ID from notification deep link
@@ -966,6 +968,10 @@ function CalendarApp() {
                       <List className="h-4 w-4" />
                       <span className="hidden sm:inline">List</span>
                     </TabsTrigger>
+                    <TabsTrigger value="search" className="gap-1.5" data-testid="tab-search">
+                      <Search className="h-4 w-4" />
+                      <span className="hidden sm:inline">Search</span>
+                    </TabsTrigger>
                   </TabsList>
                 </Tabs>
               </div>
@@ -1094,6 +1100,16 @@ function CalendarApp() {
                   onCompetitionClick={handleCompetitionClick}
                   showMySessionsOnly={showMySessionsOnly}
                   currentCoachId={currentCoachId}
+                />
+              </div>
+
+              <div className={mobileView === 'search' ? 'block lg:hidden h-full' : 'hidden'}>
+                <SessionSearch
+                  sessions={sessions}
+                  squads={squads}
+                  coaches={coaches}
+                  locations={locations}
+                  onSessionClick={handleSessionClick}
                 />
               </div>
             </>
