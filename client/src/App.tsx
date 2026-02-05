@@ -26,6 +26,7 @@ import { ManageCoachingRates } from '@/pages/manage-coaching-rates';
 import { SessionLibrary } from '@/pages/session-library';
 import { DrillsLibrary } from '@/pages/drills-library';
 import { FeedbackAnalytics } from '@/pages/feedback-analytics';
+import { Handbook } from '@/pages/handbook';
 import { CompetitionDetailModal } from '@/components/CompetitionDetailModal';
 import { HomePage } from '@/components/HomePage';
 import { SwimmerProfiles } from '@/components/SwimmerProfiles';
@@ -55,6 +56,7 @@ import {
   Home,
   Search,
   X,
+  BookOpen,
 } from 'lucide-react';
 import { CollapsibleSidebar } from './components/CollapsibleSidebar';
 import { Badge } from './components/ui/badge';
@@ -84,7 +86,7 @@ import type {
 
 type View = 'month' | 'day';
 type MobileView = 'calendar' | 'list' | 'search';
-type ManagementView = 'home' | 'calendar' | 'coaches' | 'squads' | 'swimmers' | 'locations' | 'invitations' | 'competitions' | 'addSession' | 'invoices' | 'coachingRates' | 'sessionLibrary' | 'drillsLibrary' | 'feedbackAnalytics' | 'swimmerProfiles' | 'swimmerProfile';
+type ManagementView = 'home' | 'calendar' | 'coaches' | 'squads' | 'swimmers' | 'locations' | 'invitations' | 'competitions' | 'addSession' | 'invoices' | 'coachingRates' | 'sessionLibrary' | 'drillsLibrary' | 'feedbackAnalytics' | 'swimmerProfiles' | 'swimmerProfile' | 'handbook';
 
 // Global storage for pending session ID from notification deep link
 // This is set before CalendarApp mounts and read when it does
@@ -592,6 +594,30 @@ function CalendarApp() {
                   {drills.length}
                 </Badge>
               </Button>
+              
+              <Button
+                variant="ghost"
+                className={cn(
+                  "w-full justify-start py-2.5 relative transition-all duration-200 hover:scale-[1.02]",
+                  isActive('handbook') && "bg-accent/50"
+                )}
+                onClick={() => handleManagementClick('handbook')}
+                data-testid="button-handbook-mobile"
+              >
+                {isActive('handbook') && (
+                  <div 
+                    className="absolute left-0 top-0 bottom-0 w-1 rounded-r"
+                    style={{ backgroundColor: '#4B9A4A' }}
+                  />
+                )}
+                <BookOpen 
+                  className={cn(
+                    "h-4 w-4 mr-3 ml-2 transition-colors",
+                    isActive('handbook') ? "text-[#4B9A4A]" : "text-muted-foreground"
+                  )}
+                />
+                <span className="flex-1 text-left">Handbook</span>
+              </Button>
             </div>
           </div>
 
@@ -1026,6 +1052,10 @@ function CalendarApp() {
             <DrillsLibrary onBack={handleBackToHome} />
           ) : managementView === 'feedbackAnalytics' ? (
             <FeedbackAnalytics onBack={handleBackToHome} />
+          ) : managementView === 'handbook' ? (
+            currentCoach ? (
+              <Handbook coach={currentCoach} onBack={handleBackToHome} />
+            ) : null
           ) : managementView === 'swimmerProfiles' ? (
             currentCoach ? (
               <SwimmerProfiles
