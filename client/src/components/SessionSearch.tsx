@@ -12,6 +12,7 @@ interface SessionSearchProps {
   locations: Location[];
   onSessionClick: (session: Session) => void;
   showResultsOnly?: boolean;
+  externalSearchQuery?: string;
 }
 
 export function SessionSearch({
@@ -21,8 +22,13 @@ export function SessionSearch({
   locations,
   onSessionClick,
   showResultsOnly = false,
+  externalSearchQuery,
 }: SessionSearchProps) {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [internalSearchQuery, setInternalSearchQuery] = useState('');
+  
+  // Use external query if provided, otherwise use internal
+  const searchQuery = externalSearchQuery !== undefined ? externalSearchQuery : internalSearchQuery;
+  const setSearchQuery = externalSearchQuery !== undefined ? () => {} : setInternalSearchQuery;
 
   const getSquadName = (squadId: string) => {
     return squads.find(s => s.id === squadId)?.name || 'Unknown Squad';
@@ -148,29 +154,32 @@ export function SessionSearch({
 
   return (
     <div className="space-y-4 h-full flex flex-col">
-      <div className="flex-shrink-0">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search sessions by squad, coach, content..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 pr-9"
-            autoFocus
-            data-testid="input-session-search"
-          />
-          {searchQuery && (
-            <button
-              type="button"
-              onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              data-testid="button-clear-search"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
+      {/* Only show internal search input when not using external query */}
+      {externalSearchQuery === undefined && (
+        <div className="flex-shrink-0">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search sessions by squad, coach, content..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 pr-9"
+              autoFocus
+              data-testid="input-session-search"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                data-testid="button-clear-search"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="flex-shrink-0 text-sm text-muted-foreground" data-testid="text-results-count">
         {searchQuery ? (

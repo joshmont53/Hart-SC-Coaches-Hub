@@ -54,6 +54,7 @@ import {
   Receipt,
   Home,
   Search,
+  X,
 } from 'lucide-react';
 import { CollapsibleSidebar } from './components/CollapsibleSidebar';
 import { Badge } from './components/ui/badge';
@@ -144,7 +145,8 @@ function CalendarApp() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showMySessionsOnly, setShowMySessionsOnly] = useState(false);
-  const [searchSheetOpen, setSearchSheetOpen] = useState(false);
+  const [desktopSearchActive, setDesktopSearchActive] = useState(false);
+  const [desktopSearchQuery, setDesktopSearchQuery] = useState('');
 
   // iOS Push Notification Device Token Bridge
   useEffect(() => {
@@ -947,16 +949,6 @@ function CalendarApp() {
                     />
                   </div>
                   
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => setSearchSheetOpen(true)}
-                    className="hidden lg:flex"
-                    data-testid="button-search-desktop"
-                  >
-                    <Search className="h-4 w-4" />
-                  </Button>
-                  
                   <Button onClick={handleAddSession} size="default" data-testid="button-add-session">
                     <Plus className="h-4 w-4 mr-2" />
                     Add Session
@@ -1083,7 +1075,54 @@ function CalendarApp() {
             )
           ) : view === 'month' ? (
             <>
-              <div className={mobileView === 'calendar' ? 'block' : 'hidden lg:block'}>
+              {/* Desktop: Inline search bar when search is active */}
+              {desktopSearchActive && (
+                <div className="hidden lg:block px-2 mb-4">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <input
+                      type="text"
+                      placeholder="Search sessions by squad, coach, location, focus, or content..."
+                      value={desktopSearchQuery}
+                      onChange={(e) => setDesktopSearchQuery(e.target.value)}
+                      className="w-full pl-10 pr-10 py-2 border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                      autoFocus
+                      data-testid="input-desktop-search"
+                    />
+                    {desktopSearchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setDesktopSearchQuery('')}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover-elevate"
+                        data-testid="button-clear-search"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Desktop: Show search results when there's a query */}
+              {desktopSearchActive && desktopSearchQuery.trim() && (
+                <div className="hidden lg:block h-full overflow-auto">
+                  <SessionSearch
+                    sessions={sessions}
+                    squads={squads}
+                    coaches={coaches}
+                    locations={locations}
+                    onSessionClick={(session) => {
+                      handleSessionClick(session);
+                      setDesktopSearchActive(false);
+                      setDesktopSearchQuery('');
+                    }}
+                    externalSearchQuery={desktopSearchQuery}
+                  />
+                </div>
+              )}
+
+              {/* Calendar: Always visible on mobile when mobileView='calendar', visible on desktop when search has no query */}
+              <div className={`${mobileView === 'calendar' ? 'block' : 'hidden lg:block'} ${desktopSearchActive && desktopSearchQuery.trim() ? 'lg:hidden' : ''}`}>
                 <MonthCalendarView
                   sessions={filteredSessions}
                   competitions={filteredCompetitions}
@@ -1095,6 +1134,8 @@ function CalendarApp() {
                   onCompetitionClick={handleCompetitionClick}
                   showMySessionsOnly={showMySessionsOnly}
                   currentCoachId={currentCoachId}
+                  onSearchClick={() => setDesktopSearchActive(!desktopSearchActive)}
+                  isSearchActive={desktopSearchActive}
                 />
               </div>
               
@@ -1154,25 +1195,6 @@ function CalendarApp() {
         onClose={handleCloseCompetitionModal}
       />
 
-      {/* Desktop Session Search Sheet */}
-      <Sheet open={searchSheetOpen} onOpenChange={setSearchSheetOpen}>
-        <SheetContent side="right" className="w-full sm:max-w-md p-0">
-          <SheetTitle className="sr-only">Search Sessions</SheetTitle>
-          <SheetDescription className="sr-only">Search through all sessions by squad, coach, location, focus, or content</SheetDescription>
-          <div className="h-full flex flex-col p-4">
-            <SessionSearch
-              sessions={sessions}
-              squads={squads}
-              coaches={coaches}
-              locations={locations}
-              onSessionClick={(session) => {
-                handleSessionClick(session);
-                setSearchSheetOpen(false);
-              }}
-            />
-          </div>
-        </SheetContent>
-      </Sheet>
     </div>
   );
 }

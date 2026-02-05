@@ -1,6 +1,6 @@
 import type { Session, Squad } from '../lib/typeAdapters';
 import type { Competition, CompetitionCoaching } from '@shared/schema';
-import { ChevronLeft, ChevronRight, Trophy } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Trophy, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { parse } from 'date-fns';
 
@@ -15,6 +15,8 @@ interface MonthCalendarViewProps {
   onCompetitionClick: (competition: Competition) => void;
   showMySessionsOnly?: boolean;
   currentCoachId?: string | null;
+  onSearchClick?: () => void;
+  isSearchActive?: boolean;
 }
 
 export function MonthCalendarView({
@@ -28,6 +30,8 @@ export function MonthCalendarView({
   onCompetitionClick,
   showMySessionsOnly = false,
   currentCoachId = null,
+  onSearchClick,
+  isSearchActive = false,
 }: MonthCalendarViewProps) {
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -118,12 +122,24 @@ export function MonthCalendarView({
           {monthNames[month]} {year}
         </h2>
         <div className="flex gap-2">
-          <Button onClick={previousMonth} variant="outline" size="icon" data-testid="button-previous-month">
+          <Button onClick={previousMonth} variant="outline" size="icon" data-testid="button-previous-month" type="button">
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <Button onClick={nextMonth} variant="outline" size="icon" data-testid="button-next-month">
+          <Button onClick={nextMonth} variant="outline" size="icon" data-testid="button-next-month" type="button">
             <ChevronRight className="h-4 w-4" />
           </Button>
+          {onSearchClick && (
+            <Button
+              onClick={onSearchClick}
+              variant={isSearchActive ? "default" : "outline"}
+              size="icon"
+              data-testid="button-search-desktop"
+              type="button"
+              className="hidden lg:flex"
+            >
+              <Search className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </div>
 
