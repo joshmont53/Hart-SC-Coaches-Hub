@@ -443,8 +443,8 @@ export function Handbook({ coach, onBack }: HandbookProps) {
       )}
 
       <Dialog open={!!previewDocument} onOpenChange={(open) => !open && setPreviewDocument(null)}>
-        <DialogContent className="max-w-4xl h-[80vh]" data-testid="dialog-preview">
-          <DialogHeader>
+        <DialogContent className="max-w-4xl h-[80vh] flex flex-col" data-testid="dialog-preview">
+          <DialogHeader className="shrink-0">
             <DialogTitle data-testid="text-preview-title">{previewDocument?.name}</DialogTitle>
             <DialogDescription>
               {previewDocument && (
@@ -454,12 +454,12 @@ export function Handbook({ coach, onBack }: HandbookProps) {
               )}
             </DialogDescription>
           </DialogHeader>
-          <div className="flex-1 overflow-auto">
+          <div className="flex-1 overflow-auto min-h-0">
             {previewDocument && (
               <DocumentPreview document={previewDocument} />
             )}
           </div>
-          <div className="flex gap-2 pt-4 border-t">
+          <div className="flex gap-2 pt-4 border-t items-center shrink-0">
             <Button
               variant="outline"
               size="sm"
