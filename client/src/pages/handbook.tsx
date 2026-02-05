@@ -535,7 +535,11 @@ function DocumentPreview({ document }: { document: Document }) {
     );
   }
 
-  if (document.type.includes('word') || document.type.includes('document')) {
+  if (document.type.includes('sheet') || document.type.includes('excel') || document.type.includes('spreadsheet')) {
+    return <ExcelPreview document={document} />;
+  }
+
+  if (document.type.includes('word') || (document.type.includes('document') && !document.type.includes('spreadsheet'))) {
     return (
       <div className="text-center p-8" data-testid="preview-word-placeholder">
         <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
@@ -547,10 +551,6 @@ function DocumentPreview({ document }: { document: Document }) {
         </p>
       </div>
     );
-  }
-
-  if (document.type.includes('sheet') || document.type.includes('excel')) {
-    return <ExcelPreview document={document} />;
   }
 
   return (
