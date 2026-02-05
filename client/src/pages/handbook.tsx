@@ -462,6 +462,7 @@ export function Handbook({ coach, onBack }: HandbookProps) {
           <div className="flex gap-2 pt-4 border-t">
             <Button
               variant="outline"
+              size="sm"
               onClick={() => previewDocument && handleDownload(previewDocument)}
               data-testid="button-preview-download"
             >
@@ -470,6 +471,7 @@ export function Handbook({ coach, onBack }: HandbookProps) {
             </Button>
             <Button
               variant="outline"
+              size="sm"
               onClick={() => setPreviewDocument(null)}
               className="ml-auto"
               data-testid="button-preview-close"

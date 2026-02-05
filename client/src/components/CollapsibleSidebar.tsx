@@ -291,44 +291,6 @@ export function CollapsibleSidebar({
                   </TooltipContent>
                 )}
               </Tooltip>
-
-              {/* Handbook */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className={cn(
-                      "w-full py-2.5 relative transition-all duration-200",
-                      collapsed ? "justify-center px-0" : "justify-start hover:scale-[1.02]",
-                      isActive('handbook') && "bg-accent/50"
-                    )}
-                    onClick={() => onNavigate('handbook')}
-                    data-testid="button-nav-handbook"
-                  >
-                    {isActive('handbook') && (
-                      <div 
-                        className="absolute left-0 top-0 bottom-0 w-1 rounded-r"
-                        style={{ backgroundColor: '#4B9A4A' }}
-                      />
-                    )}
-                    <BookOpen 
-                      className={cn(
-                        "h-4 w-4 transition-colors",
-                        collapsed ? "" : "mr-3 ml-2",
-                        isActive('handbook') ? "text-[#4B9A4A]" : "text-muted-foreground"
-                      )}
-                    />
-                    {!collapsed && (
-                      <span className="flex-1 text-left">Handbook</span>
-                    )}
-                  </Button>
-                </TooltipTrigger>
-                {collapsed && (
-                  <TooltipContent side="right">
-                    Handbook
-                  </TooltipContent>
-                )}
-              </Tooltip>
             </div>
           </div>
 
@@ -759,6 +721,44 @@ export function CollapsibleSidebar({
                 {collapsed && (
                   <TooltipContent side="right">
                     Swimmer Profiles
+                  </TooltipContent>
+                )}
+              </Tooltip>
+
+              {/* Handbook */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className={cn(
+                      "w-full py-2.5 relative transition-all duration-200",
+                      collapsed ? "justify-center px-0" : "justify-start hover:scale-[1.02]",
+                      isActive('handbook') && "bg-accent/50"
+                    )}
+                    onClick={() => onNavigate('handbook')}
+                    data-testid="button-nav-handbook"
+                  >
+                    {isActive('handbook') && (
+                      <div 
+                        className="absolute left-0 top-0 bottom-0 w-1 rounded-r"
+                        style={{ backgroundColor: '#4B9A4A' }}
+                      />
+                    )}
+                    <BookOpen 
+                      className={cn(
+                        "h-4 w-4 transition-colors",
+                        collapsed ? "" : "mr-3 ml-2",
+                        isActive('handbook') ? "text-[#4B9A4A]" : "text-muted-foreground"
+                      )}
+                    />
+                    {!collapsed && (
+                      <span className="flex-1 text-left">Handbook</span>
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                {collapsed && (
+                  <TooltipContent side="right">
+                    Handbook
                   </TooltipContent>
                 )}
               </Tooltip>

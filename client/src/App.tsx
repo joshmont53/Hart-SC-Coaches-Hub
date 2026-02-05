@@ -594,30 +594,6 @@ function CalendarApp() {
                   {drills.length}
                 </Badge>
               </Button>
-              
-              <Button
-                variant="ghost"
-                className={cn(
-                  "w-full justify-start py-2.5 relative transition-all duration-200 hover:scale-[1.02]",
-                  isActive('handbook') && "bg-accent/50"
-                )}
-                onClick={() => handleManagementClick('handbook')}
-                data-testid="button-handbook-mobile"
-              >
-                {isActive('handbook') && (
-                  <div 
-                    className="absolute left-0 top-0 bottom-0 w-1 rounded-r"
-                    style={{ backgroundColor: '#4B9A4A' }}
-                  />
-                )}
-                <BookOpen 
-                  className={cn(
-                    "h-4 w-4 mr-3 ml-2 transition-colors",
-                    isActive('handbook') ? "text-[#4B9A4A]" : "text-muted-foreground"
-                  )}
-                />
-                <span className="flex-1 text-left">Handbook</span>
-              </Button>
             </div>
           </div>
 
@@ -894,6 +870,30 @@ function CalendarApp() {
                   )}
                 />
                 <span className="flex-1 text-left">Swimmer Profiles</span>
+              </Button>
+
+              <Button
+                variant="ghost"
+                className={cn(
+                  "w-full justify-start py-2.5 relative transition-all duration-200 hover:scale-[1.02]",
+                  isActive('handbook') && "bg-accent/50"
+                )}
+                onClick={() => handleManagementClick('handbook')}
+                data-testid="button-handbook-mobile"
+              >
+                {isActive('handbook') && (
+                  <div 
+                    className="absolute left-0 top-0 bottom-0 w-1 rounded-r"
+                    style={{ backgroundColor: '#4B9A4A' }}
+                  />
+                )}
+                <BookOpen 
+                  className={cn(
+                    "h-4 w-4 mr-3 ml-2 transition-colors",
+                    isActive('handbook') ? "text-[#4B9A4A]" : "text-muted-foreground"
+                  )}
+                />
+                <span className="flex-1 text-left">Handbook</span>
               </Button>
             </div>
           </div>
