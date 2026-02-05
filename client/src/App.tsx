@@ -26,10 +26,12 @@ import { ManageCoachingRates } from '@/pages/manage-coaching-rates';
 import { SessionLibrary } from '@/pages/session-library';
 import { DrillsLibrary } from '@/pages/drills-library';
 import { FeedbackAnalytics } from '@/pages/feedback-analytics';
+import { Handbook } from '@/pages/handbook';
 import { CompetitionDetailModal } from '@/components/CompetitionDetailModal';
 import { HomePage } from '@/components/HomePage';
 import { SwimmerProfiles } from '@/components/SwimmerProfiles';
 import { SwimmerProfilePage } from '@/components/SwimmerProfilePage';
+import { SessionSearch } from '@/components/SessionSearch';
 import { Button } from './components/ui/button';
 import { Switch as ToggleSwitch } from './components/ui/switch';
 import { Label } from './components/ui/label';
@@ -52,6 +54,9 @@ import {
   Shield,
   Receipt,
   Home,
+  Search,
+  X,
+  BookOpen,
 } from 'lucide-react';
 import { CollapsibleSidebar } from './components/CollapsibleSidebar';
 import { Badge } from './components/ui/badge';
@@ -80,8 +85,8 @@ import type {
 } from '@shared/schema';
 
 type View = 'month' | 'day';
-type MobileView = 'calendar' | 'list';
-type ManagementView = 'home' | 'calendar' | 'coaches' | 'squads' | 'swimmers' | 'locations' | 'invitations' | 'competitions' | 'addSession' | 'invoices' | 'coachingRates' | 'sessionLibrary' | 'drillsLibrary' | 'feedbackAnalytics' | 'swimmerProfiles' | 'swimmerProfile';
+type MobileView = 'calendar' | 'list' | 'search';
+type ManagementView = 'home' | 'calendar' | 'coaches' | 'squads' | 'swimmers' | 'locations' | 'invitations' | 'competitions' | 'addSession' | 'invoices' | 'coachingRates' | 'sessionLibrary' | 'drillsLibrary' | 'feedbackAnalytics' | 'swimmerProfiles' | 'swimmerProfile' | 'handbook';
 
 // Global storage for pending session ID from notification deep link
 // This is set before CalendarApp mounts and read when it does
@@ -142,6 +147,8 @@ function CalendarApp() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showMySessionsOnly, setShowMySessionsOnly] = useState(false);
+  const [desktopSearchActive, setDesktopSearchActive] = useState(false);
+  const [desktopSearchQuery, setDesktopSearchQuery] = useState('');
 
   // iOS Push Notification Device Token Bridge
   useEffect(() => {
@@ -864,6 +871,30 @@ function CalendarApp() {
                 />
                 <span className="flex-1 text-left">Swimmer Profiles</span>
               </Button>
+
+              <Button
+                variant="ghost"
+                className={cn(
+                  "w-full justify-start py-2.5 relative transition-all duration-200 hover:scale-[1.02]",
+                  isActive('handbook') && "bg-accent/50"
+                )}
+                onClick={() => handleManagementClick('handbook')}
+                data-testid="button-handbook-mobile"
+              >
+                {isActive('handbook') && (
+                  <div 
+                    className="absolute left-0 top-0 bottom-0 w-1 rounded-r"
+                    style={{ backgroundColor: '#4B9A4A' }}
+                  />
+                )}
+                <BookOpen 
+                  className={cn(
+                    "h-4 w-4 mr-3 ml-2 transition-colors",
+                    isActive('handbook') ? "text-[#4B9A4A]" : "text-muted-foreground"
+                  )}
+                />
+                <span className="flex-1 text-left">Handbook</span>
+              </Button>
             </div>
           </div>
         </div>
@@ -966,6 +997,10 @@ function CalendarApp() {
                       <List className="h-4 w-4" />
                       <span className="hidden sm:inline">List</span>
                     </TabsTrigger>
+                    <TabsTrigger value="search" className="gap-1.5" data-testid="tab-search">
+                      <Search className="h-4 w-4" />
+                      <span className="hidden sm:inline">Search</span>
+                    </TabsTrigger>
                   </TabsList>
                 </Tabs>
               </div>
@@ -1017,6 +1052,10 @@ function CalendarApp() {
             <DrillsLibrary onBack={handleBackToHome} />
           ) : managementView === 'feedbackAnalytics' ? (
             <FeedbackAnalytics onBack={handleBackToHome} />
+          ) : managementView === 'handbook' ? (
+            currentCoach ? (
+              <Handbook coach={currentCoach} onBack={handleBackToHome} />
+            ) : null
           ) : managementView === 'swimmerProfiles' ? (
             currentCoach ? (
               <SwimmerProfiles
@@ -1066,7 +1105,54 @@ function CalendarApp() {
             )
           ) : view === 'month' ? (
             <>
-              <div className={mobileView === 'calendar' ? 'block' : 'hidden lg:block'}>
+              {/* Desktop: Inline search bar when search is active */}
+              {desktopSearchActive && (
+                <div className="hidden lg:block px-2 mb-4">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <input
+                      type="text"
+                      placeholder="Search sessions by squad, coach, location, focus, or content..."
+                      value={desktopSearchQuery}
+                      onChange={(e) => setDesktopSearchQuery(e.target.value)}
+                      className="w-full pl-10 pr-10 py-2 border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                      autoFocus
+                      data-testid="input-desktop-search"
+                    />
+                    {desktopSearchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setDesktopSearchQuery('')}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover-elevate"
+                        data-testid="button-clear-search"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Desktop: Show search results when there's a query */}
+              {desktopSearchActive && desktopSearchQuery.trim() && (
+                <div className="hidden lg:block h-full overflow-auto">
+                  <SessionSearch
+                    sessions={sessions}
+                    squads={squads}
+                    coaches={coaches}
+                    locations={locations}
+                    onSessionClick={(session) => {
+                      handleSessionClick(session);
+                      setDesktopSearchActive(false);
+                      setDesktopSearchQuery('');
+                    }}
+                    externalSearchQuery={desktopSearchQuery}
+                  />
+                </div>
+              )}
+
+              {/* Calendar: Always visible on mobile when mobileView='calendar', visible on desktop when search has no query */}
+              <div className={`${mobileView === 'calendar' ? 'block' : 'hidden lg:block'} ${desktopSearchActive && desktopSearchQuery.trim() ? 'lg:hidden' : ''}`}>
                 <MonthCalendarView
                   sessions={filteredSessions}
                   competitions={filteredCompetitions}
@@ -1078,6 +1164,8 @@ function CalendarApp() {
                   onCompetitionClick={handleCompetitionClick}
                   showMySessionsOnly={showMySessionsOnly}
                   currentCoachId={currentCoachId}
+                  onSearchClick={() => setDesktopSearchActive(!desktopSearchActive)}
+                  isSearchActive={desktopSearchActive}
                 />
               </div>
               
@@ -1094,6 +1182,16 @@ function CalendarApp() {
                   onCompetitionClick={handleCompetitionClick}
                   showMySessionsOnly={showMySessionsOnly}
                   currentCoachId={currentCoachId}
+                />
+              </div>
+
+              <div className={mobileView === 'search' ? 'block lg:hidden h-full' : 'hidden'}>
+                <SessionSearch
+                  sessions={sessions}
+                  squads={squads}
+                  coaches={coaches}
+                  locations={locations}
+                  onSessionClick={handleSessionClick}
                 />
               </div>
             </>
@@ -1126,6 +1224,7 @@ function CalendarApp() {
         open={!!selectedCompetitionId}
         onClose={handleCloseCompetitionModal}
       />
+
     </div>
   );
 }

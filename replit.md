@@ -17,6 +17,14 @@ Core features include:
 - **Attendance Register**: Manages swimmer attendance with status and notes, enforcing business rules.
 - **Session Library**: A template management system allowing coaches to create, edit, store, and reuse session content, integrated with the session editor.
 - **Drills Library**: A comprehensive drill management system with stroke-based filtering (Freestyle, Backstroke, Breaststroke, Butterfly, Starts, Turns), real-time search, YouTube video embedding, and full CRUD operations. Features color-coded badges, permission-based edit/delete controls, and responsive card layout.
+- **Handbook**: Document management system for coaches to upload, categorize, preview, and download documents (PDF, Word, Excel). Documents are stored in localStorage as base64-encoded data. Features include:
+  - Drag-and-drop upload with file type validation
+  - 6 document categories (Session Plans, Competition Calendars, Training Programs, Meet Results, Meeting Notes, Other)
+  - Search and filter functionality by name and category
+  - Full document preview: PDF (iframe with loading state), Excel (xlsx library with multi-sheet support), Word (mammoth library converting to HTML)
+  - Delete confirmation dialogs and download capability
+  - File type badges in preview dialog header
+  - Navigation available in both desktop and mobile sidebars under the MY TOOLS section
 - **Intelligent Drill Detection**: AI-powered feature that automatically detects drills mentioned in training session content using GPT-4o-mini. Detected drills are displayed in a dedicated sidebar (accessed via Play button) with expandable cards showing full drill details and embedded videos. The drills sidebar button is positioned inside the session content container using absolute positioning (`right-0`), stacked directly below the distance breakdown button when present. Both buttons shift left together when the distance sidebar opens to remain accessible. Includes fallback case-insensitive substring matching for reliability.
 - **Feedback System**: Comprehensive three-part feedback system:
   - **Feedback Form**: Coaches can rate sessions across 6 categories (Engagement, Difficulty, Technique Focus, Energy Levels, Session Flow, Overall Effectiveness) on a 1-5 scale, with optional notes and privacy settings. Accessible via feedback icon on session cards.

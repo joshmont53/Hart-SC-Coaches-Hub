@@ -4,13 +4,13 @@ import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import { 
   CalendarDays, FileText, Target, Receipt, BarChart3, 
   UserCog, Users, Shield, MapPin, Trophy, LogOut, ChevronLeft, ChevronRight,
-  Mail, PoundSterling, Home
+  Mail, PoundSterling, Home, BookOpen
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import type { Session, Squad, Location, Coach, Swimmer } from '@/lib/typeAdapters';
 
-type ManagementView = 'home' | 'calendar' | 'coaches' | 'squads' | 'swimmers' | 'locations' | 'invitations' | 'competitions' | 'addSession' | 'invoices' | 'coachingRates' | 'sessionLibrary' | 'drillsLibrary' | 'feedbackAnalytics' | 'swimmerProfiles' | 'swimmerProfile';
+type ManagementView = 'home' | 'calendar' | 'coaches' | 'squads' | 'swimmers' | 'locations' | 'invitations' | 'competitions' | 'addSession' | 'invoices' | 'coachingRates' | 'sessionLibrary' | 'drillsLibrary' | 'feedbackAnalytics' | 'swimmerProfiles' | 'swimmerProfile' | 'handbook';
 
 interface CollapsibleSidebarProps {
   collapsed: boolean;
@@ -721,6 +721,44 @@ export function CollapsibleSidebar({
                 {collapsed && (
                   <TooltipContent side="right">
                     Swimmer Profiles
+                  </TooltipContent>
+                )}
+              </Tooltip>
+
+              {/* Handbook */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className={cn(
+                      "w-full py-2.5 relative transition-all duration-200",
+                      collapsed ? "justify-center px-0" : "justify-start hover:scale-[1.02]",
+                      isActive('handbook') && "bg-accent/50"
+                    )}
+                    onClick={() => onNavigate('handbook')}
+                    data-testid="button-nav-handbook"
+                  >
+                    {isActive('handbook') && (
+                      <div 
+                        className="absolute left-0 top-0 bottom-0 w-1 rounded-r"
+                        style={{ backgroundColor: '#4B9A4A' }}
+                      />
+                    )}
+                    <BookOpen 
+                      className={cn(
+                        "h-4 w-4 transition-colors",
+                        collapsed ? "" : "mr-3 ml-2",
+                        isActive('handbook') ? "text-[#4B9A4A]" : "text-muted-foreground"
+                      )}
+                    />
+                    {!collapsed && (
+                      <span className="flex-1 text-left">Handbook</span>
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                {collapsed && (
+                  <TooltipContent side="right">
+                    Handbook
                   </TooltipContent>
                 )}
               </Tooltip>
