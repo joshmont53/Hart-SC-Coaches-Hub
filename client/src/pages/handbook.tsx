@@ -447,11 +447,20 @@ export function Handbook({ coach, onBack }: HandbookProps) {
       <Dialog open={!!previewDocument} onOpenChange={(open) => !open && setPreviewDocument(null)}>
         <DialogContent className="max-w-4xl h-[80vh] flex flex-col" data-testid="dialog-preview">
           <DialogHeader className="shrink-0">
-            <DialogTitle data-testid="text-preview-title">{previewDocument?.name}</DialogTitle>
+            <div className="flex items-start gap-3">
+              <DialogTitle className="flex-1" data-testid="text-preview-title">{previewDocument?.name}</DialogTitle>
+              {previewDocument && (
+                <Badge variant="outline" className="shrink-0 text-xs">
+                  {previewDocument.type.includes('pdf') ? 'PDF' : 
+                   previewDocument.type.includes('sheet') || previewDocument.type.includes('excel') || previewDocument.type.includes('spreadsheet') ? 'Excel' :
+                   previewDocument.type.includes('word') || previewDocument.type.includes('document') ? 'Word' : 'Document'}
+                </Badge>
+              )}
+            </div>
             <DialogDescription>
               {previewDocument && (
                 <>
-                  {previewDocument.category} uploaded by {previewDocument.uploadedBy} on {format(previewDocument.uploadDate, 'MMM dd, yyyy')}
+                  {previewDocument.category} • Uploaded by {previewDocument.uploadedBy} on {format(previewDocument.uploadDate, 'MMM dd, yyyy')}
                 </>
               )}
             </DialogDescription>
@@ -510,10 +519,19 @@ export function Handbook({ coach, onBack }: HandbookProps) {
 
 function DocumentPreview({ document }: { document: Document }) {
   const [pdfError, setPdfError] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(true);
 
   if (document.type.includes('pdf')) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-muted/30" data-testid="preview-pdf">
+      <div className="w-full h-full flex items-center justify-center bg-muted/30 relative" data-testid="preview-pdf">
+        {pdfLoading && !pdfError && (
+          <div className="absolute inset-0 flex items-center justify-center bg-muted/30 z-10">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Loading PDF...</p>
+            </div>
+          </div>
+        )}
         {pdfError ? (
           <div className="text-center p-8">
             <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
@@ -529,7 +547,11 @@ function DocumentPreview({ document }: { document: Document }) {
             src={document.fileData}
             className="w-full h-full border-0"
             title={document.name}
-            onError={() => setPdfError(true)}
+            onLoad={() => setPdfLoading(false)}
+            onError={() => {
+              setPdfLoading(false);
+              setPdfError(true);
+            }}
           />
         )}
       </div>
