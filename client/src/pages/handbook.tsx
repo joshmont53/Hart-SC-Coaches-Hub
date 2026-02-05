@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import * as XLSX from 'xlsx';
+import mammoth from 'mammoth';
 import { 
   Upload, 
   FileText, 
@@ -540,17 +541,7 @@ function DocumentPreview({ document }: { document: Document }) {
   }
 
   if (document.type.includes('word') || (document.type.includes('document') && !document.type.includes('spreadsheet'))) {
-    return (
-      <div className="text-center p-8" data-testid="preview-word-placeholder">
-        <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-        <p className="text-muted-foreground mb-4">
-          Word document preview coming soon
-        </p>
-        <p className="text-sm text-muted-foreground">
-          Click Download to view the file in Microsoft Word
-        </p>
-      </div>
-    );
+    return <WordPreview document={document} />;
   }
 
   return (
@@ -656,5 +647,70 @@ function ExcelPreview({ document }: { document: Document }) {
         )}
       </div>
     </div>
+  );
+}
+
+function WordPreview({ document }: { document: Document }) {
+  const [htmlContent, setHtmlContent] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    const convertDocument = async () => {
+      try {
+        setIsLoading(true);
+        setError(false);
+        
+        const base64Data = document.fileData.split(',')[1];
+        const binaryString = atob(base64Data);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        
+        const result = await mammoth.convertToHtml({ arrayBuffer: bytes.buffer });
+        setHtmlContent(result.value);
+      } catch (e) {
+        console.error('Error converting Word document:', e);
+        setError(true);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    convertDocument();
+  }, [document.fileData]);
+
+  if (isLoading) {
+    return (
+      <div className="w-full h-full flex items-center justify-center" data-testid="preview-word-loading">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading document...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !htmlContent) {
+    return (
+      <div className="text-center p-8" data-testid="preview-word-error">
+        <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+        <p className="text-muted-foreground mb-4">
+          Unable to preview this Word document
+        </p>
+        <p className="text-sm text-muted-foreground">
+          Click Download to view the file in Microsoft Word
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div 
+      className="w-full h-full overflow-auto p-6 bg-white dark:bg-gray-900 prose prose-sm dark:prose-invert max-w-none"
+      data-testid="preview-word"
+      dangerouslySetInnerHTML={{ __html: htmlContent }}
+    />
   );
 }
