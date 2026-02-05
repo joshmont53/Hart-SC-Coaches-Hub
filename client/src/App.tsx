@@ -30,7 +30,6 @@ import { CompetitionDetailModal } from '@/components/CompetitionDetailModal';
 import { HomePage } from '@/components/HomePage';
 import { SwimmerProfiles } from '@/components/SwimmerProfiles';
 import { SwimmerProfilePage } from '@/components/SwimmerProfilePage';
-import { SessionSearch } from '@/components/SessionSearch';
 import { Button } from './components/ui/button';
 import { Switch as ToggleSwitch } from './components/ui/switch';
 import { Label } from './components/ui/label';
@@ -53,8 +52,6 @@ import {
   Shield,
   Receipt,
   Home,
-  Search,
-  X,
 } from 'lucide-react';
 import { CollapsibleSidebar } from './components/CollapsibleSidebar';
 import { Badge } from './components/ui/badge';
@@ -83,7 +80,7 @@ import type {
 } from '@shared/schema';
 
 type View = 'month' | 'day';
-type MobileView = 'calendar' | 'list' | 'search';
+type MobileView = 'calendar' | 'list';
 type ManagementView = 'home' | 'calendar' | 'coaches' | 'squads' | 'swimmers' | 'locations' | 'invitations' | 'competitions' | 'addSession' | 'invoices' | 'coachingRates' | 'sessionLibrary' | 'drillsLibrary' | 'feedbackAnalytics' | 'swimmerProfiles' | 'swimmerProfile';
 
 // Global storage for pending session ID from notification deep link
@@ -145,8 +142,6 @@ function CalendarApp() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showMySessionsOnly, setShowMySessionsOnly] = useState(false);
-  const [desktopSearchActive, setDesktopSearchActive] = useState(false);
-  const [desktopSearchQuery, setDesktopSearchQuery] = useState('');
 
   // iOS Push Notification Device Token Bridge
   useEffect(() => {
@@ -971,10 +966,6 @@ function CalendarApp() {
                       <List className="h-4 w-4" />
                       <span className="hidden sm:inline">List</span>
                     </TabsTrigger>
-                    <TabsTrigger value="search" className="gap-1.5" data-testid="tab-search">
-                      <Search className="h-4 w-4" />
-                      <span className="hidden sm:inline">Search</span>
-                    </TabsTrigger>
                   </TabsList>
                 </Tabs>
               </div>
@@ -1075,54 +1066,7 @@ function CalendarApp() {
             )
           ) : view === 'month' ? (
             <>
-              {/* Desktop: Inline search bar when search is active */}
-              {desktopSearchActive && (
-                <div className="hidden lg:block px-2 mb-4">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <input
-                      type="text"
-                      placeholder="Search sessions by squad, coach, location, focus, or content..."
-                      value={desktopSearchQuery}
-                      onChange={(e) => setDesktopSearchQuery(e.target.value)}
-                      className="w-full pl-10 pr-10 py-2 border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-                      autoFocus
-                      data-testid="input-desktop-search"
-                    />
-                    {desktopSearchQuery && (
-                      <button
-                        type="button"
-                        onClick={() => setDesktopSearchQuery('')}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover-elevate"
-                        data-testid="button-clear-search"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Desktop: Show search results when there's a query */}
-              {desktopSearchActive && desktopSearchQuery.trim() && (
-                <div className="hidden lg:block h-full overflow-auto">
-                  <SessionSearch
-                    sessions={sessions}
-                    squads={squads}
-                    coaches={coaches}
-                    locations={locations}
-                    onSessionClick={(session) => {
-                      handleSessionClick(session);
-                      setDesktopSearchActive(false);
-                      setDesktopSearchQuery('');
-                    }}
-                    externalSearchQuery={desktopSearchQuery}
-                  />
-                </div>
-              )}
-
-              {/* Calendar: Always visible on mobile when mobileView='calendar', visible on desktop when search has no query */}
-              <div className={`${mobileView === 'calendar' ? 'block' : 'hidden lg:block'} ${desktopSearchActive && desktopSearchQuery.trim() ? 'lg:hidden' : ''}`}>
+              <div className={mobileView === 'calendar' ? 'block' : 'hidden lg:block'}>
                 <MonthCalendarView
                   sessions={filteredSessions}
                   competitions={filteredCompetitions}
@@ -1134,8 +1078,6 @@ function CalendarApp() {
                   onCompetitionClick={handleCompetitionClick}
                   showMySessionsOnly={showMySessionsOnly}
                   currentCoachId={currentCoachId}
-                  onSearchClick={() => setDesktopSearchActive(!desktopSearchActive)}
-                  isSearchActive={desktopSearchActive}
                 />
               </div>
               
@@ -1152,16 +1094,6 @@ function CalendarApp() {
                   onCompetitionClick={handleCompetitionClick}
                   showMySessionsOnly={showMySessionsOnly}
                   currentCoachId={currentCoachId}
-                />
-              </div>
-
-              <div className={mobileView === 'search' ? 'block lg:hidden h-full' : 'hidden'}>
-                <SessionSearch
-                  sessions={sessions}
-                  squads={squads}
-                  coaches={coaches}
-                  locations={locations}
-                  onSessionClick={handleSessionClick}
                 />
               </div>
             </>
@@ -1194,7 +1126,6 @@ function CalendarApp() {
         open={!!selectedCompetitionId}
         onClose={handleCloseCompetitionModal}
       />
-
     </div>
   );
 }
