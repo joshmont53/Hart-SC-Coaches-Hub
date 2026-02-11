@@ -351,8 +351,12 @@ export function HomePage({
     
     const sessionsThisMonth = thisMonthSessions.length;
     
-    // Unique squads coached this month (as lead, second, or helper)
-    const squadsCoached = new Set(thisMonthSessions.map(s => s.squadId)).size;
+    const allSquadIds = new Set<string>();
+    thisMonthSessions.forEach(s => {
+      const ids = sessionSquadMap[s.id] || [s.squadId];
+      ids.forEach(id => allSquadIds.add(id));
+    });
+    const squadsCoached = allSquadIds.size;
     
     return {
       sessionsThisMonth,
@@ -360,7 +364,7 @@ export function HomePage({
       thisWeekSessions: thisWeekUpcomingSessions.length,
       incompleteTasks: allIncompleteSessions.length
     };
-  }, [coachSessions, thisWeekUpcomingSessions, allIncompleteSessions, currentMonthStart, currentMonthEnd]);
+  }, [coachSessions, thisWeekUpcomingSessions, allIncompleteSessions, currentMonthStart, currentMonthEnd, sessionSquadMap]);
 
   return (
     <>

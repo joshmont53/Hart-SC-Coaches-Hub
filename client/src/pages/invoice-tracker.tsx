@@ -572,9 +572,9 @@ export function InvoiceTracker({ onBack }: InvoiceTrackerProps) {
                             <p className="font-medium">{format(sessionDate, 'EEEE do')}</p>
                             <p className="font-semibold text-primary">{session.duration.toFixed(1)} hrs</p>
                           </div>
-                          <div className="flex items-center justify-between text-sm">
-                            <Badge variant="outline" className="font-normal">{session.squadName}</Badge>
-                            <p className="text-muted-foreground">{session.startTime} - {session.endTime}</p>
+                          <div className="flex items-start justify-between gap-2 text-sm">
+                            <Badge variant="outline" className="font-normal whitespace-normal text-left">{session.squadName}</Badge>
+                            <p className="text-muted-foreground whitespace-nowrap flex-shrink-0">{session.startTime} - {session.endTime}</p>
                           </div>
                         </div>
                       );
@@ -617,7 +617,7 @@ export function InvoiceTracker({ onBack }: InvoiceTrackerProps) {
                             <p className="font-semibold text-primary">£{invoiceData.rates.sessionWritingRate.toFixed(2)}</p>
                           </div>
                           <div className="flex items-center gap-2 text-sm">
-                            <Badge variant="outline" className="font-normal">{session.squadName}</Badge>
+                            <Badge variant="outline" className="font-normal whitespace-normal text-left">{session.squadName}</Badge>
                           </div>
                         </div>
                       );
