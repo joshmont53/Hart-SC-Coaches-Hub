@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Calendar, MapPin, Users, Clock, Target, UserCheck } from "lucide-react";
 import { Link } from "wouter";
-import type { SwimmingSession, Coach, Squad, Location } from "@shared/schema";
+import type { SwimmingSession, Coach, Squad, Location, SessionSquad } from "@shared/schema";
 import { format, parseISO, isFuture, isPast, isToday } from "date-fns";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
@@ -40,6 +40,10 @@ export default function Dashboard() {
     queryKey: ["/api/locations"],
   });
 
+  const { data: allSessionSquads = [] } = useQuery<SessionSquad[]>({
+    queryKey: ["/api/session-squads"],
+  });
+
   // Helper functions to get related data
   const getCoachName = (coachId: string | null) => {
     if (!coachId || !coaches) return "N/A";
@@ -47,10 +51,16 @@ export default function Dashboard() {
     return coach ? `${coach.firstName} ${coach.lastName}` : "N/A";
   };
 
-  const getSquadName = (squadId: string) => {
+  const getSquadNames = (session: SwimmingSession) => {
     if (!squads) return "Loading...";
-    const squad = squads.find(s => s.id === squadId);
-    return squad?.squadName || "Unknown Squad";
+    const squadIds = allSessionSquads
+      .filter(ss => ss.sessionId === session.id)
+      .map(ss => ss.squadId);
+    const ids = squadIds.length > 0 ? squadIds : [session.squadId];
+    const names = ids
+      .map(id => squads.find(s => s.id === id)?.squadName)
+      .filter(Boolean);
+    return names.length > 0 ? names.join(' / ') : "Unknown Squad";
   };
 
   const getLocationName = (poolId: string) => {
@@ -110,7 +120,7 @@ export default function Dashboard() {
                 {format(parseISO(session.sessionDate), "EEEE, MMMM d, yyyy")}
               </CardTitle>
               <CardDescription className="text-sm">
-                {getSquadName(session.squadId)}
+                {getSquadNames(session)}
               </CardDescription>
             </div>
             <Badge variant="secondary" className="text-xs">

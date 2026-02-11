@@ -508,6 +508,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/session-squads", requireAuth, async (req, res) => {
+    try {
+      const allSessionSquads = await storage.getAllSessionSquads();
+      res.json(allSessionSquads);
+    } catch (error) {
+      console.error("Error fetching all session squads:", error);
+      res.status(500).json({ message: "Failed to fetch session squads" });
+    }
+  });
+
   app.get("/api/session-squads/:sessionId", requireAuth, async (req, res) => {
     try {
       const sessionSquadRecords = await storage.getSessionSquads(req.params.sessionId);

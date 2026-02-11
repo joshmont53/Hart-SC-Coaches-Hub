@@ -9,6 +9,7 @@ interface DayCalendarViewProps {
   competitions: Competition[];
   competitionCoaching: CompetitionCoaching[];
   squads: Squad[];
+  sessionSquadMap: Record<string, string[]>;
   locations: Location[];
   selectedDate: Date;
   onBack: () => void;
@@ -23,6 +24,7 @@ export function DayCalendarView({
   competitions,
   competitionCoaching,
   squads,
+  sessionSquadMap,
   locations,
   selectedDate,
   onBack,
@@ -240,8 +242,13 @@ export function DayCalendarView({
 
                         {/* Render sessions */}
                         {locationSessions.map((session) => {
-                          const squad = squads.find((s) => s.id === session.squadId);
-                          if (!squad) return null;
+                          const squadIds = sessionSquadMap[session.id] || [session.squadId];
+                          const sessionSquads = squadIds
+                            .map(id => squads.find(s => s.id === id))
+                            .filter(Boolean);
+                          const primarySquad = sessionSquads[0];
+                          if (!primarySquad) return null;
+                          const squadLabel = sessionSquads.map(s => s!.name).join(' / ');
 
                           const { top, height } = getSessionPosition(session);
                           
@@ -274,7 +281,7 @@ export function DayCalendarView({
                               key={session.id}
                               className="absolute p-2 rounded text-white text-sm overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
                               style={{
-                                backgroundColor: squad.color,
+                                backgroundColor: primarySquad.color,
                                 top: `${top}px`,
                                 height: `${height}px`,
                                 left: left,
@@ -286,7 +293,7 @@ export function DayCalendarView({
                               }}
                               data-testid={`session-block-${session.id}`}
                             >
-                              <div>{squad.name}</div>
+                              <div>{squadLabel}</div>
                               <div className="text-xs opacity-90">
                                 {session.startTime} - {session.endTime}
                               </div>

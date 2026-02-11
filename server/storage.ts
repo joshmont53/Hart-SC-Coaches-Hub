@@ -160,6 +160,7 @@ export interface IStorage {
   deleteDrill(id: string): Promise<void>;
   
   // Session Squads operations (Multi-Squad Sessions Feature)
+  getAllSessionSquads(): Promise<SessionSquad[]>;
   getSessionSquads(sessionId: string): Promise<SessionSquad[]>;
   createSessionSquad(sessionSquad: InsertSessionSquad): Promise<SessionSquad>;
   deactivateSessionSquad(sessionId: string, squadId: string): Promise<void>;
@@ -769,6 +770,11 @@ export class DatabaseStorage implements IStorage {
   // ============================================================================
   // Session Squads operations (Multi-Squad Sessions Feature)
   // ============================================================================
+
+  async getAllSessionSquads(): Promise<SessionSquad[]> {
+    return await db.select().from(sessionSquads)
+      .where(eq(sessionSquads.recordStatus, "active"));
+  }
 
   async getSessionSquads(sessionId: string): Promise<SessionSquad[]> {
     return await db.select().from(sessionSquads)

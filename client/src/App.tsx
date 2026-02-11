@@ -82,6 +82,7 @@ import type {
   CompetitionCoaching,
   Attendance,
   SessionFeedback,
+  SessionSquad,
 } from '@shared/schema';
 
 type View = 'month' | 'day';
@@ -266,6 +267,21 @@ function CalendarApp() {
   const { data: sessionFeedback = [] } = useQuery<SessionFeedback[]>({ 
     queryKey: ['/api/feedback'],
   });
+
+  // Fetch all session-squad mappings for multi-squad display
+  const { data: allSessionSquads = [] } = useQuery<SessionSquad[]>({
+    queryKey: ['/api/session-squads'],
+  });
+
+  // Build a lookup: sessionId -> squadId[]
+  const sessionSquadMap = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    for (const ss of allSessionSquads) {
+      if (!map[ss.sessionId]) map[ss.sessionId] = [];
+      map[ss.sessionId].push(ss.squadId);
+    }
+    return map;
+  }, [allSessionSquads]);
 
   // Adapt backend data to frontend types
   const sessions = useMemo(
@@ -1158,6 +1174,7 @@ function CalendarApp() {
                   competitions={filteredCompetitions}
                   competitionCoaching={competitionCoaching}
                   squads={squads}
+                  sessionSquadMap={sessionSquadMap}
                   currentDate={currentDate}
                   onDateChange={setCurrentDate}
                   onDayClick={handleDayClick}
@@ -1175,6 +1192,7 @@ function CalendarApp() {
                   competitions={filteredCompetitions}
                   competitionCoaching={competitionCoaching}
                   squads={squads}
+                  sessionSquadMap={sessionSquadMap}
                   locations={locations}
                   coaches={coaches}
                   currentDate={currentDate}
@@ -1202,6 +1220,7 @@ function CalendarApp() {
                 competitions={filteredCompetitions}
                 competitionCoaching={competitionCoaching}
                 squads={squads}
+                sessionSquadMap={sessionSquadMap}
                 locations={locations}
                 selectedDate={selectedDate}
                 onBack={handleBackToMonth}

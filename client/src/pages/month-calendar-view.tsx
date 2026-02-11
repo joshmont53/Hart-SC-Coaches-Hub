@@ -9,6 +9,7 @@ interface MonthCalendarViewProps {
   competitions: Competition[];
   competitionCoaching: CompetitionCoaching[];
   squads: Squad[];
+  sessionSquadMap: Record<string, string[]>;
   currentDate: Date;
   onDateChange: (date: Date) => void;
   onDayClick: (date: Date) => void;
@@ -24,6 +25,7 @@ export function MonthCalendarView({
   competitions,
   competitionCoaching,
   squads,
+  sessionSquadMap,
   currentDate,
   onDateChange,
   onDayClick,
@@ -172,17 +174,22 @@ export function MonthCalendarView({
                   <div className="space-y-1">
                     {/* Render sessions */}
                     {daySessions.map((session) => {
-                      const squad = squads.find((s) => s.id === session.squadId);
-                      if (!squad) return null;
+                      const squadIds = sessionSquadMap[session.id] || [session.squadId];
+                      const sessionSquads = squadIds
+                        .map(id => squads.find(s => s.id === id))
+                        .filter(Boolean);
+                      const primarySquad = sessionSquads[0];
+                      if (!primarySquad) return null;
+                      const squadLabel = sessionSquads.map(s => s!.name).join(' / ');
                       return (
                         <div
                           key={session.id}
                           className="text-xs px-2 py-1 rounded truncate text-white"
-                          style={{ backgroundColor: squad.color }}
-                          title={`${squad.name} - ${session.focus}`}
+                          style={{ backgroundColor: primarySquad.color }}
+                          title={`${squadLabel} - ${session.focus}`}
                           data-testid={`session-badge-${session.id}`}
                         >
-                          {squad.name} - {session.focus}
+                          {squadLabel} - {session.focus}
                         </div>
                       );
                     })}

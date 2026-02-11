@@ -8,6 +8,7 @@ interface DayListViewProps {
   competitions: Competition[];
   competitionCoaching: CompetitionCoaching[];
   squads: Squad[];
+  sessionSquadMap: Record<string, string[]>;
   locations: Location[];
   coaches: Coach[];
   currentDate: Date;
@@ -22,6 +23,7 @@ export function DayListView({
   competitions,
   competitionCoaching,
   squads,
+  sessionSquadMap,
   locations,
   coaches,
   currentDate,
@@ -173,24 +175,29 @@ export function DayListView({
                 })}
                 {/* Render sessions */}
                 {daySessions.map((session) => {
-                  const squad = squads.find((s) => s.id === session.squadId);
+                  const squadIds = sessionSquadMap[session.id] || [session.squadId];
+                  const sessionSquadsList = squadIds
+                    .map(id => squads.find(s => s.id === id))
+                    .filter(Boolean);
+                  const primarySquad = sessionSquadsList[0];
                   const location = locations.find((l) => l.id === session.locationId);
                   const coach = coaches.find((c) => c.id === session.leadCoachId);
 
-                  if (!squad) return null;
+                  if (!primarySquad) return null;
+                  const squadLabel = sessionSquadsList.map(s => s!.name).join(' / ');
 
                   return (
                     <div
                       key={session.id}
                       className="p-3 rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
-                      style={{ backgroundColor: squad.color }}
+                      style={{ backgroundColor: primarySquad.color }}
                       onClick={() => onSessionClick(session)}
                       data-testid={`session-item-${session.id}`}
                     >
                       <div className="text-white">
                         <div className="flex items-start justify-between gap-2">
                           <div>
-                            <div>{squad.name}</div>
+                            <div>{squadLabel}</div>
                             <div className="text-sm opacity-90">{session.focus}</div>
                           </div>
                           <div className="text-sm opacity-90 text-right whitespace-nowrap">
