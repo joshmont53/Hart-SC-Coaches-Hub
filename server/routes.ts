@@ -1739,37 +1739,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ============================================================================
-  // Backfill session_squads (temporary admin endpoint - remove after use)
-  // ============================================================================
-  app.post("/api/admin/backfill-session-squads", requireAuth, requireAdmin, async (req: any, res) => {
-    try {
-      const allSessions = await storage.getSessions();
-      const existingSquads = await storage.getAllSessionSquads();
-      const existingSet = new Set(
-        existingSquads
-          .filter(ss => ss.recordStatus === 'active')
-          .map(ss => ss.sessionId)
-      );
-
-      let inserted = 0;
-      for (const session of allSessions) {
-        if (session.squadId && !existingSet.has(session.id)) {
-          await storage.createSessionSquad({
-            sessionId: session.id,
-            squadId: session.squadId,
-          });
-          inserted++;
-        }
-      }
-
-      res.json({ message: `Backfill complete. Inserted ${inserted} session_squads rows.` });
-    } catch (error: any) {
-      console.error("Error backfilling session_squads:", error);
-      res.status(500).json({ message: error.message || "Failed to backfill" });
-    }
-  });
-
-  // ============================================================================
   // Session Feedback routes (Feedback Feature - No impact on existing functionality)
   // ============================================================================
 
