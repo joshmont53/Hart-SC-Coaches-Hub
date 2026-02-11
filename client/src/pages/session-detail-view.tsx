@@ -951,62 +951,78 @@ export function SessionDetail({
             </div>
 
             <div className="border rounded-lg p-4 md:p-6 bg-card">
-              <div className="space-y-2 md:space-y-3">
-                {squadSwimmers.map((swimmer) => {
-                  const record = attendanceRecords.find((r) => r.swimmerId === swimmer.id);
-                  const status = record?.status || 'Present';
-                  const notes = record?.notes || '-';
-                  const isAbsent = status === 'Absent';
-
+              <div className="space-y-1">
+                {sessionSquadsList.map((sq, squadIndex) => {
+                  const swimmersInSquad = squadSwimmers.filter(s => s.squadId === sq.id);
+                  if (swimmersInSquad.length === 0) return null;
                   return (
-                    <div
-                      key={swimmer.id}
-                      className="grid grid-cols-[1fr_100px_75px] md:grid-cols-[1fr_110px_80px] gap-2 md:gap-3 items-center p-2 md:p-3"
-                      data-testid={`attendance-row-${swimmer.id}`}
-                    >
-                      <div className="min-w-0">
-                        <p className="text-sm md:text-base">
-                          {swimmer.firstName} {swimmer.lastName}
-                        </p>
+                    <div key={sq.id}>
+                      {squadIndex > 0 && <div className="border-t my-3" />}
+                      <div className="flex items-center gap-2 mb-2 px-2 md:px-3 pt-1">
+                        <div className="h-3 w-3 rounded-full shrink-0" style={{ backgroundColor: sq.color }} />
+                        <h3 className="text-sm font-semibold text-muted-foreground">{sq.name}</h3>
+                        <span className="text-xs text-muted-foreground">({swimmersInSquad.length})</span>
                       </div>
-                      <div>
-                        <Select
-                          value={status}
-                          onValueChange={(value) =>
-                            handleAttendanceChange(swimmer.id, 'status', value)
-                          }
-                        >
-                          <SelectTrigger className="h-8 w-full text-xs md:text-sm [&>span]:truncate [&>svg]:hidden" data-testid={`select-status-${swimmer.id}`}>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {attendanceStatusOptions.map((option) => (
-                              <SelectItem key={option} value={option}>
-                                {option}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Select
-                          value={notes}
-                          onValueChange={(value) =>
-                            handleAttendanceChange(swimmer.id, 'notes', value)
-                          }
-                          disabled={isAbsent}
-                        >
-                          <SelectTrigger disabled={isAbsent} className="h-8 w-full text-xs md:text-sm [&>span]:truncate [&>svg]:hidden" data-testid={`select-notes-${swimmer.id}`}>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {attendanceNoteOptions.map((option) => (
-                              <SelectItem key={option} value={option}>
-                                {option}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                      <div className="space-y-1">
+                        {swimmersInSquad.map((swimmer) => {
+                          const record = attendanceRecords.find((r) => r.swimmerId === swimmer.id);
+                          const status = record?.status || 'Present';
+                          const notes = record?.notes || '-';
+                          const isAbsent = status === 'Absent';
+
+                          return (
+                            <div
+                              key={swimmer.id}
+                              className="grid grid-cols-[1fr_100px_75px] md:grid-cols-[1fr_110px_80px] gap-2 md:gap-3 items-center p-2 md:p-3"
+                              data-testid={`attendance-row-${swimmer.id}`}
+                            >
+                              <div className="min-w-0">
+                                <p className="text-sm md:text-base">
+                                  {swimmer.firstName} {swimmer.lastName}
+                                </p>
+                              </div>
+                              <div>
+                                <Select
+                                  value={status}
+                                  onValueChange={(value) =>
+                                    handleAttendanceChange(swimmer.id, 'status', value)
+                                  }
+                                >
+                                  <SelectTrigger className="h-8 w-full text-xs md:text-sm [&>span]:truncate [&>svg]:hidden" data-testid={`select-status-${swimmer.id}`}>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {attendanceStatusOptions.map((option) => (
+                                      <SelectItem key={option} value={option}>
+                                        {option}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div>
+                                <Select
+                                  value={notes}
+                                  onValueChange={(value) =>
+                                    handleAttendanceChange(swimmer.id, 'notes', value)
+                                  }
+                                  disabled={isAbsent}
+                                >
+                                  <SelectTrigger disabled={isAbsent} className="h-8 w-full text-xs md:text-sm [&>span]:truncate [&>svg]:hidden" data-testid={`select-notes-${swimmer.id}`}>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {attendanceNoteOptions.map((option) => (
+                                      <SelectItem key={option} value={option}>
+                                        {option}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   );
