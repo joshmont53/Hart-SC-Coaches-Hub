@@ -97,6 +97,7 @@ export const squadsRelations = relations(squads, ({ one, many }) => ({
   }),
   swimmers: many(swimmers),
   sessions: many(swimmingSessions),
+  sessionSquads: many(sessionSquads),
 }));
 
 export type Squad = typeof squads.$inferSelect;
@@ -243,6 +244,7 @@ export const swimmingSessionsRelations = relations(swimmingSessions, ({ one, man
     relationName: "setWriter",
   }),
   attendance: many(attendance),
+  sessionSquads: many(sessionSquads),
 }));
 
 export type SwimmingSession = typeof swimmingSessions.$inferSelect;
@@ -253,6 +255,36 @@ export const insertSwimmingSessionSchema = createInsertSchema(swimmingSessions).
   recordStatus: true
 });
 export type InsertSwimmingSession = z.infer<typeof insertSwimmingSessionSchema>;
+
+// Session Squads junction table - Links sessions to multiple squads
+export const sessionSquads = pgTable("session_squads", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: varchar("session_id").references(() => swimmingSessions.id, { onDelete: 'cascade' }).notNull(),
+  squadId: varchar("squad_id").references(() => squads.id).notNull(),
+  recordStatus: varchar("record_status").notNull().default("active"), // "active" | "inactive"
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  unique().on(table.sessionId, table.squadId),
+]);
+
+export const sessionSquadsRelations = relations(sessionSquads, ({ one }) => ({
+  session: one(swimmingSessions, {
+    fields: [sessionSquads.sessionId],
+    references: [swimmingSessions.id],
+  }),
+  squad: one(squads, {
+    fields: [sessionSquads.squadId],
+    references: [squads.id],
+  }),
+}));
+
+export type SessionSquad = typeof sessionSquads.$inferSelect;
+export const insertSessionSquadSchema = createInsertSchema(sessionSquads).omit({ 
+  id: true, 
+  createdAt: true, 
+  recordStatus: true 
+});
+export type InsertSessionSquad = z.infer<typeof insertSessionSquadSchema>;
 
 // Attendance table
 export const attendance = pgTable("attendance", {
