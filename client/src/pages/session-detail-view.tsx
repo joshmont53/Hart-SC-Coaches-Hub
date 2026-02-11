@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, Pencil, Trash2, Calendar as CalendarIcon, Clock, MapPin, ChevronRight, Target, Save, Loader2, FileText, Play, Lightbulb, Sparkles } from 'lucide-react';
+import { ArrowLeft, Pencil, Trash2, Calendar as CalendarIcon, Clock, MapPin, ChevronRight, ChevronDown, Target, Save, Loader2, FileText, Play, Lightbulb, Sparkles, X } from 'lucide-react';
 import { format, isValid } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { RichTextEditor } from '@/components/RichTextEditor';
@@ -151,6 +151,9 @@ export function SessionDetail({
   const [drillsSidebarOpen, setDrillsSidebarOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [editSquadIds, setEditSquadIds] = useState<string[]>([]);
+  const [editSquadDropdownOpen, setEditSquadDropdownOpen] = useState(false);
+  const editSquadDropdownRef = useRef<HTMLDivElement>(null);
   // Background calculation states - user can continue working while these are true
   const [isCalculatingDistances, setIsCalculatingDistances] = useState(false);
   const [isCalculatingDrills, setIsCalculatingDrills] = useState(false);
@@ -166,6 +169,26 @@ export function SessionDetail({
       return format(date, 'yyyy-MM-dd');
     }
     return '';
+  };
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (editSquadDropdownRef.current && !editSquadDropdownRef.current.contains(event.target as Node)) {
+        setEditSquadDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const toggleEditSquad = (squadId: string) => {
+    setEditSquadIds(prev => {
+      if (prev.includes(squadId)) {
+        if (prev.length <= 1) return prev;
+        return prev.filter(id => id !== squadId);
+      }
+      return [...prev, squadId];
+    });
   };
 
   const [editFormData, setEditFormData] = useState({
@@ -299,11 +322,13 @@ export function SessionDetail({
   });
 
   const updateSessionMutation = useMutation({
-    mutationFn: async (data: Partial<Session>) => {
+    mutationFn: async (data: any) => {
       return await apiRequest('PUT', `/api/sessions/${sessionId}`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/sessions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/session-squads'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/session-squads', sessionId] });
       setIsEditDialogOpen(false);
     },
     onError: (error: Error) => {
@@ -522,11 +547,13 @@ export function SessionDetail({
       helperId: session.helperId || 'none',
       setWriterId: session.setWriterId,
     });
+    setEditSquadIds([...activeSessionSquadIds]);
+    setEditSquadDropdownOpen(false);
     setIsEditDialogOpen(true);
   };
 
   const handleSaveEdit = () => {
-    if (!editFormData.date || !editFormData.startTime || !editFormData.endTime || !editFormData.poolId || !editFormData.focus || !editFormData.leadCoachId || !editFormData.setWriterId) {
+    if (!editFormData.date || !editFormData.startTime || !editFormData.endTime || !editFormData.poolId || !editFormData.focus || !editFormData.leadCoachId || !editFormData.setWriterId || editSquadIds.length === 0) {
       toast({
         title: 'Validation Error',
         description: 'Please fill in all required fields',
@@ -535,7 +562,7 @@ export function SessionDetail({
       return;
     }
 
-    const sessionData: Partial<Session> = {
+    const sessionData: any = {
       date: new Date(editFormData.date),
       startTime: editFormData.startTime,
       endTime: editFormData.endTime,
@@ -545,6 +572,8 @@ export function SessionDetail({
       secondCoachId: editFormData.secondCoachId === 'none' ? undefined : editFormData.secondCoachId,
       helperId: editFormData.helperId === 'none' ? undefined : editFormData.helperId,
       setWriterId: editFormData.setWriterId,
+      squadId: editSquadIds[0],
+      squadIds: editSquadIds,
     };
 
     updateSessionMutation.mutate(sessionData);
@@ -1283,6 +1312,82 @@ export function SessionDetail({
                   data-testid="input-edit-end-time"
                 />
               </div>
+            </div>
+
+            <div>
+              <Label>Squad(s) *</Label>
+              <div ref={editSquadDropdownRef} className="relative">
+                <button
+                  type="button"
+                  onClick={() => setEditSquadDropdownOpen(!editSquadDropdownOpen)}
+                  className="flex items-center justify-between w-full min-h-9 rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                  data-testid="select-edit-squad"
+                >
+                  <span className="text-muted-foreground">
+                    {editSquadIds.length === 0
+                      ? "Select squad(s)"
+                      : `${editSquadIds.length} squad${editSquadIds.length > 1 ? 's' : ''} selected`}
+                  </span>
+                  <ChevronDown className="h-4 w-4 opacity-50 shrink-0" />
+                </button>
+                {editSquadDropdownOpen && (
+                  <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover p-1 shadow-md">
+                    {squads?.map((sq) => (
+                      <button
+                        key={sq.id}
+                        type="button"
+                        onClick={() => toggleEditSquad(sq.id)}
+                        className="flex items-center gap-2 w-full rounded-sm px-2 py-1.5 text-sm hover-elevate cursor-pointer"
+                        data-testid={`option-edit-squad-${sq.id}`}
+                      >
+                        <div
+                          className="h-4 w-4 rounded-sm border flex items-center justify-center shrink-0"
+                          style={{
+                            backgroundColor: editSquadIds.includes(sq.id) ? sq.color : 'transparent',
+                            borderColor: sq.color,
+                          }}
+                        >
+                          {editSquadIds.includes(sq.id) && (
+                            <svg className="h-3 w-3 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                              <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                          )}
+                        </div>
+                        <div className="h-3 w-3 rounded-full shrink-0" style={{ backgroundColor: sq.color }} />
+                        <span>{sq.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {editSquadIds.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-1.5">
+                  {editSquadIds.map((sqId) => {
+                    const sq = squads?.find(s => s.id === sqId);
+                    if (!sq) return null;
+                    return (
+                      <Badge
+                        key={sqId}
+                        variant="secondary"
+                        className="text-xs text-white"
+                        style={{ backgroundColor: sq.color }}
+                      >
+                        {sq.name}
+                        {editSquadIds.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); toggleEditSquad(sqId); }}
+                            className="ml-1"
+                            data-testid={`remove-edit-squad-${sqId}`}
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        )}
+                      </Badge>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             <div>
