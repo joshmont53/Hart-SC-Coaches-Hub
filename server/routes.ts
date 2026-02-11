@@ -771,12 +771,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const { session } = sessionData;
-      const squad = session.squadId ? await storage.getSquad(session.squadId) : null;
+
+      const allSessionSquads = await storage.getAllSessionSquads();
+      const sessionSquadIds = allSessionSquads
+        .filter(ss => ss.sessionId === sessionId && ss.recordStatus === 'active')
+        .map(ss => ss.squadId);
+      const effectiveSquadIds = sessionSquadIds.length > 0
+        ? sessionSquadIds
+        : (session.squadId ? [session.squadId] : []);
+
+      const allSquads = await storage.getSquads();
+      const sessionSquads = allSquads.filter(sq => effectiveSquadIds.includes(sq.id));
+      const combinedSquadName = sessionSquads.map(sq => sq.squadName).join(', ');
       
       const allSwimmers = await storage.getSwimmers();
-      const squadSwimmers = squad 
-        ? allSwimmers.filter(s => s.squadId === squad.id)
-        : [];
+      const squadSwimmers = allSwimmers.filter(s => effectiveSquadIds.includes(s.squadId));
       
       const today = new Date();
       const swimmerAges = squadSwimmers.map(swimmer => {
@@ -794,11 +803,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         : null;
       const minAge = swimmerAges.length > 0 ? Math.min(...swimmerAges) : null;
       const maxAge = swimmerAges.length > 0 ? Math.max(...swimmerAges) : null;
+
+      const sessionSquadMap = new Map<string, string[]>();
+      for (const ss of allSessionSquads.filter(ss => ss.recordStatus === 'active')) {
+        const existing = sessionSquadMap.get(ss.sessionId) || [];
+        existing.push(ss.squadId);
+        sessionSquadMap.set(ss.sessionId, existing);
+      }
       
       const allSessions = await storage.getSessions();
-      const squadSessions = squad
+      const squadSessions = effectiveSquadIds.length > 0
         ? allSessions
-            .filter(s => s.squadId === squad.id && s.id !== sessionId)
+            .filter(s => {
+              if (s.id === sessionId) return false;
+              const sSquadIds = sessionSquadMap.get(s.id) || (s.squadId ? [s.squadId] : []);
+              return sSquadIds.some(sid => effectiveSquadIds.includes(sid));
+            })
             .sort((a, b) => new Date(b.sessionDate).getTime() - new Date(a.sessionDate).getTime())
             .slice(0, 10)
         : [];
@@ -832,9 +852,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           content: session.sessionContent,
           totalDistance: session.totalDistance || null,
         },
-        squad: squad ? {
-          id: squad.id,
-          name: squad.squadName,
+        squad: sessionSquads.length > 0 ? {
+          id: sessionSquads[0].id,
+          name: combinedSquadName,
           swimmerCount: squadSwimmers.length,
           ageRange: minAge && maxAge ? `${minAge}-${maxAge}` : null,
           averageAge: avgAge,
@@ -879,16 +899,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const { session } = sessionData;
       
-      // Get the squad for this session
-      const squad = session.squadId ? await storage.getSquad(session.squadId) : null;
+      const allSessionSquads = await storage.getAllSessionSquads();
+      const sessionSquadIds = allSessionSquads
+        .filter(ss => ss.sessionId === sessionId && ss.recordStatus === 'active')
+        .map(ss => ss.squadId);
+      const effectiveSquadIds = sessionSquadIds.length > 0
+        ? sessionSquadIds
+        : (session.squadId ? [session.squadId] : []);
+
+      const allSquads = await storage.getSquads();
+      const sessionSquads = allSquads.filter(sq => effectiveSquadIds.includes(sq.id));
+      const combinedSquadName = sessionSquads.map(sq => sq.squadName).join(', ');
       
-      // Get swimmers in this squad
       const allSwimmers = await storage.getSwimmers();
-      const squadSwimmers = squad 
-        ? allSwimmers.filter(s => s.squadId === squad.id)
-        : [];
+      const squadSwimmers = allSwimmers.filter(s => effectiveSquadIds.includes(s.squadId));
       
-      // Calculate swimmer ages
       const today = new Date();
       const swimmerAges = squadSwimmers.map(swimmer => {
         const dob = new Date(swimmer.dob);
@@ -905,17 +930,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         : null;
       const minAge = swimmerAges.length > 0 ? Math.min(...swimmerAges) : null;
       const maxAge = swimmerAges.length > 0 ? Math.max(...swimmerAges) : null;
+
+      const sessionSquadMap = new Map<string, string[]>();
+      for (const ss of allSessionSquads.filter(ss => ss.recordStatus === 'active')) {
+        const existing = sessionSquadMap.get(ss.sessionId) || [];
+        existing.push(ss.squadId);
+        sessionSquadMap.set(ss.sessionId, existing);
+      }
       
-      // Get recent sessions for this squad (last 10)
       const allSessions = await storage.getSessions();
-      const squadSessions = squad
+      const squadSessions = effectiveSquadIds.length > 0
         ? allSessions
-            .filter(s => s.squadId === squad.id && s.id !== sessionId)
+            .filter(s => {
+              if (s.id === sessionId) return false;
+              const sSquadIds = sessionSquadMap.get(s.id) || (s.squadId ? [s.squadId] : []);
+              return sSquadIds.some(sid => effectiveSquadIds.includes(sid));
+            })
             .sort((a, b) => new Date(b.sessionDate).getTime() - new Date(a.sessionDate).getTime())
             .slice(0, 10)
         : [];
       
-      // Calculate average distances from recent sessions
       const recentDistances = squadSessions
         .filter(s => s.totalDistance > 0)
         .map(s => s.totalDistance);
@@ -924,7 +958,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ? Math.round(recentDistances.reduce((a, b) => a + b, 0) / recentDistances.length)
         : null;
       
-      // Get common focus areas from recent sessions
       const focusCounts: Record<string, number> = {};
       squadSessions.forEach(s => {
         if (s.focus) {
@@ -936,10 +969,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .slice(0, 3)
         .map(([focus]) => focus);
       
-      // Get location info
       const location = session.poolId ? await storage.getLocation(session.poolId) : null;
       
-      // Build the context response
       const aiContext = {
         currentSession: {
           id: session.id,
@@ -948,9 +979,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           content: session.sessionContent,
           totalDistance: session.totalDistance || null,
         },
-        squad: squad ? {
-          id: squad.id,
-          name: squad.squadName,
+        squad: sessionSquads.length > 0 ? {
+          id: sessionSquads[0].id,
+          name: combinedSquadName,
           swimmerCount: squadSwimmers.length,
           ageRange: minAge && maxAge ? `${minAge}-${maxAge}` : null,
           averageAge: avgAge,
