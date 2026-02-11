@@ -181,11 +181,15 @@ export function MonthCalendarView({
                       const primarySquad = sessionSquads[0];
                       if (!primarySquad) return null;
                       const squadLabel = sessionSquads.map(s => s!.name).join(' / ');
+                      const colors = sessionSquads.map(s => s!.color);
+                      const bgStyle = colors.length > 1
+                        ? { background: `linear-gradient(135deg, ${colors.map((c, i) => `${c} ${(i / colors.length) * 100}%, ${c} ${((i + 1) / colors.length) * 100}%`).join(', ')})` }
+                        : { backgroundColor: primarySquad.color };
                       return (
                         <div
                           key={session.id}
                           className="text-xs px-2 py-1 rounded truncate text-white"
-                          style={{ backgroundColor: primarySquad.color }}
+                          style={bgStyle}
                           title={`${squadLabel} - ${session.focus}`}
                           data-testid={`session-badge-${session.id}`}
                         >

@@ -185,12 +185,16 @@ export function DayListView({
 
                   if (!primarySquad) return null;
                   const squadLabel = sessionSquadsList.map(s => s!.name).join(' / ');
+                  const colors = sessionSquadsList.map(s => s!.color);
+                  const bgStyle = colors.length > 1
+                    ? { background: `linear-gradient(135deg, ${colors.map((c, i) => `${c} ${(i / colors.length) * 100}%, ${c} ${((i + 1) / colors.length) * 100}%`).join(', ')})` }
+                    : { backgroundColor: primarySquad.color };
 
                   return (
                     <div
                       key={session.id}
                       className="p-3 rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
-                      style={{ backgroundColor: primarySquad.color }}
+                      style={bgStyle}
                       onClick={() => onSessionClick(session)}
                       data-testid={`session-item-${session.id}`}
                     >

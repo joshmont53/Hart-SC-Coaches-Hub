@@ -1105,6 +1105,7 @@ function CalendarApp() {
                   competitionCoaching={competitionCoaching}
                   attendance={allAttendance}
                   sessionFeedback={sessionFeedback}
+                  sessionSquadMap={sessionSquadMap}
                   onNavigateToSession={(session) => {
                     setSelectedSessionId(session.id);
                     setManagementView('calendar');

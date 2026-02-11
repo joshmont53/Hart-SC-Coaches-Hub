@@ -249,6 +249,10 @@ export function DayCalendarView({
                           const primarySquad = sessionSquads[0];
                           if (!primarySquad) return null;
                           const squadLabel = sessionSquads.map(s => s!.name).join(' / ');
+                          const colors = sessionSquads.map(s => s!.color);
+                          const bgStyle = colors.length > 1
+                            ? { background: `linear-gradient(135deg, ${colors.map((c, i) => `${c} ${(i / colors.length) * 100}%, ${c} ${((i + 1) / colors.length) * 100}%`).join(', ')})` }
+                            : { backgroundColor: primarySquad.color };
 
                           const { top, height } = getSessionPosition(session);
                           
@@ -281,7 +285,7 @@ export function DayCalendarView({
                               key={session.id}
                               className="absolute p-2 rounded text-white text-sm overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
                               style={{
-                                backgroundColor: primarySquad.color,
+                                ...bgStyle,
                                 top: `${top}px`,
                                 height: `${height}px`,
                                 left: left,

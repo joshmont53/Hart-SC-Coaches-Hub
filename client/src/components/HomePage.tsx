@@ -46,6 +46,7 @@ interface HomePageProps {
   competitionCoaching: CompetitionCoaching[];
   attendance: Attendance[];
   sessionFeedback: SessionFeedback[];
+  sessionSquadMap: Record<string, string[]>;
   onNavigateToSession: (session: Session) => void;
   onNavigateToCalendar: () => void;
   onAddSession: () => void;
@@ -62,6 +63,7 @@ export function HomePage({
   competitionCoaching,
   attendance,
   sessionFeedback,
+  sessionSquadMap,
   onNavigateToSession,
   onNavigateToCalendar,
   onAddSession,
@@ -388,7 +390,13 @@ export function HomePage({
               </p>
               <div className="space-y-1.5">
                 {displayedIncompleteSessions.map(({ session }) => {
-                  const squad = squads.find(s => s.id === session.squadId);
+                  const squadIds = sessionSquadMap[session.id] || [session.squadId];
+                  const sessionSquadsList = squadIds
+                    .map(id => squads.find(s => s.id === id))
+                    .filter(Boolean);
+                  const squadLabel = sessionSquadsList.length > 0
+                    ? sessionSquadsList.map(s => s!.name).join(' / ')
+                    : squads.find(s => s.id === session.squadId)?.name || 'Unknown';
                   
                   return (
                     <div 
@@ -403,7 +411,7 @@ export function HomePage({
                       <div className="flex items-center gap-2 flex-1 min-w-0">
                         <CalendarDays className="h-3.5 w-3.5 text-orange-600 flex-shrink-0" />
                         <div className="flex-1 min-w-0">
-                          <div className="font-medium text-sm truncate">{squad?.name}</div>
+                          <div className="font-medium text-sm truncate">{squadLabel}</div>
                           <div className="text-xs text-muted-foreground">
                             {format(new Date(session.date), 'MMM d')} • {session.startTime}
                           </div>
@@ -449,7 +457,14 @@ export function HomePage({
               {thisWeekUpcomingSessions.length > 0 ? (
                 <div className="space-y-2">
                   {thisWeekUpcomingSessions.map(session => {
-                    const squad = squads.find(s => s.id === session.squadId);
+                    const squadIds = sessionSquadMap[session.id] || [session.squadId];
+                    const sessionSquadsList = squadIds
+                      .map(id => squads.find(s => s.id === id))
+                      .filter(Boolean);
+                    const squadLabel = sessionSquadsList.length > 0
+                      ? sessionSquadsList.map(s => s!.name).join(' / ')
+                      : squads.find(s => s.id === session.squadId)?.name || 'Unknown';
+                    const colors = sessionSquadsList.map(s => s!.color);
                     const sessionDate = new Date(session.date);
                     const isSessionToday = isToday(sessionDate);
                     
@@ -460,11 +475,24 @@ export function HomePage({
                         onClick={() => onNavigateToSession(session)}
                         data-testid={`upcoming-session-${session.id}`}
                       >
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1 min-w-0">
-                            <div className="font-medium text-sm truncate">{squad?.name}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {isSessionToday ? 'Today' : format(sessionDate, 'EEE, MMM d')} • {session.startTime}
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            {colors.length > 0 && (
+                              <div className="flex flex-shrink-0">
+                                {colors.map((color, i) => (
+                                  <div
+                                    key={i}
+                                    className="w-2.5 h-2.5 rounded-full border border-white"
+                                    style={{ backgroundColor: color, marginLeft: i > 0 ? '-4px' : '0' }}
+                                  />
+                                ))}
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium text-sm truncate">{squadLabel}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {isSessionToday ? 'Today' : format(sessionDate, 'EEE, MMM d')} • {session.startTime}
+                              </div>
                             </div>
                           </div>
                           {isSessionToday && (
