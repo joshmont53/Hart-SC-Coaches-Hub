@@ -1623,7 +1623,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const getSquadName = (session: typeof monthSessions[0]) => {
         const squadIds = sessionSquadMap.get(session.id);
         if (squadIds && squadIds.length > 0) {
-          return squadIds.map(id => squadMap.get(id)?.squadName || 'Unknown Squad').join(', ');
+          return squadIds.map(id => squadMap.get(id)?.squadName || 'Unknown Squad').join(' & ');
         }
         const squad = squadMap.get(session.squadId);
         return squad?.squadName || 'Unknown Squad';

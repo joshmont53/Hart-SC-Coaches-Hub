@@ -291,7 +291,13 @@ export function InvoiceTracker({ onBack }: InvoiceTrackerProps) {
       `£${invoiceData.totals.totalEarnings.toFixed(2)}`,
     ]);
 
-    const csvContent = csvRows.map(row => row.join(',')).join('\n');
+    const escapeCsvCell = (cell: string) => {
+      if (cell.includes(',') || cell.includes('"') || cell.includes('\n')) {
+        return `"${cell.replace(/"/g, '""')}"`;
+      }
+      return cell;
+    };
+    const csvContent = csvRows.map(row => row.map(escapeCsvCell).join(',')).join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
