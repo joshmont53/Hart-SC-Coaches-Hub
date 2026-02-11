@@ -36,6 +36,10 @@ export default function SessionDetail() {
     queryKey: ["/api/attendance", sessionId],
     enabled: !!sessionId,
   });
+  const { data: sessionSquads } = useQuery<{ id: string; sessionId: string; squadId: string; recordStatus: string }[]>({
+    queryKey: ["/api/session-squads", sessionId],
+    enabled: !!sessionId,
+  });
   const { data: currentCoach } = useQuery<Coach>({
     queryKey: ["/api/coaches/me"],
   });
@@ -139,7 +143,13 @@ export default function SessionDetail() {
     return location ? `${location.poolName} (${location.poolType})` : "Unknown Pool";
   };
 
-  const squadSwimmers = swimmers?.filter(s => s.squadId === session.squadId) || [];
+  const activeSessionSquadIds = sessionSquads
+    ?.filter(ss => ss.recordStatus === 'active')
+    .map(ss => ss.squadId) || [];
+  const allSquadIds = activeSessionSquadIds.length > 0
+    ? activeSessionSquadIds
+    : session?.squadId ? [session.squadId] : [];
+  const squadSwimmers = swimmers?.filter(s => allSquadIds.includes(s.squadId)) || [];
 
   const strokeData = [
     {
@@ -254,7 +264,11 @@ export default function SessionDetail() {
               <CardHeader>
                 <div className="flex items-start justify-between gap-4 flex-wrap">
                   <div>
-                    <CardTitle className="text-xl mb-2">{getSquadName(session.squadId)}</CardTitle>
+                    <CardTitle className="text-xl mb-2">
+                      {allSquadIds.length > 1
+                        ? allSquadIds.map(id => getSquadName(id)).join(' / ')
+                        : getSquadName(session.squadId)}
+                    </CardTitle>
                     <CardDescription>{getLocationName(session.poolId)}</CardDescription>
                   </div>
                   <Badge variant="secondary" className="text-sm">
@@ -371,7 +385,9 @@ export default function SessionDetail() {
                   <div>
                     <CardTitle>Attendance</CardTitle>
                     <CardDescription>
-                      {squadSwimmers.length} swimmers in {getSquadName(session.squadId)}
+                      {squadSwimmers.length} swimmers in {allSquadIds.length > 1
+                        ? allSquadIds.map(id => getSquadName(id)).join(' / ')
+                        : getSquadName(session.squadId)}
                     </CardDescription>
                   </div>
                   <Button

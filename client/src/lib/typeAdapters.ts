@@ -87,6 +87,7 @@ export interface DistanceBreakdown {
 export interface Session {
   id: string;
   squadId: string;
+  squadIds?: string[];
   locationId: string;
   leadCoachId: string;
   secondCoachId?: string | null;
@@ -332,7 +333,7 @@ export function adaptSession(backend: BackendSession & { attendance?: BackendAtt
 
 export function adaptSessionToBackend(
   frontend: Omit<Session, 'id' | 'distanceBreakdown' | 'attendance'>
-): Omit<BackendSession, 'id' | 'createdAt' | 'updatedAt'> {
+): Omit<BackendSession, 'id' | 'createdAt' | 'updatedAt'> & { squadIds?: string[] } {
   const startParts = frontend.startTime.split(':');
   const endParts = frontend.endTime.split(':');
   const startMinutes = parseInt(startParts[0]) * 60 + parseInt(startParts[1]);
@@ -346,6 +347,7 @@ export function adaptSessionToBackend(
     duration: durationHours.toFixed(2),
     poolId: frontend.locationId,
     squadId: frontend.squadId,
+    squadIds: frontend.squadIds,
     leadCoachId: frontend.leadCoachId,
     secondCoachId: frontend.secondCoachId || null,
     helperId: frontend.helperId || null,

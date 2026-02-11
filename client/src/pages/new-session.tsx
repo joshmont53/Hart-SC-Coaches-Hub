@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -11,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { ArrowLeft, ArrowRight, Save, CheckCircle2, AlertCircle } from "lucide-react";
+import { ArrowLeft, ArrowRight, Save, CheckCircle2, AlertCircle, ChevronDown, X } from "lucide-react";
 import { useLocation } from "wouter";
 import type { Coach, Squad, Location, Swimmer } from "@shared/schema";
 
@@ -20,7 +21,7 @@ const sessionFormSchema = z.object({
   startTime: z.string().min(1, "Start time is required"),
   endTime: z.string().min(1, "End time is required"),
   poolId: z.string().min(1, "Pool is required"),
-  squadId: z.string().min(1, "Squad is required"),
+  squadIds: z.array(z.string()).min(1, "At least one squad is required"),
   leadCoachId: z.string().min(1, "Lead coach is required"),
   secondCoachId: z.string().optional(),
   helperId: z.string().optional(),
@@ -61,6 +62,18 @@ export default function NewSession() {
   const [isParsing, setIsParsing] = useState(false);
   const { toast } = useToast();
   const parseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [squadDropdownOpen, setSquadDropdownOpen] = useState(false);
+  const squadDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (squadDropdownRef.current && !squadDropdownRef.current.contains(event.target as Node)) {
+        setSquadDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const { data: coaches } = useQuery<Coach[]>({ queryKey: ["/api/coaches"] });
   const { data: squads } = useQuery<Squad[]>({ queryKey: ["/api/squads"] });
@@ -73,6 +86,7 @@ export default function NewSession() {
       sessionDate: new Date().toISOString().split('T')[0],
       startTime: "19:00",
       endTime: "21:00",
+      squadIds: [],
       sessionContent: "",
       totalFrontCrawlSwim: 0,
       totalFrontCrawlDrill: 0,
@@ -201,8 +215,11 @@ export default function NewSession() {
         data.totalIMSwim + data.totalIMDrill + data.totalIMKick + data.totalIMPull +
         data.totalNo1Swim + data.totalNo1Drill + data.totalNo1Kick + data.totalNo1Pull;
 
+      const { squadIds, ...restData } = data;
       const payload = {
-        ...data,
+        ...restData,
+        squadId: squadIds[0],
+        squadIds,
         secondCoachId: data.secondCoachId === "none" ? undefined : data.secondCoachId,
         helperId: data.helperId === "none" ? undefined : data.helperId,
         duration,
@@ -351,24 +368,86 @@ export default function NewSession() {
                     />
                     <FormField
                       control={form.control}
-                      name="squadId"
+                      name="squadIds"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Squad</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-squad">
-                                <SelectValue placeholder="Select squad" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {squads?.map((squad) => (
-                                <SelectItem key={squad.id} value={squad.id}>
-                                  {squad.squadName}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <FormLabel>Squad(s)</FormLabel>
+                          <div ref={squadDropdownRef} className="relative">
+                            <button
+                              type="button"
+                              onClick={() => setSquadDropdownOpen(!squadDropdownOpen)}
+                              className="flex items-center justify-between w-full min-h-9 rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                              data-testid="select-squad"
+                            >
+                              <span className="text-muted-foreground">
+                                {field.value.length === 0
+                                  ? "Select squad(s)"
+                                  : `${field.value.length} squad${field.value.length > 1 ? 's' : ''} selected`}
+                              </span>
+                              <ChevronDown className="h-4 w-4 opacity-50 shrink-0" />
+                            </button>
+                            {squadDropdownOpen && (
+                              <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover p-1 shadow-md">
+                                {squads?.map((squad) => (
+                                  <button
+                                    key={squad.id}
+                                    type="button"
+                                    onClick={() => {
+                                      const newValue = field.value.includes(squad.id)
+                                        ? field.value.filter((id: string) => id !== squad.id)
+                                        : [...field.value, squad.id];
+                                      field.onChange(newValue);
+                                    }}
+                                    className="flex items-center gap-2 w-full rounded-sm px-2 py-1.5 text-sm hover-elevate cursor-pointer"
+                                    data-testid={`option-squad-${squad.id}`}
+                                  >
+                                    <div
+                                      className="h-4 w-4 rounded-sm border flex items-center justify-center shrink-0"
+                                      style={{
+                                        backgroundColor: field.value.includes(squad.id) ? (squad.squadColor || '#3b82f6') : 'transparent',
+                                        borderColor: squad.squadColor || '#3b82f6',
+                                      }}
+                                    >
+                                      {field.value.includes(squad.id) && (
+                                        <svg className="h-3 w-3 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                                          <polyline points="20 6 9 17 4 12" />
+                                        </svg>
+                                      )}
+                                    </div>
+                                    <div className="h-3 w-3 rounded-full shrink-0" style={{ backgroundColor: squad.squadColor || '#3b82f6' }} />
+                                    <span>{squad.squadName}</span>
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          {field.value.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 mt-1.5">
+                              {field.value.map((squadId: string) => {
+                                const squad = squads?.find(s => s.id === squadId);
+                                if (!squad) return null;
+                                return (
+                                  <Badge
+                                    key={squadId}
+                                    variant="secondary"
+                                    className="gap-1"
+                                    data-testid={`badge-squad-${squadId}`}
+                                  >
+                                    <div className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: squad.squadColor || '#3b82f6' }} />
+                                    {squad.squadName}
+                                    <button
+                                      type="button"
+                                      onClick={() => field.onChange(field.value.filter((id: string) => id !== squadId))}
+                                      className="ml-0.5"
+                                      data-testid={`button-remove-squad-${squadId}`}
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </button>
+                                  </Badge>
+                                );
+                              })}
+                            </div>
+                          )}
                           <FormMessage />
                         </FormItem>
                       )}

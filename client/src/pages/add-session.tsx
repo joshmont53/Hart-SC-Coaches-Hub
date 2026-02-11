@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Save, X, ChevronDown } from 'lucide-react';
 import type { Session, SessionFocus, Squad, Location, Coach } from '../lib/typeAdapters';
 
 interface AddSessionProps {
@@ -25,7 +26,7 @@ const sessionFocusOptions: SessionFocus[] = [
 
 export function AddSession({ squads, locations, coaches, onSave, onCancel }: AddSessionProps) {
   const [formData, setFormData] = useState<{
-    squadId: string;
+    squadIds: string[];
     locationId: string;
     leadCoachId: string;
     secondCoachId: string;
@@ -36,7 +37,7 @@ export function AddSession({ squads, locations, coaches, onSave, onCancel }: Add
     endTime: string;
     focus: SessionFocus | '';
   }>({
-    squadId: '',
+    squadIds: [],
     locationId: '',
     leadCoachId: '',
     secondCoachId: 'none',
@@ -48,9 +49,38 @@ export function AddSession({ squads, locations, coaches, onSave, onCancel }: Add
     focus: '',
   });
 
+  const [squadDropdownOpen, setSquadDropdownOpen] = useState(false);
+  const squadDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (squadDropdownRef.current && !squadDropdownRef.current.contains(event.target as Node)) {
+        setSquadDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const toggleSquad = (squadId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      squadIds: prev.squadIds.includes(squadId)
+        ? prev.squadIds.filter(id => id !== squadId)
+        : [...prev.squadIds, squadId],
+    }));
+  };
+
+  const removeSquad = (squadId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      squadIds: prev.squadIds.filter(id => id !== squadId),
+    }));
+  };
+
   const isFormValid = () => {
     return (
-      formData.squadId &&
+      formData.squadIds.length > 0 &&
       formData.locationId &&
       formData.leadCoachId &&
       formData.setWriterId &&
@@ -65,7 +95,8 @@ export function AddSession({ squads, locations, coaches, onSave, onCancel }: Add
     if (!isFormValid()) return;
 
     const sessionData: Omit<Session, 'id'> = {
-      squadId: formData.squadId,
+      squadId: formData.squadIds[0],
+      squadIds: formData.squadIds,
       locationId: formData.locationId,
       leadCoachId: formData.leadCoachId,
       secondCoachId: formData.secondCoachId !== 'none' ? formData.secondCoachId : undefined,
@@ -149,26 +180,82 @@ export function AddSession({ squads, locations, coaches, onSave, onCancel }: Add
                   </div>
                 </div>
 
-                {/* Squad */}
+                {/* Squad(s) */}
                 <div className="space-y-2">
-                  <Label htmlFor="squad">
-                    Squad <span className="text-destructive">*</span>
+                  <Label>
+                    Squad(s) <span className="text-destructive">*</span>
                   </Label>
-                  <Select
-                    value={formData.squadId}
-                    onValueChange={(value) => setFormData({ ...formData, squadId: value })}
-                  >
-                    <SelectTrigger id="squad" data-testid="select-squad">
-                      <SelectValue placeholder="Select squad" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {squads.map((squad) => (
-                        <SelectItem key={squad.id} value={squad.id}>
-                          {squad.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div ref={squadDropdownRef} className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setSquadDropdownOpen(!squadDropdownOpen)}
+                      className="flex items-center justify-between w-full min-h-9 rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                      data-testid="select-squad"
+                    >
+                      <span className="text-muted-foreground">
+                        {formData.squadIds.length === 0
+                          ? "Select squad(s)"
+                          : `${formData.squadIds.length} squad${formData.squadIds.length > 1 ? 's' : ''} selected`}
+                      </span>
+                      <ChevronDown className="h-4 w-4 opacity-50 shrink-0" />
+                    </button>
+                    {squadDropdownOpen && (
+                      <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover p-1 shadow-md">
+                        {squads.map((squad) => (
+                          <button
+                            key={squad.id}
+                            type="button"
+                            onClick={() => toggleSquad(squad.id)}
+                            className="flex items-center gap-2 w-full rounded-sm px-2 py-1.5 text-sm hover-elevate cursor-pointer"
+                            data-testid={`option-squad-${squad.id}`}
+                          >
+                            <div
+                              className="h-4 w-4 rounded-sm border flex items-center justify-center shrink-0"
+                              style={{
+                                backgroundColor: formData.squadIds.includes(squad.id) ? squad.color : 'transparent',
+                                borderColor: squad.color,
+                              }}
+                            >
+                              {formData.squadIds.includes(squad.id) && (
+                                <svg className="h-3 w-3 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                                  <polyline points="20 6 9 17 4 12" />
+                                </svg>
+                              )}
+                            </div>
+                            <div className="h-3 w-3 rounded-full shrink-0" style={{ backgroundColor: squad.color }} />
+                            <span>{squad.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {formData.squadIds.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-1.5">
+                      {formData.squadIds.map((squadId) => {
+                        const squad = squads.find(s => s.id === squadId);
+                        if (!squad) return null;
+                        return (
+                          <Badge
+                            key={squadId}
+                            variant="secondary"
+                            className="gap-1"
+                            data-testid={`badge-squad-${squadId}`}
+                          >
+                            <div className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: squad.color }} />
+                            {squad.name}
+                            <button
+                              type="button"
+                              onClick={() => removeSquad(squadId)}
+                              className="ml-0.5"
+                              data-testid={`button-remove-squad-${squadId}`}
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
 
                 {/* Location */}

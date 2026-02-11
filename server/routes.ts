@@ -508,10 +508,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/session-squads/:sessionId", requireAuth, async (req, res) => {
+    try {
+      const sessionSquadRecords = await storage.getSessionSquads(req.params.sessionId);
+      res.json(sessionSquadRecords);
+    } catch (error) {
+      console.error("Error fetching session squads:", error);
+      res.status(500).json({ message: "Failed to fetch session squads" });
+    }
+  });
+
   app.post("/api/sessions", requireAuth, async (req, res) => {
     try {
-      const validatedData = insertSwimmingSessionSchema.parse(req.body);
+      const { squadIds, ...sessionBody } = req.body;
+      const validatedData = insertSwimmingSessionSchema.parse(sessionBody);
       let session = await storage.createSession(validatedData);
+
+      // Create session_squads entries for multi-squad support
+      const allSquadIds: string[] = squadIds && Array.isArray(squadIds) && squadIds.length > 0
+        ? squadIds
+        : [validatedData.squadId];
+      
+      for (const squadId of allSquadIds) {
+        await storage.createSessionSquad({ sessionId: session.id, squadId });
+      }
 
       // Run drill detection if session content exists
       if (session.sessionContent && session.sessionContent.trim()) {

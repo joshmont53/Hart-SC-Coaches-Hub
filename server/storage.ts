@@ -15,6 +15,7 @@ import {
   sessionTemplates,
   drills,
   sessionFeedback,
+  sessionSquads,
   deviceTokens,
   notificationLog,
   type User,
@@ -47,6 +48,8 @@ import {
   type InsertDrill,
   type SessionFeedback,
   type InsertSessionFeedback,
+  type SessionSquad,
+  type InsertSessionSquad,
   type DeviceToken,
   type InsertDeviceToken,
   type NotificationLog,
@@ -156,6 +159,11 @@ export interface IStorage {
   updateDrill(id: string, drill: Partial<InsertDrill>): Promise<Drill>;
   deleteDrill(id: string): Promise<void>;
   
+  // Session Squads operations (Multi-Squad Sessions Feature)
+  getSessionSquads(sessionId: string): Promise<SessionSquad[]>;
+  createSessionSquad(sessionSquad: InsertSessionSquad): Promise<SessionSquad>;
+  deactivateSessionSquad(sessionId: string, squadId: string): Promise<void>;
+
   // Session Feedback operations (Feedback Feature - No impact on existing functionality)
   getFeedbackBySession(sessionId: string): Promise<SessionFeedback | undefined>;
   getAllFeedback(): Promise<SessionFeedback[]>;
@@ -756,6 +764,26 @@ export class DatabaseStorage implements IStorage {
     if (result.length === 0) {
       throw new Error("Drill not found");
     }
+  }
+
+  // ============================================================================
+  // Session Squads operations (Multi-Squad Sessions Feature)
+  // ============================================================================
+
+  async getSessionSquads(sessionId: string): Promise<SessionSquad[]> {
+    return await db.select().from(sessionSquads)
+      .where(and(eq(sessionSquads.sessionId, sessionId), eq(sessionSquads.recordStatus, "active")));
+  }
+
+  async createSessionSquad(sessionSquad: InsertSessionSquad): Promise<SessionSquad> {
+    const [newSessionSquad] = await db.insert(sessionSquads).values(sessionSquad).returning();
+    return newSessionSquad;
+  }
+
+  async deactivateSessionSquad(sessionId: string, squadId: string): Promise<void> {
+    await db.update(sessionSquads)
+      .set({ recordStatus: "inactive" })
+      .where(and(eq(sessionSquads.sessionId, sessionId), eq(sessionSquads.squadId, squadId)));
   }
 
   // ============================================================================

@@ -100,6 +100,12 @@ export function SessionDetail({
     queryKey: ['/api/drills'],
   });
 
+  // Fetch session squads for multi-squad support
+  const { data: sessionSquadRecords = [] } = useQuery<{ id: string; sessionId: string; squadId: string; recordStatus: string }[]>({
+    queryKey: ['/api/session-squads', sessionId],
+    enabled: !!sessionId,
+  });
+
   // Fetch current coach for feedback form
   const { data: currentCoach } = useQuery<BackendCoach>({
     queryKey: ['/api/coaches/me'],
@@ -128,6 +134,14 @@ export function SessionDetail({
     [backendSquads]
   );
 
+  const activeSessionSquadIds = useMemo(() => {
+    const ids = sessionSquadRecords
+      .filter(ss => ss.recordStatus === 'active')
+      .map(ss => ss.squadId);
+    return ids.length > 0 ? ids : (session?.squadId ? [session.squadId] : []);
+  }, [sessionSquadRecords, session?.squadId]);
+
+  const sessionSquadsList = squads.filter(s => activeSessionSquadIds.includes(s.id));
   const squad = squads.find(s => s.id === session?.squadId);
   const location = locations.find(l => l.id === session?.locationId);
 
@@ -352,7 +366,7 @@ export function SessionDetail({
       });
       
       // Build attendance records by merging saved attendance with current squad swimmers
-      const currentSquadSwimmers = swimmers.filter((s) => s.squadId === session.squadId);
+      const currentSquadSwimmers = swimmers.filter((s) => activeSessionSquadIds.includes(s.squadId));
       const savedAttendance = session.attendance || [];
       
       const mergedAttendance = currentSquadSwimmers.map((swimmer) => {
@@ -402,7 +416,7 @@ export function SessionDetail({
   const helper = coaches.find((c) => c.id === session.helperId);
   const setWriter = coaches.find((c) => c.id === session.setWriterId);
 
-  const squadSwimmers = swimmers.filter((s) => s.squadId === session.squadId);
+  const squadSwimmers = swimmers.filter((s) => activeSessionSquadIds.includes(s.squadId));
 
   const getCoachName = (coachId?: string) => {
     if (!coachId) return null;
@@ -555,7 +569,11 @@ export function SessionDetail({
                 <ArrowLeft className="h-5 w-5" />
               </Button>
               <div className="min-w-0">
-                <h1 className="truncate">{squad?.name || 'Unknown Squad'} - {session.focus}</h1>
+                <h1 className="truncate">
+                  {sessionSquadsList.length > 1
+                    ? sessionSquadsList.map(s => s.name).join(' / ')
+                    : squad?.name || 'Unknown Squad'} - {session.focus}
+                </h1>
                 <p className="text-sm text-muted-foreground">
                   {session.date && isValid(new Date(session.date)) ? format(session.date, 'EEEE, MMMM dd, yyyy') : 'Date unavailable'}
                 </p>
