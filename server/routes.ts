@@ -1612,18 +1612,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allSquads = await storage.getSquads();
       const squadMap = new Map(allSquads.map(squad => [squad.id, squad]));
 
+      const allSessionSquads = await storage.getAllSessionSquads();
+      const sessionSquadMap = new Map<string, string[]>();
+      for (const ss of allSessionSquads.filter(ss => ss.recordStatus === 'active')) {
+        const existing = sessionSquadMap.get(ss.sessionId) || [];
+        existing.push(ss.squadId);
+        sessionSquadMap.set(ss.sessionId, existing);
+      }
+
+      const getSquadName = (session: typeof monthSessions[0]) => {
+        const squadIds = sessionSquadMap.get(session.id);
+        if (squadIds && squadIds.length > 0) {
+          return squadIds.map(id => squadMap.get(id)?.squadName || 'Unknown Squad').join(', ');
+        }
+        const squad = squadMap.get(session.squadId);
+        return squad?.squadName || 'Unknown Squad';
+      };
+
       // Calculate coaching hours
       const coachingSessions = monthSessions.filter(s => 
         s.leadCoachId === coachId || s.secondCoachId === coachId || s.helperId === coachId
       );
 
       const sessionDetails = coachingSessions.map(s => {
-        const squad = squadMap.get(s.squadId);
         return {
           sessionId: s.id,
           sessionDate: s.sessionDate,
           squadId: s.squadId,
-          squadName: squad?.squadName || 'Unknown Squad',
+          squadName: getSquadName(s),
           startTime: s.startTime,
           endTime: s.endTime,
           duration: parseFloat(s.duration),
@@ -1636,12 +1652,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Calculate sessions written
       const sessionsWritten = monthSessions.filter(s => s.setWriterId === coachId);
       const sessionWritingDetails = sessionsWritten.map(s => {
-        const squad = squadMap.get(s.squadId);
         return {
           sessionId: s.id,
           sessionDate: s.sessionDate,
           squadId: s.squadId,
-          squadName: squad?.squadName || 'Unknown Squad',
+          squadName: getSquadName(s),
         };
       });
 
