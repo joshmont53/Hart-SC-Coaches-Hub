@@ -583,8 +583,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/sessions/:id", requireAuth, async (req, res) => {
     try {
-      const validatedData = insertSwimmingSessionSchema.partial().parse(req.body);
+      const { squadIds, ...sessionBody } = req.body;
+      const validatedData = insertSwimmingSessionSchema.partial().parse(sessionBody);
       let session = await storage.updateSession(req.params.id, validatedData);
+
+      // Update session_squads if squadIds were provided
+      if (squadIds && Array.isArray(squadIds) && squadIds.length > 0) {
+        await storage.updateSessionSquads(session.id, squadIds);
+      }
 
       // Re-run drill detection if session content was updated
       if (validatedData.sessionContent !== undefined && session.sessionContent && session.sessionContent.trim()) {

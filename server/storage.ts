@@ -792,6 +792,38 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(sessionSquads.sessionId, sessionId), eq(sessionSquads.squadId, squadId)));
   }
 
+  async getAllSessionSquadsIncludingInactive(sessionId: string): Promise<SessionSquad[]> {
+    return await db.select().from(sessionSquads)
+      .where(eq(sessionSquads.sessionId, sessionId));
+  }
+
+  async reactivateSessionSquad(sessionId: string, squadId: string): Promise<void> {
+    await db.update(sessionSquads)
+      .set({ recordStatus: "active" })
+      .where(and(eq(sessionSquads.sessionId, sessionId), eq(sessionSquads.squadId, squadId)));
+  }
+
+  async updateSessionSquads(sessionId: string, newSquadIds: string[]): Promise<void> {
+    const existingAll = await this.getAllSessionSquadsIncludingInactive(sessionId);
+
+    for (const squadId of newSquadIds) {
+      const existing = existingAll.find(ss => ss.squadId === squadId);
+      if (existing) {
+        if (existing.recordStatus === "inactive") {
+          await this.reactivateSessionSquad(sessionId, squadId);
+        }
+      } else {
+        await this.createSessionSquad({ sessionId, squadId });
+      }
+    }
+
+    for (const existing of existingAll) {
+      if (!newSquadIds.includes(existing.squadId) && existing.recordStatus === "active") {
+        await this.deactivateSessionSquad(sessionId, existing.squadId);
+      }
+    }
+  }
+
   // ============================================================================
   // Session Feedback operations (Feedback Feature - No impact on existing functionality)
   // ============================================================================

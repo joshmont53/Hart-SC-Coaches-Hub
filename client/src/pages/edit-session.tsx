@@ -4,17 +4,19 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { ArrowLeft, ArrowRight, Save, AlertCircle, Lightbulb } from "lucide-react";
+import { ArrowLeft, ArrowRight, Save, AlertCircle, Lightbulb, ChevronDown, X } from "lucide-react";
 import { useLocation, useRoute } from "wouter";
-import type { Coach, Squad, Location, Swimmer, SwimmingSession } from "@shared/schema";
+import type { Coach, Squad, Location, Swimmer, SwimmingSession, SessionSquad } from "@shared/schema";
 import { SessionWriterHelper } from "@/components/SessionWriterHelper";
 
 const sessionFormSchema = z.object({
@@ -64,6 +66,9 @@ export default function EditSession() {
   const [step, setStep] = useState(1);
   const [isParsing, setIsParsing] = useState(false);
   const [isHelperOpen, setIsHelperOpen] = useState(false);
+  const [selectedSquadIds, setSelectedSquadIds] = useState<string[]>([]);
+  const [squadDropdownOpen, setSquadDropdownOpen] = useState(false);
+  const squadDropdownRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const parseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -72,10 +77,46 @@ export default function EditSession() {
     enabled: !!sessionId,
   });
 
+  const { data: sessionSquadRecords } = useQuery<SessionSquad[]>({
+    queryKey: ["/api/session-squads", sessionId],
+    enabled: !!sessionId,
+  });
+
   const { data: coaches } = useQuery<Coach[]>({ queryKey: ["/api/coaches"] });
   const { data: squads } = useQuery<Squad[]>({ queryKey: ["/api/squads"] });
   const { data: locations } = useQuery<Location[]>({ queryKey: ["/api/locations"] });
   const { data: swimmers } = useQuery<Swimmer[]>({ queryKey: ["/api/swimmers"] });
+
+  useEffect(() => {
+    if (sessionSquadRecords && sessionSquadRecords.length > 0) {
+      setSelectedSquadIds(sessionSquadRecords.map(ss => ss.squadId));
+    } else if (session) {
+      setSelectedSquadIds([session.squadId]);
+    }
+  }, [sessionSquadRecords, session]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (squadDropdownRef.current && !squadDropdownRef.current.contains(event.target as Node)) {
+        setSquadDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const toggleSquad = (squadId: string) => {
+    setSelectedSquadIds(prev => {
+      if (prev.includes(squadId)) {
+        if (prev.length === 1) return prev;
+        const updated = prev.filter(id => id !== squadId);
+        form.setValue("squadId", updated[0]);
+        return updated;
+      } else {
+        return [...prev, squadId];
+      }
+    });
+  };
 
   const form = useForm<SessionFormValues>({
     resolver: zodResolver(sessionFormSchema),
@@ -220,10 +261,12 @@ export default function EditSession() {
 
       const payload = {
         ...data,
+        squadId: selectedSquadIds[0] || data.squadId,
         secondCoachId: data.secondCoachId === "none" ? undefined : data.secondCoachId,
         helperId: data.helperId === "none" ? undefined : data.helperId,
         duration,
         totalDistance,
+        squadIds: selectedSquadIds,
       };
 
       await apiRequest("PUT", `/api/sessions/${sessionId}`, payload);
@@ -231,6 +274,8 @@ export default function EditSession() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/sessions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/sessions", sessionId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/session-squads"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/session-squads", sessionId] });
       navigate(`/sessions/${sessionId}`);
     },
     onError: (error: Error) => {
@@ -373,30 +418,83 @@ export default function EditSession() {
                         </FormItem>
                       )}
                     />
-                    <FormField
-                      control={form.control}
-                      name="squadId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Squad</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-squad">
-                                <SelectValue placeholder="Select squad" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {squads?.map((squad) => (
-                                <SelectItem key={squad.id} value={squad.id}>
-                                  {squad.squadName}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
+                    <div className="space-y-2">
+                      <Label>
+                        Squad(s) <span className="text-destructive">*</span>
+                      </Label>
+                      <div ref={squadDropdownRef} className="relative">
+                        <button
+                          type="button"
+                          onClick={() => setSquadDropdownOpen(!squadDropdownOpen)}
+                          className="flex items-center justify-between w-full min-h-9 rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                          data-testid="select-squad"
+                        >
+                          <span className="text-muted-foreground">
+                            {selectedSquadIds.length === 0
+                              ? "Select squad(s)"
+                              : `${selectedSquadIds.length} squad${selectedSquadIds.length > 1 ? 's' : ''} selected`}
+                          </span>
+                          <ChevronDown className="h-4 w-4 opacity-50 shrink-0" />
+                        </button>
+                        {squadDropdownOpen && (
+                          <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover p-1 shadow-md">
+                            {squads?.map((squad) => (
+                              <button
+                                key={squad.id}
+                                type="button"
+                                onClick={() => toggleSquad(squad.id)}
+                                className="flex items-center gap-2 w-full rounded-sm px-2 py-1.5 text-sm hover-elevate cursor-pointer"
+                                data-testid={`option-squad-${squad.id}`}
+                              >
+                                <div
+                                  className="h-4 w-4 rounded-sm border flex items-center justify-center shrink-0"
+                                  style={{
+                                    backgroundColor: selectedSquadIds.includes(squad.id) ? squad.color : 'transparent',
+                                    borderColor: squad.color,
+                                  }}
+                                >
+                                  {selectedSquadIds.includes(squad.id) && (
+                                    <svg className="h-3 w-3 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                                      <polyline points="20 6 9 17 4 12" />
+                                    </svg>
+                                  )}
+                                </div>
+                                <div className="h-3 w-3 rounded-full shrink-0" style={{ backgroundColor: squad.color }} />
+                                <span>{squad.squadName}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      {selectedSquadIds.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mt-1.5">
+                          {selectedSquadIds.map((squadId) => {
+                            const squad = squads?.find(s => s.id === squadId);
+                            if (!squad) return null;
+                            return (
+                              <Badge
+                                key={squadId}
+                                variant="secondary"
+                                className="text-xs text-white"
+                                style={{ backgroundColor: squad.color }}
+                              >
+                                {squad.squadName}
+                                {selectedSquadIds.length > 1 && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); toggleSquad(squadId); }}
+                                    className="ml-1"
+                                    data-testid={`remove-squad-${squadId}`}
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                )}
+                              </Badge>
+                            );
+                          })}
+                        </div>
                       )}
-                    />
+                    </div>
                   </div>
 
                   <div className="grid md:grid-cols-2 gap-4">
