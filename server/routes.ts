@@ -1763,6 +1763,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allSessions = await storage.getSessions();
       const allSquads = await storage.getSquads();
       const allCoaches = await storage.getCoaches();
+      const allSessionSquads = await storage.getAllSessionSquads();
+
+      // Build session-to-squads lookup (multi-squad support)
+      const sessionSquadMap = new Map<string, string[]>();
+      allSessionSquads.forEach(ss => {
+        const existing = sessionSquadMap.get(ss.sessionId) || [];
+        existing.push(ss.squadId);
+        sessionSquadMap.set(ss.sessionId, existing);
+      });
 
       // Create lookup maps
       const sessionMap = new Map(allSessions.map(s => [s.id, s]));
@@ -1772,13 +1781,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Enrich feedback with session data
       const enrichedFeedback = allFeedback.map(f => {
         const session = sessionMap.get(f.sessionId);
-        const squad = session ? squadMap.get(session.squadId) : undefined;
+        const squadIds = session ? (sessionSquadMap.get(session.id) || [session.squadId]) : [];
+        const squadNames = squadIds.map(id => squadMap.get(id)?.squadName).filter(Boolean);
         const coach = coachMap.get(f.coachId);
         return {
           ...f,
           session,
+          squadIds,
           squadId: session?.squadId,
-          squadName: squad?.squadName,
+          squadName: squadNames.join(', ') || undefined,
           sessionDate: session?.sessionDate,
           duration: session?.duration,
           coachName: coach ? `${coach.firstName} ${coach.lastName}` : undefined,
@@ -1789,7 +1800,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let filteredFeedback = enrichedFeedback;
 
       if (squadId && typeof squadId === 'string') {
-        filteredFeedback = filteredFeedback.filter(f => f.squadId === squadId);
+        filteredFeedback = filteredFeedback.filter(f => f.squadIds.includes(squadId));
       }
 
       if (coachId && typeof coachId === 'string') {
@@ -2062,7 +2073,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allFeedback = await storage.getAllFeedback();
       const allSessions = await storage.getSessions();
       const allSquads = await storage.getSquads();
+      const allSessionSquads = await storage.getAllSessionSquads();
       
+      // Build session-to-squads lookup (multi-squad support)
+      const sessionSquadMap = new Map<string, string[]>();
+      allSessionSquads.forEach(ss => {
+        const existing = sessionSquadMap.get(ss.sessionId) || [];
+        existing.push(ss.squadId);
+        sessionSquadMap.set(ss.sessionId, existing);
+      });
+
       // Create lookup maps
       const sessionMap = new Map(allSessions.map(s => [s.id, s]));
       const squadMap = new Map(allSquads.filter(s => s.recordStatus === 'active').map(s => [s.id, s.squadName]));
@@ -2071,7 +2091,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let filteredFeedback = allFeedback.filter((f: SessionFeedback) => {
         const session = sessionMap.get(f.sessionId);
         if (!session) return false;
-        if (squadId && session.squadId !== squadId) return false;
+        if (squadId) {
+          const sessionSquadIds = sessionSquadMap.get(session.id) || [session.squadId];
+          if (!sessionSquadIds.includes(squadId as string)) return false;
+        }
         if (coachId) {
           const isInvolved = session.leadCoachId === coachId || 
                             session.secondCoachId === coachId || 
@@ -2105,7 +2128,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             return session.focus || 'Unknown';
           }
           case 'squad': {
-            return squadMap.get(session.squadId) || 'Unknown';
+            const sSquadIds = sessionSquadMap.get(session.id) || [session.squadId];
+            const names = sSquadIds.map((id: string) => squadMap.get(id)).filter(Boolean);
+            return names.join(', ') || 'Unknown';
           }
           case 'staffing': {
             let count = 1; // Lead coach always present
@@ -2201,7 +2226,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allSessions = await storage.getSessions();
       const allSquads = await storage.getSquads();
       const allCoaches = await storage.getCoaches();
+      const allSessionSquads = await storage.getAllSessionSquads();
       
+      // Build session-to-squads lookup (multi-squad support)
+      const sessionSquadMap = new Map<string, string[]>();
+      allSessionSquads.forEach(ss => {
+        const existing = sessionSquadMap.get(ss.sessionId) || [];
+        existing.push(ss.squadId);
+        sessionSquadMap.set(ss.sessionId, existing);
+      });
+
       // Create lookup maps
       const sessionMap = new Map(allSessions.map(s => [s.id, s]));
       const squadMap = new Map(allSquads.filter(s => s.recordStatus === 'active').map(s => [s.id, s.squadName]));
@@ -2211,7 +2245,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const filteredFeedback = allFeedback.filter((f: SessionFeedback) => {
         const session = sessionMap.get(f.sessionId);
         if (!session) return false;
-        if (squadId && session.squadId !== squadId) return false;
+        if (squadId) {
+          const sessionSquadIds = sessionSquadMap.get(session.id) || [session.squadId];
+          if (!sessionSquadIds.includes(squadId as string)) return false;
+        }
         if (coachId) {
           const isInvolved = session.leadCoachId === coachId || 
                             session.secondCoachId === coachId || 
@@ -2491,15 +2528,25 @@ CRITICAL RULES:
 
       const allFeedback = await storage.getAllFeedback();
       const allSessions = await storage.getSessions();
+      const allSessionSquads = await storage.getAllSessionSquads();
       
+      // Build session-to-squads lookup (multi-squad support)
+      const sessionSquadMap = new Map<string, string[]>();
+      allSessionSquads.forEach(ss => {
+        const existing = sessionSquadMap.get(ss.sessionId) || [];
+        existing.push(ss.squadId);
+        sessionSquadMap.set(ss.sessionId, existing);
+      });
+
       // Create session lookup map
       const sessionMap = new Map(allSessions.map(s => [s.id, s]));
       
-      // Filter feedback by squad (and optionally focus)
+      // Filter feedback by squad (and optionally focus) using session_squads
       let filteredFeedback = allFeedback.filter((f: SessionFeedback) => {
         const session = sessionMap.get(f.sessionId);
         if (!session) return false;
-        if (session.squadId !== squadId) return false;
+        const sessionSquadIds = sessionSquadMap.get(session.id) || [session.squadId];
+        if (!sessionSquadIds.includes(squadId)) return false;
         if (sessionFocus && session.focus !== sessionFocus) return false;
         return true;
       });
@@ -2510,7 +2557,8 @@ CRITICAL RULES:
         filteredFeedback = allFeedback.filter((f: SessionFeedback) => {
           const session = sessionMap.get(f.sessionId);
           if (!session) return false;
-          return session.squadId === squadId;
+          const sessionSquadIds = sessionSquadMap.get(session.id) || [session.squadId];
+          return sessionSquadIds.includes(squadId);
         });
         usingFallback = filteredFeedback.length >= 1;
       }
@@ -2602,18 +2650,28 @@ CRITICAL RULES:
       const allFeedback = await storage.getAllFeedback();
       const allSessions = await storage.getSessions();
       const allSquads = await storage.getSquads();
+      const allSessionSquads = await storage.getAllSessionSquads();
       
+      // Build session-to-squads lookup (multi-squad support)
+      const sessionSquadMap = new Map<string, string[]>();
+      allSessionSquads.forEach(ss => {
+        const existing = sessionSquadMap.get(ss.sessionId) || [];
+        existing.push(ss.squadId);
+        sessionSquadMap.set(ss.sessionId, existing);
+      });
+
       // Create lookup maps
       const sessionMap = new Map(allSessions.map(s => [s.id, s]));
       const squadMap = new Map(allSquads.map(s => [s.id, s.squadName]));
       
       const squadName = squadMap.get(squadId as string) || 'Unknown Squad';
       
-      // Filter feedback by squad (and optionally focus)
+      // Filter feedback by squad (and optionally focus) using session_squads
       let filteredFeedback = allFeedback.filter((f: SessionFeedback) => {
         const session = sessionMap.get(f.sessionId);
         if (!session) return false;
-        if (session.squadId !== squadId) return false;
+        const sessionSquadIds = sessionSquadMap.get(session.id) || [session.squadId];
+        if (!sessionSquadIds.includes(squadId)) return false;
         if (sessionFocus && session.focus !== sessionFocus) return false;
         return true;
       });
@@ -2624,7 +2682,8 @@ CRITICAL RULES:
         filteredFeedback = allFeedback.filter((f: SessionFeedback) => {
           const session = sessionMap.get(f.sessionId);
           if (!session) return false;
-          return session.squadId === squadId;
+          const sessionSquadIds = sessionSquadMap.get(session.id) || [session.squadId];
+          return sessionSquadIds.includes(squadId);
         });
         usingFallback = filteredFeedback.length >= 3;
       }
