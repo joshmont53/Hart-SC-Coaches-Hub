@@ -9,11 +9,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { ArrowLeft, Calendar, Clock, MapPin, Users, Target, Trash2, Save, Edit, MessageSquare } from "lucide-react";
+import { ArrowLeft, Calendar, Clock, MapPin, Users, Target, Trash2, Save, Edit, MessageSquare, Copy } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { useState, useEffect } from "react";
 import type { SwimmingSession, Coach, Squad, Location, Swimmer, Attendance } from "@shared/schema";
 import { FeedbackForm } from "@/components/FeedbackForm";
+import { DuplicateSessionModal } from "@/components/DuplicateSessionModal";
 
 export default function SessionDetail() {
   const [, params] = useRoute("/sessions/:id");
@@ -22,6 +23,7 @@ export default function SessionDetail() {
   const sessionId = params?.id;
 
   const [attendanceData, setAttendanceData] = useState<Record<string, { status: string, notes: string | null }>>({});
+  const [duplicateModalOpen, setDuplicateModalOpen] = useState(false);
 
   const { data: session, isLoading } = useQuery<SwimmingSession>({
     queryKey: ["/api/sessions", sessionId],
@@ -228,6 +230,15 @@ export default function SessionDetail() {
                   Edit
                 </Button>
               </Link>
+              <Button
+                variant="outline"
+                size="default"
+                onClick={() => setDuplicateModalOpen(true)}
+                data-testid="button-duplicate-session"
+              >
+                <Copy className="w-4 h-4 mr-2" />
+                Duplicate
+              </Button>
               <Button
                 variant="destructive"
                 size="default"
@@ -494,6 +505,12 @@ export default function SessionDetail() {
           </TabsContent>
         </Tabs>
       </div>
+
+      <DuplicateSessionModal
+        session={session}
+        open={duplicateModalOpen}
+        onOpenChange={setDuplicateModalOpen}
+      />
     </div>
   );
 }

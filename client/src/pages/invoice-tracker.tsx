@@ -35,6 +35,7 @@ import {
   Trophy,
   FileText,
   Banknote,
+  Copy,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import type { Coach as BackendCoach, SwimmingSession, CompetitionCoaching, Squad, Competition, Location } from '@shared/schema';
@@ -82,6 +83,7 @@ interface InvoiceData {
       sessionDate: string;
       squadId: string;
       squadName: string;
+      isDuplicated?: boolean;
     }>;
     earnings: number;
   };
@@ -248,8 +250,8 @@ export function InvoiceTracker({ onBack }: InvoiceTrackerProps) {
       const sessionDate = new Date(session.sessionDate);
       csvRows.push([
         format(sessionDate, 'EEE dd MMM'),
-        session.squadName,
-        `£${invoiceData.rates.sessionWritingRate.toFixed(2)}`,
+        session.squadName + (session.isDuplicated ? ' (Duplicate)' : ''),
+        session.isDuplicated ? '£0.00' : `£${invoiceData.rates.sessionWritingRate.toFixed(2)}`,
       ]);
     });
 
@@ -470,10 +472,24 @@ export function InvoiceTracker({ onBack }: InvoiceTrackerProps) {
                   {invoiceData.sessionWriting.sessions.map((session) => {
                     const sessionDate = new Date(session.sessionDate);
                     return (
-                      <TableRow key={session.sessionId}>
+                      <TableRow key={session.sessionId} className={session.isDuplicated ? "text-muted-foreground" : ""}>
                         <TableCell>{format(sessionDate, 'EEE, dd MMM')}</TableCell>
-                        <TableCell>{session.squadName}</TableCell>
-                        <TableCell className="text-right">£{invoiceData.rates.sessionWritingRate.toFixed(2)}</TableCell>
+                        <TableCell className="flex items-center gap-2 flex-wrap">
+                          {session.squadName}
+                          {session.isDuplicated && (
+                            <Badge variant="outline" className="text-xs">
+                              <Copy className="w-3 h-3 mr-1" />
+                              Duplicate
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {session.isDuplicated ? (
+                            <span className="text-muted-foreground">£0.00</span>
+                          ) : (
+                            `£${invoiceData.rates.sessionWritingRate.toFixed(2)}`
+                          )}
+                        </TableCell>
                       </TableRow>
                     );
                   })}
@@ -611,13 +627,21 @@ export function InvoiceTracker({ onBack }: InvoiceTrackerProps) {
                     {invoiceData.sessionWriting.sessions.map((session) => {
                       const sessionDate = new Date(session.sessionDate);
                       return (
-                        <div key={session.sessionId} className="p-4 space-y-1" data-testid={`writing-detail-${session.sessionId}`}>
+                        <div key={session.sessionId} className={`p-4 space-y-1 ${session.isDuplicated ? "opacity-60" : ""}`} data-testid={`writing-detail-${session.sessionId}`}>
                           <div className="flex items-center justify-between">
                             <p className="font-medium">{format(sessionDate, 'EEEE do')}</p>
-                            <p className="font-semibold text-primary">£{invoiceData.rates.sessionWritingRate.toFixed(2)}</p>
+                            <p className={`font-semibold ${session.isDuplicated ? "text-muted-foreground" : "text-primary"}`}>
+                              {session.isDuplicated ? "£0.00" : `£${invoiceData.rates.sessionWritingRate.toFixed(2)}`}
+                            </p>
                           </div>
-                          <div className="flex items-center gap-2 text-sm">
+                          <div className="flex items-center gap-2 text-sm flex-wrap">
                             <Badge variant="outline" className="font-normal whitespace-normal text-left">{session.squadName}</Badge>
+                            {session.isDuplicated && (
+                              <Badge variant="outline" className="text-xs">
+                                <Copy className="w-3 h-3 mr-1" />
+                                Duplicate
+                              </Badge>
+                            )}
                           </div>
                         </div>
                       );

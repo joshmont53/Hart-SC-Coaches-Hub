@@ -581,6 +581,105 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/sessions/:id/duplicate", requireAuth, async (req: any, res) => {
+    try {
+      const sourceSession = await storage.getSession(req.params.id);
+      if (!sourceSession) {
+        return res.status(404).json({ message: "Source session not found" });
+      }
+
+      const userId = req.user?.id || req.user?.claims?.sub;
+      const requestingUser = await storage.getUser(userId);
+      const isAdmin = requestingUser?.role === 'admin';
+
+      if (!isAdmin) {
+        const requestingCoach = await storage.getCoachByUserId(userId);
+        if (!requestingCoach) {
+          return res.status(403).json({ message: "No coach profile found" });
+        }
+        const coachId = requestingCoach.id;
+        const isInvolved = [sourceSession.leadCoachId, sourceSession.secondCoachId, sourceSession.helperId, sourceSession.setWriterId].includes(coachId);
+        if (!isInvolved) {
+          return res.status(403).json({ message: "You can only duplicate sessions you are involved in" });
+        }
+      }
+
+      const { squadIds, sessionDate, startTime, endTime } = req.body;
+      if (!squadIds || !Array.isArray(squadIds) || squadIds.length === 0) {
+        return res.status(400).json({ message: "At least one squad must be selected" });
+      }
+      if (!sessionDate || !startTime || !endTime) {
+        return res.status(400).json({ message: "Date and times are required" });
+      }
+
+      const [startH, startM] = startTime.split(':').map(Number);
+      const [endH, endM] = endTime.split(':').map(Number);
+      const startMinutes = startH * 60 + startM;
+      const endMinutes = endH * 60 + endM;
+      if (endMinutes <= startMinutes) {
+        return res.status(400).json({ message: "End time must be after start time" });
+      }
+      const duration = ((endMinutes - startMinutes) / 60).toFixed(2);
+      const primarySquadId = squadIds[0];
+
+      const newSessionData = {
+        sessionDate,
+        startTime,
+        endTime,
+        duration,
+        poolId: sourceSession.poolId,
+        squadId: primarySquadId,
+        leadCoachId: sourceSession.leadCoachId,
+        secondCoachId: sourceSession.secondCoachId,
+        helperId: sourceSession.helperId,
+        setWriterId: sourceSession.setWriterId,
+        focus: sourceSession.focus,
+        sessionContent: sourceSession.sessionContent,
+        sessionContentHtml: sourceSession.sessionContentHtml,
+        detectedDrillIds: sourceSession.detectedDrillIds,
+        totalDistance: sourceSession.totalDistance,
+        totalFrontCrawlSwim: sourceSession.totalFrontCrawlSwim,
+        totalFrontCrawlDrill: sourceSession.totalFrontCrawlDrill,
+        totalFrontCrawlKick: sourceSession.totalFrontCrawlKick,
+        totalFrontCrawlPull: sourceSession.totalFrontCrawlPull,
+        totalBackstrokeSwim: sourceSession.totalBackstrokeSwim,
+        totalBackstrokeDrill: sourceSession.totalBackstrokeDrill,
+        totalBackstrokeKick: sourceSession.totalBackstrokeKick,
+        totalBackstrokePull: sourceSession.totalBackstrokePull,
+        totalBreaststrokeSwim: sourceSession.totalBreaststrokeSwim,
+        totalBreaststrokeDrill: sourceSession.totalBreaststrokeDrill,
+        totalBreaststrokeKick: sourceSession.totalBreaststrokeKick,
+        totalBreaststrokePull: sourceSession.totalBreaststrokePull,
+        totalButterflySwim: sourceSession.totalButterflySwim,
+        totalButterflyDrill: sourceSession.totalButterflyDrill,
+        totalButterflyKick: sourceSession.totalButterflyKick,
+        totalButterflyPull: sourceSession.totalButterflyPull,
+        totalIMSwim: sourceSession.totalIMSwim,
+        totalIMDrill: sourceSession.totalIMDrill,
+        totalIMKick: sourceSession.totalIMKick,
+        totalIMPull: sourceSession.totalIMPull,
+        totalNo1Swim: sourceSession.totalNo1Swim,
+        totalNo1Drill: sourceSession.totalNo1Drill,
+        totalNo1Kick: sourceSession.totalNo1Kick,
+        totalNo1Pull: sourceSession.totalNo1Pull,
+        duplicatedFromSessionId: sourceSession.id,
+      };
+
+      const validatedData = insertSwimmingSessionSchema.parse(newSessionData);
+      const newSession = await storage.createSession(validatedData);
+
+      for (const squadId of squadIds) {
+        await storage.createSessionSquad({ sessionId: newSession.id, squadId });
+      }
+
+      console.log(`[Session Duplicate] Session ${newSession.id} duplicated from ${sourceSession.id}`);
+      res.json(newSession);
+    } catch (error: any) {
+      console.error("Error duplicating session:", error);
+      res.status(400).json({ message: error.message || "Failed to duplicate session" });
+    }
+  });
+
   app.put("/api/sessions/:id", requireAuth, async (req, res) => {
     try {
       const { squadIds, ...sessionBody } = req.body;
@@ -1649,7 +1748,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const totalCoachingHours = sessionDetails.reduce((sum, s) => sum + s.duration, 0);
 
-      // Calculate sessions written
+      // Calculate sessions written (duplicated sessions are zero-rated)
       const sessionsWritten = monthSessions.filter(s => s.setWriterId === coachId);
       const sessionWritingDetails = sessionsWritten.map(s => {
         return {
@@ -1657,6 +1756,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           sessionDate: s.sessionDate,
           squadId: s.squadId,
           squadName: getSquadName(s),
+          isDuplicated: !!s.duplicatedFromSessionId,
         };
       });
 
@@ -1687,9 +1787,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const totalCompetitionHours = competitionDetails.reduce((sum, c) => sum + c.duration, 0);
 
-      // Calculate totals
+      // Calculate totals (duplicated sessions don't count for writing earnings)
       const totalHours = totalCoachingHours + totalCompetitionHours;
-      const totalSessionsWritten = sessionsWritten.length;
+      const originalSessionsWritten = sessionsWritten.filter(s => !s.duplicatedFromSessionId);
+      const totalSessionsWritten = originalSessionsWritten.length;
 
       const hourlyRate = parseFloat(rate.hourlyRate);
       const sessionWritingRate = parseFloat(rate.sessionWritingRate);
