@@ -1,0 +1,1 @@
+ALTER TABLE "swimming_sessions" ADD COLUMN "duplicated_from_session_id" varchar;

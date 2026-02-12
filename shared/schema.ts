@@ -209,6 +209,9 @@ export const swimmingSessions = pgTable("swimming_sessions", {
   totalNo1Kick: integer("total_no1_kick").notNull().default(0),
   totalNo1Pull: integer("total_no1_pull").notNull().default(0),
   
+  // Duplication tracking - links to the source session if this was created via duplication
+  duplicatedFromSessionId: varchar("duplicated_from_session_id"),
+  
   recordStatus: varchar("record_status").notNull().default("active"), // "active" | "inactive"
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -242,6 +245,11 @@ export const swimmingSessionsRelations = relations(swimmingSessions, ({ one, man
     fields: [swimmingSessions.setWriterId],
     references: [coaches.id],
     relationName: "setWriter",
+  }),
+  duplicatedFromSession: one(swimmingSessions, {
+    fields: [swimmingSessions.duplicatedFromSessionId],
+    references: [swimmingSessions.id],
+    relationName: "duplicatedFrom",
   }),
   attendance: many(attendance),
   sessionSquads: many(sessionSquads),
