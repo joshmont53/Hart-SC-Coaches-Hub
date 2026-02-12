@@ -1036,6 +1036,7 @@ function CalendarApp() {
                 coaches={coaches}
                 swimmers={swimmers}
                 onBack={handleBackFromSession}
+                onNavigateToSession={setSelectedSessionId}
               />
             </div>
           ) : managementView === 'addSession' ? (

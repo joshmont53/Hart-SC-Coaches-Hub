@@ -38,6 +38,7 @@ interface SessionDetailProps {
   coaches: Coach[];
   swimmers: Swimmer[];
   onBack: () => void;
+  onNavigateToSession?: (sessionId: string) => void;
 }
 
 type TabType = 'detail' | 'session' | 'attendance' | 'feedback';
@@ -74,6 +75,7 @@ export function SessionDetail({
   coaches,
   swimmers,
   onBack,
+  onNavigateToSession,
 }: SessionDetailProps) {
   const { toast } = useToast();
   
@@ -1674,6 +1676,7 @@ export function SessionDetail({
           session={backendSession}
           open={isDuplicateModalOpen}
           onOpenChange={setIsDuplicateModalOpen}
+          onDuplicated={onNavigateToSession}
         />
       )}
     </div>

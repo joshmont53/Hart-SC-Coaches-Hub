@@ -604,7 +604,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      const { squadIds, sessionDate, startTime, endTime } = req.body;
+      const { squadIds, sessionDate, startTime, endTime, locationId, focus, leadCoachId, secondCoachId, helperId, setWriterId } = req.body;
       if (!squadIds || !Array.isArray(squadIds) || squadIds.length === 0) {
         return res.status(400).json({ message: "At least one squad must be selected" });
       }
@@ -627,13 +627,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         startTime,
         endTime,
         duration,
-        poolId: sourceSession.poolId,
+        poolId: locationId || sourceSession.poolId,
         squadId: primarySquadId,
-        leadCoachId: sourceSession.leadCoachId,
-        secondCoachId: sourceSession.secondCoachId,
-        helperId: sourceSession.helperId,
-        setWriterId: sourceSession.setWriterId,
-        focus: sourceSession.focus,
+        leadCoachId: leadCoachId || sourceSession.leadCoachId,
+        secondCoachId: secondCoachId !== undefined ? secondCoachId : sourceSession.secondCoachId,
+        helperId: helperId !== undefined ? helperId : sourceSession.helperId,
+        setWriterId: setWriterId || sourceSession.setWriterId,
+        focus: focus || sourceSession.focus,
         sessionContent: sourceSession.sessionContent,
         sessionContentHtml: sourceSession.sessionContentHtml,
         detectedDrillIds: sourceSession.detectedDrillIds,
