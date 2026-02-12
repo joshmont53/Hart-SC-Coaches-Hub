@@ -213,35 +213,29 @@ export default function SessionDetail() {
                 <ArrowLeft className="w-5 h-5" />
               </Button>
               <div>
-                <h1 className="text-2xl font-bold">Session Details</h1>
+                <h1 className="text-xl font-bold">
+                  {allSquadIds.length > 1
+                    ? allSquadIds.map(id => getSquadName(id)).join(' / ')
+                    : getSquadName(session.squadId)}
+                  {session.focus ? ` - ${session.focus}` : ''}
+                </h1>
                 <p className="text-sm text-muted-foreground">
                   {format(parseISO(session.sessionDate), "EEEE, MMMM d, yyyy")}
                 </p>
               </div>
             </div>
-            <div className="flex gap-2">
-              <Link href={`/sessions/${sessionId}/edit`}>
-                <Button
-                  variant="outline"
-                  size="default"
-                  data-testid="button-edit-session"
-                >
-                  <Edit className="w-4 h-4 mr-2" />
-                  Edit
-                </Button>
-              </Link>
+            <div className="flex items-center gap-2">
               <Button
                 variant="outline"
-                size="default"
+                size="icon"
                 onClick={() => setDuplicateModalOpen(true)}
                 data-testid="button-duplicate-session"
               >
-                <Copy className="w-4 h-4 mr-2" />
-                Duplicate
+                <Copy className="w-4 h-4" />
               </Button>
               <Button
                 variant="destructive"
-                size="default"
+                size="icon"
                 onClick={() => {
                   if (confirm("Are you sure you want to delete this session?")) {
                     deleteSessionMutation.mutate();
@@ -250,8 +244,7 @@ export default function SessionDetail() {
                 disabled={deleteSessionMutation.isPending}
                 data-testid="button-delete-session"
               >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Delete
+                <Trash2 className="w-4 h-4" />
               </Button>
             </div>
           </div>
@@ -274,20 +267,21 @@ export default function SessionDetail() {
             <Card>
               <CardHeader>
                 <div className="flex items-start justify-between gap-4 flex-wrap">
-                  <div>
-                    <CardTitle className="text-xl mb-2">
-                      {allSquadIds.length > 1
-                        ? allSquadIds.map(id => getSquadName(id)).join(' / ')
-                        : getSquadName(session.squadId)}
-                    </CardTitle>
-                    <CardDescription>{getLocationName(session.poolId)}</CardDescription>
-                  </div>
-                  <Badge variant="secondary" className="text-sm">
-                    {session.focus}
-                  </Badge>
+                  <CardTitle className="text-xl">Session Details</CardTitle>
+                  <Link href={`/sessions/${sessionId}/edit`}>
+                    <Button
+                      variant="outline"
+                      size="default"
+                      data-testid="button-edit-session"
+                    >
+                      <Edit className="w-4 h-4 mr-2" />
+                      Edit
+                    </Button>
+                  </Link>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
+                <h3 className="font-semibold text-base" data-testid="text-basic-info-heading">Basic Information</h3>
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="flex items-center gap-3 text-sm">
                     <Calendar className="w-5 h-5 text-muted-foreground" />
