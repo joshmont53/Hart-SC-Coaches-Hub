@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, Pencil, Trash2, Calendar as CalendarIcon, Clock, MapPin, ChevronRight, ChevronDown, Target, Save, Loader2, FileText, Play, Lightbulb, Sparkles, X } from 'lucide-react';
+import { ArrowLeft, Pencil, Trash2, Calendar as CalendarIcon, Clock, MapPin, ChevronRight, ChevronDown, Target, Save, Loader2, FileText, Play, Lightbulb, Sparkles, X, Copy } from 'lucide-react';
 import { format, isValid } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { RichTextEditor } from '@/components/RichTextEditor';
@@ -28,6 +28,7 @@ import { DrillsSidebar } from '@/components/DrillsSidebar';
 import { FeedbackForm } from '@/components/FeedbackForm';
 import { SessionWriterHelper } from '@/components/SessionWriterHelper';
 import { AiChatPanel } from '@/components/AiChatPanel';
+import { DuplicateSessionModal } from '@/components/DuplicateSessionModal';
 import type { Squad as SchemaSquad } from '@shared/schema';
 import type { Coach as BackendCoach } from '@shared/schema';
 
@@ -151,6 +152,7 @@ export function SessionDetail({
   const [drillsSidebarOpen, setDrillsSidebarOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDuplicateModalOpen, setIsDuplicateModalOpen] = useState(false);
   const [editSquadIds, setEditSquadIds] = useState<string[]>([]);
   const [editSquadDropdownOpen, setEditSquadDropdownOpen] = useState(false);
   const editSquadDropdownRef = useRef<HTMLDivElement>(null);
@@ -608,10 +610,14 @@ export function SessionDetail({
                 </p>
               </div>
             </div>
-            <Button variant="destructive" size="sm" onClick={handleDelete} className="flex-shrink-0" data-testid="button-delete">
-              <Trash2 className="h-4 w-4 md:mr-2" />
-              <span className="hidden md:inline">Delete</span>
-            </Button>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <Button variant="outline" size="icon" onClick={() => setIsDuplicateModalOpen(true)} data-testid="button-duplicate-session">
+                <Copy className="h-4 w-4" />
+              </Button>
+              <Button variant="destructive" size="icon" onClick={handleDelete} data-testid="button-delete">
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -1660,6 +1666,14 @@ export function SessionDetail({
               : content;
             setSessionContent(newContent);
           }}
+        />
+      )}
+
+      {backendSession && (
+        <DuplicateSessionModal
+          session={backendSession}
+          open={isDuplicateModalOpen}
+          onOpenChange={setIsDuplicateModalOpen}
         />
       )}
     </div>
